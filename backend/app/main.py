@@ -7,8 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine
 
-# Import routers (we'll create these in Week 1)
-# from app.api.routes import auth, items
+# Import models (required for SQLAlchemy relationships to work)
+from app.models.user import User
+from app.models.item import Item
+
+# Import routers
+from app.api.routes import auth, items
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -50,9 +54,9 @@ def health_check():
     }
 
 
-# Include routers (uncomment as you create them)
-# app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-# app.include_router(items.router, prefix="/api/items", tags=["Items"])
+# Include routers
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(items.router, prefix="/api/items", tags=["Items"])
 
 
 if __name__ == "__main__":

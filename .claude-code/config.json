@@ -1,0 +1,18 @@
+{
+    "project": {
+      "name": "MindStash",
+      "language": ["python", "typescript"],
+      "framework": ["fastapi", "nextjs"]
+    },
+    "rules": {
+      "python": {
+        "formatter": "black",
+        "linter": "flake8",
+        "type_checker": "mypy"
+      },
+      "typescript": {
+        "formatter": "prettier",
+        "linter": "eslint"
+      }
+    }
+}

@@ -3,7 +3,7 @@ Pydantic schemas for User
 """
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class UserBase(BaseModel):
@@ -13,7 +13,20 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema for user registration"""
-    password: str
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=72,
+        description="Password must be between 8 and 72 characters"
+    )
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_bytes(cls, v: str) -> str:
+        """Validate that password doesn't exceed 72 bytes (bcrypt limit)"""
+        if len(v.encode('utf-8')) > 72:
+            raise ValueError('Password cannot exceed 72 bytes when UTF-8 encoded')
+        return v
 
 
 class UserLogin(BaseModel):
