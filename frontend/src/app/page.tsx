@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Brain, Sparkles, Clock, ArrowRight, Zap, Shield, Globe } from 'lucide-react';
 
 // =============================================================================
@@ -89,9 +90,13 @@ export default function Home() {
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-violet-600">
-                <Brain className="h-5 w-5 text-white" />
-              </div>
+              <Image
+                src="/logo-icon.png"
+                alt="MindStash"
+                width={36}
+                height={36}
+                className="rounded-lg"
+              />
               <span className="text-xl font-bold text-gray-900">MindStash</span>
             </Link>
 
@@ -420,9 +425,13 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-violet-600">
-                <Brain className="h-4 w-4 text-white" />
-              </div>
+              <Image
+                src="/logo-icon.png"
+                alt="MindStash"
+                width={32}
+                height={32}
+                className="rounded-lg"
+              />
               <span className="text-lg font-bold text-gray-900">MindStash</span>
             </div>
 

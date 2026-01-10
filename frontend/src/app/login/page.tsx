@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, ArrowLeft, Brain, Eye, EyeOff } from 'lucide-react';
+import Image from 'next/image';
+import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { PublicOnlyRoute } from '@/components/ProtectedRoute';
 import { AxiosError } from 'axios';
@@ -149,9 +150,13 @@ function LoginForm() {
             {/* Logo for mobile */}
             <motion.div variants={fadeUp} className="mb-8 lg:hidden">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-violet-600">
-                  <Brain className="h-6 w-6 text-white" />
-                </div>
+                <Image
+                  src="/logo-icon.png"
+                  alt="MindStash"
+                  width={48}
+                  height={48}
+                  className="rounded-xl"
+                />
                 <span className="text-2xl font-bold text-gray-900">MindStash</span>
               </div>
             </motion.div>

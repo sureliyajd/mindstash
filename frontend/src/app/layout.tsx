@@ -26,6 +26,15 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "MindStash - Never lose a thought again",
   description: "Drop thoughts without thinking. AI organizes, you remember.",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/logo-icon.png",
+  },
+  openGraph: {
+    title: "MindStash - Never lose a thought again",
+    description: "Drop thoughts without thinking. AI organizes, you remember.",
+    images: ["/logo.png"],
+  },
 };
 
 // =============================================================================
