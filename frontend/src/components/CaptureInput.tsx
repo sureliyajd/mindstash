@@ -13,9 +13,9 @@ interface CaptureInputProps {
 
 // Detect platform for keyboard shortcut display
 const getModifierKey = () => {
-  if (typeof window === 'undefined') return '⌘';
+  if (typeof window === 'undefined') return 'Cmd';
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  return isMac ? '⌘' : 'Ctrl';
+  return isMac ? 'Cmd' : 'Ctrl';
 };
 
 // AI Processing messages that cycle through
@@ -32,7 +32,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
   const [isFocused, setIsFocused] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modifierKey, setModifierKey] = useState('⌘');
+  const [modifierKey, setModifierKey] = useState('Cmd');
   const [processingMessageIndex, setProcessingMessageIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -155,14 +155,14 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
       transition={{ duration: 0.3 }}
     >
       <motion.div
-        className={`relative rounded-2xl border bg-white transition-all duration-200 ${
+        className={`relative rounded-2xl border bg-white shadow-sm transition-all duration-200 ${
           error
-            ? 'border-red-300 shadow-lg shadow-red-100'
+            ? 'border-red-200 shadow-lg shadow-red-100/50'
             : isSubmitting
-              ? 'border-indigo-300 shadow-lg shadow-indigo-100'
+              ? 'border-purple-200 shadow-lg shadow-purple-100/50'
               : isFocused
-                ? 'border-indigo-300 shadow-lg shadow-indigo-50'
-                : 'border-gray-200 shadow-sm'
+                ? 'border-purple-300 shadow-lg shadow-purple-100/50'
+                : 'border-gray-200'
         }`}
       >
         {/* Textarea */}
@@ -176,7 +176,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
           onFocus={() => setIsFocused(true)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          placeholder="Drop anything here — a thought, link, reminder, idea..."
+          placeholder="Drop anything here - a thought, link, reminder, idea..."
           disabled={isSubmitting}
           rows={3}
           className="w-full resize-none bg-transparent px-5 py-4 text-base text-gray-800 placeholder-gray-400 outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -190,17 +190,17 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden border-t border-indigo-100 bg-indigo-50"
+              className="overflow-hidden border-t border-purple-100 bg-purple-50"
             >
               <div className="flex items-center gap-3 px-5 py-3">
                 <div className="relative">
-                  <Brain className="h-5 w-5 text-indigo-600" />
+                  <Brain className="h-5 w-5 text-purple-600" />
                   <motion.div
                     className="absolute inset-0"
                     animate={{ opacity: [0.5, 1, 0.5] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >
-                    <Sparkles className="h-5 w-5 text-indigo-400" />
+                    <Sparkles className="h-5 w-5 text-purple-400" />
                   </motion.div>
                 </div>
                 <div className="flex-1">
@@ -211,7 +211,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -5 }}
                       transition={{ duration: 0.2 }}
-                      className="text-sm font-medium text-indigo-700"
+                      className="text-sm font-medium text-purple-700"
                     >
                       {processingMessages[processingMessageIndex]}
                     </motion.p>
@@ -221,7 +221,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
                   {[0, 1, 2].map((i) => (
                     <motion.div
                       key={i}
-                      className="h-1.5 w-1.5 rounded-full bg-indigo-500"
+                      className="h-1.5 w-1.5 rounded-full bg-purple-500"
                       animate={{
                         scale: [1, 1.3, 1],
                         opacity: [0.5, 1, 0.5],
@@ -255,16 +255,16 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
                 <span className="text-xs font-medium">Saved & organized</span>
               </motion.div>
             ) : isSubmitting ? (
-              <span className="text-xs font-medium text-indigo-600">AI is thinking...</span>
+              <span className="text-xs font-medium text-purple-600">AI is thinking...</span>
             ) : (
-              <span className="hidden text-xs text-gray-500 sm:block">
+              <span className="hidden text-xs text-gray-400 sm:block">
                 {isFocused ? (
                   <>
-                    <kbd className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-600">
+                    <kbd className="rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-600">
                       {modifierKey}
                     </kbd>
                     <span className="mx-1">+</span>
-                    <kbd className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-600">Enter</kbd>
+                    <kbd className="rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-600">Enter</kbd>
                     <span className="ml-2">to save</span>
                   </>
                 ) : (
@@ -278,11 +278,11 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
           <div className="flex items-center gap-3">
             {/* Character counter */}
             <span
-              className={`text-xs tabular-nums transition-colors ${
+              className={`font-mono text-xs tabular-nums transition-colors ${
                 isOverLimit
-                  ? 'font-medium text-red-600'
+                  ? 'font-semibold text-red-600'
                   : charCount > MAX_CHARS * 0.9
-                    ? 'font-medium text-amber-600'
+                    ? 'font-semibold text-amber-600'
                     : 'text-gray-400'
               }`}
             >
@@ -293,9 +293,9 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
             <motion.button
               onClick={handleSubmit}
               disabled={isSubmitting || !hasContent || isOverLimit}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
                 hasContent && !isOverLimit && !isSubmitting
-                  ? 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 hover:shadow'
+                  ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md shadow-purple-500/25 hover:shadow-lg hover:shadow-purple-500/30'
                   : 'cursor-not-allowed bg-gray-100 text-gray-400'
               }`}
               whileHover={hasContent && !isOverLimit && !isSubmitting ? { scale: 1.02 } : {}}

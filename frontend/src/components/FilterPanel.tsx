@@ -40,28 +40,28 @@ export interface FilterPanelProps {
 }
 
 // =============================================================================
-// CONSTANTS
+// CONSTANTS - PURPLE ACCENT THEME
 // =============================================================================
 
 const categoryConfig: { id: Category; icon: typeof BookOpen; label: string; color: string }[] = [
-  { id: 'read', icon: BookOpen, label: 'Read', color: 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100' },
-  { id: 'watch', icon: Video, label: 'Watch', color: 'text-purple-600 bg-purple-50 border-purple-200 hover:bg-purple-100' },
-  { id: 'ideas', icon: Lightbulb, label: 'Ideas', color: 'text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100' },
-  { id: 'tasks', icon: CheckSquare, label: 'Tasks', color: 'text-emerald-600 bg-emerald-50 border-emerald-200 hover:bg-emerald-100' },
-  { id: 'people', icon: Users, label: 'People', color: 'text-pink-600 bg-pink-50 border-pink-200 hover:bg-pink-100' },
-  { id: 'notes', icon: FileText, label: 'Notes', color: 'text-slate-600 bg-slate-50 border-slate-200 hover:bg-slate-100' },
-  { id: 'goals', icon: Target, label: 'Goals', color: 'text-red-600 bg-red-50 border-red-200 hover:bg-red-100' },
-  { id: 'buy', icon: ShoppingCart, label: 'Buy', color: 'text-orange-600 bg-orange-50 border-orange-200 hover:bg-orange-100' },
-  { id: 'places', icon: MapPin, label: 'Places', color: 'text-teal-600 bg-teal-50 border-teal-200 hover:bg-teal-100' },
-  { id: 'journal', icon: BookMarked, label: 'Journal', color: 'text-indigo-600 bg-indigo-50 border-indigo-200 hover:bg-indigo-100' },
-  { id: 'learn', icon: GraduationCap, label: 'Learn', color: 'text-cyan-600 bg-cyan-50 border-cyan-200 hover:bg-cyan-100' },
-  { id: 'save', icon: Bookmark, label: 'Saved', color: 'text-gray-600 bg-gray-50 border-gray-200 hover:bg-gray-100' },
+  { id: 'read', icon: BookOpen, label: 'Read', color: 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100' },
+  { id: 'watch', icon: Video, label: 'Watch', color: 'text-purple-600 bg-purple-50 border-purple-100 hover:bg-purple-100' },
+  { id: 'ideas', icon: Lightbulb, label: 'Ideas', color: 'text-amber-600 bg-amber-50 border-amber-100 hover:bg-amber-100' },
+  { id: 'tasks', icon: CheckSquare, label: 'Tasks', color: 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100' },
+  { id: 'people', icon: Users, label: 'People', color: 'text-pink-600 bg-pink-50 border-pink-100 hover:bg-pink-100' },
+  { id: 'notes', icon: FileText, label: 'Notes', color: 'text-slate-600 bg-slate-50 border-slate-100 hover:bg-slate-100' },
+  { id: 'goals', icon: Target, label: 'Goals', color: 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100' },
+  { id: 'buy', icon: ShoppingCart, label: 'Buy', color: 'text-orange-600 bg-orange-50 border-orange-100 hover:bg-orange-100' },
+  { id: 'places', icon: MapPin, label: 'Places', color: 'text-teal-600 bg-teal-50 border-teal-100 hover:bg-teal-100' },
+  { id: 'journal', icon: BookMarked, label: 'Journal', color: 'text-indigo-600 bg-indigo-50 border-indigo-100 hover:bg-indigo-100' },
+  { id: 'learn', icon: GraduationCap, label: 'Learn', color: 'text-cyan-600 bg-cyan-50 border-cyan-100 hover:bg-cyan-100' },
+  { id: 'save', icon: Bookmark, label: 'Saved', color: 'text-gray-600 bg-gray-50 border-gray-100 hover:bg-gray-100' },
 ];
 
 const urgencyOptions: { value: UrgencyLevel; label: string; color: string }[] = [
-  { value: 'high', label: 'High', color: 'text-red-700 bg-red-50 border-red-200 hover:bg-red-100' },
-  { value: 'medium', label: 'Medium', color: 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100' },
-  { value: 'low', label: 'Low', color: 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100' },
+  { value: 'high', label: 'High', color: 'text-red-700 bg-red-50 border-red-100 hover:bg-red-100' },
+  { value: 'medium', label: 'Medium', color: 'text-amber-700 bg-amber-50 border-amber-100 hover:bg-amber-100' },
+  { value: 'low', label: 'Low', color: 'text-emerald-700 bg-emerald-50 border-emerald-100 hover:bg-emerald-100' },
 ];
 
 // =============================================================================
@@ -144,15 +144,15 @@ export function FilterPanel({
       {/* Toggle button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="group flex w-full items-center justify-between rounded-xl bg-white border border-gray-200 px-4 py-3 text-sm transition-all hover:border-gray-300 hover:shadow-sm"
+        className="group flex w-full items-center justify-between rounded-2xl bg-white border border-gray-100 px-5 py-3.5 text-sm transition-all hover:border-gray-200 hover:shadow-sm"
         aria-expanded={isExpanded}
         aria-controls="filter-panel"
       >
         <div className="flex items-center gap-3">
-          <span className="font-medium text-gray-700">Filters</span>
+          <span className="font-semibold text-gray-700">Filters</span>
           {hasActiveFilters && (
-            <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-              {activeFilterCount} active
+            <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-700">
+              <span className="font-mono tabular-nums">{activeFilterCount}</span> active
             </span>
           )}
         </div>
@@ -176,11 +176,11 @@ export function FilterPanel({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="mt-3 space-y-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mt-3 space-y-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
               {/* Categories - 12 category grid */}
               <div>
-                <label className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <label className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-500">
                   <Bookmark className="h-3.5 w-3.5" />
                   Categories
                 </label>
@@ -191,15 +191,15 @@ export function FilterPanel({
                       <button
                         key={id}
                         onClick={() => handleCategoryClick(id)}
-                        className={`flex flex-col items-center gap-1.5 rounded-xl border p-2.5 transition-all duration-200 ${
+                        className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all duration-200 ${
                           isSelected
                             ? `${color} ring-2 ring-offset-1 ring-current`
-                            : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300 hover:bg-gray-100'
+                            : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200 hover:bg-gray-100'
                         }`}
                         aria-pressed={isSelected}
                       >
                         <Icon className="h-4 w-4" />
-                        <span className="text-[10px] font-medium">{label}</span>
+                        <span className="text-[10px] font-semibold">{label}</span>
                       </button>
                     );
                   })}
@@ -208,7 +208,7 @@ export function FilterPanel({
 
               {/* Urgency filter */}
               <div>
-                <label className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <label className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-500">
                   Priority Level
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -218,10 +218,10 @@ export function FilterPanel({
                       <button
                         key={option.value}
                         onClick={() => handleUrgencyClick(option.value)}
-                        className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                        className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
                           isSelected
                             ? `${option.color} ring-2 ring-offset-1 ring-current`
-                            : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300 hover:bg-gray-100'
+                            : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200 hover:bg-gray-100'
                         }`}
                         aria-pressed={isSelected}
                       >
@@ -235,7 +235,7 @@ export function FilterPanel({
               {/* Tags filter with search */}
               {availableTags.length > 0 && (
                 <div>
-                  <label className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <label className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-500">
                     <Tag className="h-3.5 w-3.5" />
                     Tags
                   </label>
@@ -249,7 +249,7 @@ export function FilterPanel({
                         value={tagSearch}
                         onChange={(e) => setTagSearch(e.target.value)}
                         placeholder="Search tags..."
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 outline-none transition-colors focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+                        className="w-full rounded-xl border border-gray-100 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 outline-none transition-colors focus:border-purple-300 focus:bg-white focus:ring-2 focus:ring-purple-100"
                       />
                       {tagSearch && (
                         <button
@@ -272,8 +272,8 @@ export function FilterPanel({
                           onClick={() => handleTagClick(tag)}
                           className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-all duration-200 ${
                             isSelected
-                              ? 'border-indigo-300 bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200'
-                              : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300 hover:bg-gray-100'
+                              ? 'border-purple-200 bg-purple-100 text-purple-700 ring-1 ring-purple-200'
+                              : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200 hover:bg-gray-100'
                           }`}
                           aria-pressed={isSelected}
                         >
@@ -283,7 +283,7 @@ export function FilterPanel({
                       );
                     })}
                     {tagSearch && filteredTags.length === 0 && (
-                      <p className="text-sm text-gray-500 italic">No tags match "{tagSearch}"</p>
+                      <p className="text-sm text-gray-500 italic">No tags match &quot;{tagSearch}&quot;</p>
                     )}
                     {!tagSearch && availableTags.length > 12 && (
                       <p className="text-xs text-gray-400 w-full mt-1">
@@ -306,7 +306,7 @@ export function FilterPanel({
                   >
                     <button
                       onClick={handleClearAll}
-                      className="flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                      className="flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200"
                     >
                       <X className="h-4 w-4" />
                       Clear all filters
@@ -324,21 +324,21 @@ export function FilterPanel({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mt-2 flex flex-wrap items-center gap-2"
+          className="mt-3 flex flex-wrap items-center gap-2"
         >
           {selectedCategory && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-700">
               {categoryConfig.find((c) => c.id === selectedCategory)?.label}
               <button
                 onClick={() => onCategoryChange(null)}
-                className="hover:text-indigo-900"
+                className="hover:text-purple-900"
               >
                 <X className="h-3 w-3" />
               </button>
             </span>
           )}
           {urgencyFilter && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700">
               {urgencyFilter} priority
               <button
                 onClick={() => onUrgencyChange(null)}
@@ -351,7 +351,7 @@ export function FilterPanel({
           {selectedTags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700"
             >
               {tag}
               <button

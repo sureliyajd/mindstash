@@ -123,7 +123,7 @@ export function ModuleSelector({
 
   return (
     <nav
-      className="relative rounded-xl border border-gray-200 bg-white p-1 shadow-sm"
+      className="relative rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm"
       role="tablist"
       aria-label="Content modules"
     >
@@ -138,7 +138,7 @@ export function ModuleSelector({
       >
         {/* Sliding indicator */}
         <motion.div
-          className="absolute inset-y-1 rounded-lg bg-indigo-100"
+          className="absolute inset-y-1.5 rounded-xl bg-purple-100"
           initial={false}
           animate={{
             left: indicatorStyle.left,
@@ -171,18 +171,18 @@ export function ModuleSelector({
               onFocus={() => setFocusedIndex(index)}
               onBlur={() => setFocusedIndex(-1)}
               className={`
-                relative z-10 flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2
-                text-sm font-medium transition-colors duration-200
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50
+                relative z-10 flex items-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2.5
+                text-sm font-semibold transition-colors duration-200
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50
                 ${
                   isSelected
-                    ? 'text-indigo-700'
+                    ? 'text-purple-700'
                     : 'text-gray-500 hover:text-gray-700'
                 }
               `}
               style={{
                 scrollSnapAlign: 'center',
-                minHeight: '40px',
+                minHeight: '44px',
               }}
             >
               {/* Label */}
@@ -192,10 +192,10 @@ export function ModuleSelector({
               {count !== undefined && (
                 <span
                   className={`
-                    rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums
+                    rounded-full px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums
                     ${
                       isSelected
-                        ? 'bg-indigo-200 text-indigo-700'
+                        ? 'bg-purple-200 text-purple-700'
                         : 'bg-gray-100 text-gray-500'
                     }
                   `}

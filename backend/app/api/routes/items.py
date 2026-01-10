@@ -8,13 +8,15 @@ Endpoints:
 - GET /{item_id} - Get single item
 - PUT /{item_id} - Update item
 - DELETE /{item_id} - Delete item
+- POST /mark-surfaced - Mark items as surfaced (for Today module tracking)
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func, cast, String
+from sqlalchemy import or_, and_, func, cast, String
 from sqlalchemy.dialects.postgresql import ARRAY
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from uuid import UUID
+from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.api.dependencies import get_current_user
@@ -25,6 +27,8 @@ from app.schemas.item import (
     ItemUpdate,
     ItemResponse,
     ItemListResponse,
+    MarkSurfacedRequest,
+    MarkSurfacedResponse,
     VALID_CATEGORIES
 )
 from app.services.ai.categorizer import categorize_item
@@ -34,6 +38,61 @@ router = APIRouter(tags=["items"])
 # Valid module types for filtering
 VALID_MODULES = Literal["all", "today", "tasks", "read_later", "ideas", "insights", "archived"]
 VALID_URGENCIES = Literal["low", "medium", "high"]
+
+
+def build_today_smart_filter():
+    """
+    Build the smart resurfacing filter for the "Today" module.
+
+    This creates an intelligent daily digest by resurfacing items based on:
+    1. urgency = "high" (always show urgent items)
+    2. time_context = "immediate" (always show immediate items)
+    3. time_context = "next_week" AND created_at >= 7 days ago (resurface weekly items)
+    4. action_required = True AND last_surfaced_at is NULL (never seen tasks)
+    5. action_required = True AND last_surfaced_at < 3 days ago (resurface tasks every 3 days)
+    6. intent = "learn" AND last_surfaced_at < 7 days ago (resurface learning items weekly)
+
+    Returns:
+        SQLAlchemy OR filter expression for the Today module
+    """
+    now = datetime.utcnow()
+    three_days_ago = now - timedelta(days=3)
+    seven_days_ago = now - timedelta(days=7)
+
+    return or_(
+        # 1. Always show high urgency items
+        Item.urgency == "high",
+
+        # 2. Always show immediate items
+        Item.time_context == "immediate",
+
+        # 3. Resurface "next_week" items that are at least 7 days old
+        and_(
+            Item.time_context == "next_week",
+            Item.created_at <= seven_days_ago
+        ),
+
+        # 4. Action items never surfaced before
+        and_(
+            Item.action_required == True,
+            Item.last_surfaced_at.is_(None)
+        ),
+
+        # 5. Action items not surfaced in last 3 days
+        and_(
+            Item.action_required == True,
+            Item.last_surfaced_at < three_days_ago
+        ),
+
+        # 6. Learning items not surfaced in last 7 days
+        and_(
+            Item.intent == "learn",
+            or_(
+                Item.last_surfaced_at.is_(None),
+                Item.last_surfaced_at < seven_days_ago
+            )
+        )
+    )
 
 
 @router.post("/", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
@@ -108,6 +167,60 @@ def create_item(
     return new_item
 
 
+@router.post("/mark-surfaced", response_model=MarkSurfacedResponse)
+def mark_items_surfaced(
+    request: MarkSurfacedRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Mark items as surfaced (shown in Today module).
+
+    This endpoint updates the last_surfaced_at timestamp for the specified items,
+    which affects the smart resurfacing logic in the Today module. Items that have
+    been recently surfaced will not reappear until their resurfacing conditions
+    are met again.
+
+    Use this endpoint when:
+    - User views the Today module (mark all displayed items)
+    - User interacts with a specific item from Today
+
+    Args:
+        request: MarkSurfacedRequest with list of item IDs
+        current_user: Authenticated user
+        db: Database session
+
+    Returns:
+        MarkSurfacedResponse with count of updated items
+
+    Raises:
+        HTTPException 400: If no valid item IDs provided
+    """
+    now = datetime.utcnow()
+
+    # Update only items owned by the current user
+    updated_count = db.query(Item).filter(
+        Item.id.in_(request.item_ids),
+        Item.user_id == current_user.id
+    ).update(
+        {"last_surfaced_at": now},
+        synchronize_session=False
+    )
+
+    db.commit()
+
+    if updated_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid items found to update"
+        )
+
+    return MarkSurfacedResponse(
+        updated_count=updated_count,
+        message=f"Successfully marked {updated_count} item(s) as surfaced"
+    )
+
+
 @router.get("/", response_model=ItemListResponse)
 def list_items(
     # Module filter (AI-driven views)
@@ -154,13 +267,13 @@ def list_items(
     - Only returns current user's items
     - Ordered by created_at DESC (newest first)
 
-    Modules:
+    Modules (combine category + AI intent for intuitive filtering):
     - all: No filter (all items)
     - today: urgency=high OR time_context=immediate
-    - tasks: action_required=True AND intent=task
-    - read_later: intent=learn AND urgency=low
-    - ideas: intent=idea
-    - insights: intent=reflection OR category IN [journal, notes]
+    - tasks: category=tasks OR (action_required=True AND intent=task)
+    - read_later: category IN [read, watch, learn] OR intent=learn
+    - ideas: category=ideas OR intent=idea
+    - insights: category IN [journal, notes] OR intent=reflection
     - archived: (placeholder for future archived status)
 
     All filters are combinable:
@@ -187,7 +300,7 @@ def list_items(
     query = db.query(Item).filter(Item.user_id == current_user.id)
 
     # ==========================================================================
-    # 1. Apply Module Filter (AI-driven views)
+    # 1. Apply Module Filter (combines category + AI intent for intuitive filtering)
     # ==========================================================================
     if module and module.lower() != "all":
         valid_modules = ["all", "today", "tasks", "read_later", "ideas", "insights", "archived"]
@@ -199,38 +312,42 @@ def list_items(
             )
 
         if module == "today":
-            # urgency = high OR time_context = immediate
+            # Smart resurfacing logic for intelligent daily digest
+            query = query.filter(build_today_smart_filter())
+
+        elif module == "tasks":
+            # Category is tasks OR (action_required AND intent is task)
             query = query.filter(
                 or_(
-                    Item.urgency == "high",
-                    Item.time_context == "immediate"
+                    Item.category == "tasks",
+                    (Item.action_required == True) & (Item.intent == "task")
                 )
             )
 
-        elif module == "tasks":
-            # action_required = True AND intent = task
-            query = query.filter(
-                Item.action_required == True,
-                Item.intent == "task"
-            )
-
         elif module == "read_later":
-            # intent = learn AND urgency = low
+            # Category is read/watch/learn OR intent is learn
             query = query.filter(
-                Item.intent == "learn",
-                Item.urgency == "low"
+                or_(
+                    Item.category.in_(["read", "watch", "learn"]),
+                    Item.intent == "learn"
+                )
             )
 
         elif module == "ideas":
-            # intent = idea
-            query = query.filter(Item.intent == "idea")
-
-        elif module == "insights":
-            # intent = reflection OR category IN [journal, notes]
+            # Category is ideas OR intent is idea
             query = query.filter(
                 or_(
-                    Item.intent == "reflection",
-                    Item.category.in_(["journal", "notes"])
+                    Item.category == "ideas",
+                    Item.intent == "idea"
+                )
+            )
+
+        elif module == "insights":
+            # Category is journal/notes OR intent is reflection
+            query = query.filter(
+                or_(
+                    Item.category.in_(["journal", "notes"]),
+                    Item.intent == "reflection"
                 )
             )
 
@@ -335,34 +452,38 @@ def get_item_counts(
     # Count all items
     all_count = base_query.count()
 
-    # Count "today" items: urgency=high OR time_context=immediate
-    today_count = base_query.filter(
+    # Count "today" items: Smart resurfacing logic
+    today_count = base_query.filter(build_today_smart_filter()).count()
+
+    # Count "tasks" items: category=tasks OR (action_required AND intent=task)
+    tasks_count = base_query.filter(
         or_(
-            Item.urgency == "high",
-            Item.time_context == "immediate"
+            Item.category == "tasks",
+            (Item.action_required == True) & (Item.intent == "task")
         )
     ).count()
 
-    # Count "tasks" items: action_required=True AND intent=task
-    tasks_count = base_query.filter(
-        Item.action_required == True,
-        Item.intent == "task"
-    ).count()
-
-    # Count "read_later" items: intent=learn AND urgency=low
+    # Count "read_later" items: category IN [read, watch, learn] OR intent=learn
     read_later_count = base_query.filter(
-        Item.intent == "learn",
-        Item.urgency == "low"
+        or_(
+            Item.category.in_(["read", "watch", "learn"]),
+            Item.intent == "learn"
+        )
     ).count()
 
-    # Count "ideas" items: intent=idea
-    ideas_count = base_query.filter(Item.intent == "idea").count()
+    # Count "ideas" items: category=ideas OR intent=idea
+    ideas_count = base_query.filter(
+        or_(
+            Item.category == "ideas",
+            Item.intent == "idea"
+        )
+    ).count()
 
-    # Count "insights" items: intent=reflection OR category IN [journal, notes]
+    # Count "insights" items: category IN [journal, notes] OR intent=reflection
     insights_count = base_query.filter(
         or_(
-            Item.intent == "reflection",
-            Item.category.in_(["journal", "notes"])
+            Item.category.in_(["journal", "notes"]),
+            Item.intent == "reflection"
         )
     ).count()
 

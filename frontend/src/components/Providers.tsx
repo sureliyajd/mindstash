@@ -36,39 +36,40 @@ export function useToast() {
 // Toast component
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
   const icons = {
-    success: <CheckCircle className="h-4 w-4 text-emerald-400" />,
-    error: <AlertCircle className="h-4 w-4 text-red-400" />,
-    info: <Info className="h-4 w-4 text-blue-400" />,
+    success: <CheckCircle className="h-5 w-5 text-emerald-500" />,
+    error: <AlertCircle className="h-5 w-5 text-red-500" />,
+    info: <Info className="h-5 w-5 text-blue-500" />,
   };
 
-  const borderColors = {
-    success: 'border-emerald-500/20',
-    error: 'border-red-500/20',
-    info: 'border-blue-500/20',
+  const bgColors = {
+    success: 'bg-emerald-50 border-emerald-200',
+    error: 'bg-red-50 border-red-200',
+    info: 'bg-white border-gray-200',
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      initial={{ opacity: 0, y: 50, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-      className={`flex items-center gap-3 rounded-xl border ${borderColors[toast.type]} bg-zinc-900/95 px-4 py-3 shadow-lg backdrop-blur-sm`}
+      exit={{ opacity: 0, y: 20, scale: 0.9 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-lg ${bgColors[toast.type]}`}
     >
       {icons[toast.type]}
-      <span className="text-sm text-zinc-300">{toast.message}</span>
+      <span className="text-sm font-medium text-gray-700">{toast.message}</span>
       {toast.action && (
         <button
           onClick={toast.action.onClick}
-          className="ml-2 text-sm font-medium text-indigo-400 transition-colors hover:text-indigo-300"
+          className="ml-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
         >
           {toast.action.label}
         </button>
       )}
       <button
         onClick={onDismiss}
-        className="ml-2 rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+        className="ml-2 rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-4 w-4" />
       </button>
     </motion.div>
   );
@@ -77,7 +78,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
 // Toast container
 function ToastContainer({ toasts, hideToast }: { toasts: Toast[]; hideToast: (id: string) => void }) {
   return (
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+    <div className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 flex flex-col gap-2">
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (
           <ToastItem

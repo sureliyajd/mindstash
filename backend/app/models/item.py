@@ -47,6 +47,9 @@ class Item(Base):
     resurface_strategy = Column(String, nullable=True)  # "time_based", "contextual", "weekly_review", "manual"
     suggested_bucket = Column(String, nullable=True)  # "Today", "Learn Later", "Ideas", "Reminders", "Insights"
 
+    # Smart resurfacing tracking
+    last_surfaced_at = Column(DateTime, nullable=True, index=True)  # When item was last shown in "Today" module
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(
         DateTime,

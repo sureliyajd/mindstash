@@ -24,6 +24,10 @@ VALID_CATEGORIES = Literal[
 
 VALID_PRIORITIES = Literal["low", "medium", "high"]
 VALID_TIME_SENSITIVITIES = Literal["immediate", "this_week", "review_weekly", "reference"]
+VALID_URGENCIES = Literal["low", "medium", "high"]
+VALID_INTENTS = Literal["learn", "task", "reminder", "idea", "reflection", "reference"]
+VALID_TIME_CONTEXTS = Literal["immediate", "next_week", "someday", "conditional", "date"]
+VALID_RESURFACE_STRATEGIES = Literal["time_based", "contextual", "weekly_review", "manual"]
 
 
 class ItemBase(BaseModel):
@@ -47,7 +51,15 @@ class ItemUpdate(BaseModel):
     """Schema for updating an item (all fields optional)"""
     content: Optional[str] = Field(None, max_length=500)
     url: Optional[str] = None
-    category: Optional[VALID_CATEGORIES] = None  # Allow user to override AI category
+    category: Optional[VALID_CATEGORIES] = None
+    tags: Optional[List[str]] = None
+    priority: Optional[VALID_PRIORITIES] = None
+    urgency: Optional[VALID_URGENCIES] = None
+    intent: Optional[VALID_INTENTS] = None
+    action_required: Optional[bool] = None
+    time_context: Optional[VALID_TIME_CONTEXTS] = None
+    resurface_strategy: Optional[VALID_RESURFACE_STRATEGIES] = None
+    summary: Optional[str] = Field(None, max_length=200)
 
     @validator('content')
     def validate_content(cls, v):
@@ -55,6 +67,13 @@ class ItemUpdate(BaseModel):
         if v is not None and len(v) > 500:
             raise ValueError('Content cannot exceed 500 characters')
         return v.strip() if v else v
+
+    @validator('tags')
+    def validate_tags(cls, v):
+        """Ensure tags is a list of strings"""
+        if v is not None:
+            return [tag.strip().lower() for tag in v if tag.strip()]
+        return v
 
 
 class ItemResponse(ItemBase):
@@ -77,6 +96,9 @@ class ItemResponse(ItemBase):
     resurface_strategy: Optional[str] = Field(None, description="Resurface strategy: time_based, contextual, weekly_review, or manual")
     suggested_bucket: Optional[str] = Field(None, description="Suggested bucket: Today, Learn Later, Ideas, Reminders, or Insights")
 
+    # Smart resurfacing tracking
+    last_surfaced_at: Optional[datetime] = Field(None, description="When item was last shown in Today module")
+
     created_at: datetime
     updated_at: datetime
 
@@ -90,3 +112,14 @@ class ItemListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class MarkSurfacedRequest(BaseModel):
+    """Schema for marking items as surfaced (shown in Today module)"""
+    item_ids: List[UUID] = Field(..., description="List of item IDs to mark as surfaced", min_length=1, max_length=100)
+
+
+class MarkSurfacedResponse(BaseModel):
+    """Response for mark-surfaced endpoint"""
+    updated_count: int = Field(..., description="Number of items updated")
+    message: str = Field(..., description="Success message")
