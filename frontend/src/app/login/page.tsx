@@ -152,9 +152,10 @@ function LoginForm() {
               <Image
                 src="/logo.png"
                 alt="MindStash"
-                width={160}
-                height={48}
-                className="h-12 w-auto"
+                width={200}
+                height={56}
+                className="h-14 w-auto"
+                priority
               />
             </motion.div>
 

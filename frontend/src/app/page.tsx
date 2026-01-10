@@ -93,9 +93,10 @@ export default function Home() {
               <Image
                 src="/logo.png"
                 alt="MindStash"
-                width={140}
-                height={40}
-                className="h-10 w-auto"
+                width={180}
+                height={50}
+                className="h-12 w-auto"
+                priority
               />
             </Link>
 
@@ -427,9 +428,9 @@ export default function Home() {
               <Image
                 src="/logo.png"
                 alt="MindStash"
-                width={120}
-                height={32}
-                className="h-8 w-auto"
+                width={150}
+                height={40}
+                className="h-10 w-auto"
               />
             </div>
 

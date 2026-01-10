@@ -27,8 +27,11 @@ export const metadata: Metadata = {
   title: "MindStash - Never lose a thought again",
   description: "Drop thoughts without thinking. AI organizes, you remember.",
   icons: {
-    icon: "/favicon.ico",
-    apple: "/logo-icon.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: "/logo.png",
+    shortcut: "/favicon.ico",
   },
   openGraph: {
     title: "MindStash - Never lose a thought again",

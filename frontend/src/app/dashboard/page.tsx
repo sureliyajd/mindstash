@@ -376,9 +376,10 @@ function DashboardContent() {
             <Image
               src="/logo.png"
               alt="MindStash"
-              width={140}
-              height={40}
-              className="h-10 w-auto"
+              width={180}
+              height={50}
+              className="h-12 w-auto"
+              priority
             />
           </div>
           <div className="flex items-center gap-4">
