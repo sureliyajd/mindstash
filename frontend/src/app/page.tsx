@@ -89,15 +89,14 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center">
               <Image
-                src="/logo-icon.png"
+                src="/logo.png"
                 alt="MindStash"
-                width={36}
-                height={36}
-                className="rounded-lg"
+                width={140}
+                height={40}
+                className="h-10 w-auto"
               />
-              <span className="text-xl font-bold text-gray-900">MindStash</span>
             </Link>
 
             {/* Nav links */}
@@ -424,15 +423,14 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Logo */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <Image
-                src="/logo-icon.png"
+                src="/logo.png"
                 alt="MindStash"
-                width={32}
+                width={120}
                 height={32}
-                className="rounded-lg"
+                className="h-8 w-auto"
               />
-              <span className="text-lg font-bold text-gray-900">MindStash</span>
             </div>
 
             {/* Links */}

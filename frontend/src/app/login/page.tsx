@@ -149,16 +149,13 @@ function LoginForm() {
 
             {/* Logo for mobile */}
             <motion.div variants={fadeUp} className="mb-8 lg:hidden">
-              <div className="flex items-center gap-3">
-                <Image
-                  src="/logo-icon.png"
-                  alt="MindStash"
-                  width={48}
-                  height={48}
-                  className="rounded-xl"
-                />
-                <span className="text-2xl font-bold text-gray-900">MindStash</span>
-              </div>
+              <Image
+                src="/logo.png"
+                alt="MindStash"
+                width={160}
+                height={48}
+                className="h-12 w-auto"
+              />
             </motion.div>
 
             {/* Header */}
