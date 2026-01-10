@@ -5,8 +5,14 @@ Endpoints:
 - POST /register - Register new user
 - POST /login - User login with JWT tokens
 - POST /refresh - Refresh access token
+
+Rate Limits (IP-based to prevent brute force):
+- Register: 5/hour
+- Login: 10/hour
+- Refresh: 20/hour
+- Get current user: 200/hour
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -18,6 +24,7 @@ from app.core.security import (
     create_refresh_token,
     decode_token
 )
+from app.core.rate_limit import limiter
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse
 from app.api.dependencies import get_current_user
@@ -26,11 +33,15 @@ router = APIRouter(tags=["authentication"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/hour")
+def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     """
     Register a new user.
 
+    Rate Limit: 5 requests per hour per IP (prevents mass account creation)
+
     Args:
+        request: FastAPI request object (required for rate limiting)
         user_data: UserCreate schema with email and password
         db: Database session
 
@@ -39,6 +50,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
     Raises:
         HTTPException 400: If email already exists
+        HTTPException 429: If rate limit exceeded
     """
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
@@ -65,11 +77,15 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("10/hour")
+def login(request: Request, user_credentials: UserLogin, db: Session = Depends(get_db)):
     """
     User login with email and password.
 
+    Rate Limit: 10 requests per hour per IP (prevents brute force attacks)
+
     Args:
+        request: FastAPI request object (required for rate limiting)
         user_credentials: UserLogin schema with email and password
         db: Database session
 
@@ -79,6 +95,7 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
     Raises:
         HTTPException 404: If user not found
         HTTPException 401: If password is incorrect
+        HTTPException 429: If rate limit exceeded
     """
     # Find user by email
     user = db.query(User).filter(User.email == user_credentials.email).first()
@@ -108,11 +125,15 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh_token(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+@limiter.limit("20/hour")
+def refresh_token(request: Request, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
     """
     Refresh access token using refresh token.
 
+    Rate Limit: 20 requests per hour per IP
+
     Args:
+        request: FastAPI request object (required for rate limiting)
         authorization: Authorization header with Bearer token
         db: Database session
 
@@ -121,6 +142,7 @@ def refresh_token(authorization: Optional[str] = Header(None), db: Session = Dep
 
     Raises:
         HTTPException 401: If token is missing, invalid, or expired
+        HTTPException 429: If rate limit exceeded
     """
     # Check if authorization header exists
     if not authorization:
@@ -180,14 +202,18 @@ def refresh_token(authorization: Optional[str] = Header(None), db: Session = Dep
 
 
 @router.get("/me", response_model=UserResponse)
-def get_current_user_info(current_user: User = Depends(get_current_user)):
+@limiter.limit("200/hour")
+def get_current_user_info(request: Request, current_user: User = Depends(get_current_user)):
     """
     Get current authenticated user information.
+
+    Rate Limit: 200 requests per hour per IP
 
     This is a protected endpoint that demonstrates the get_current_user dependency.
     Requires a valid JWT access token in the Authorization header.
 
     Args:
+        request: FastAPI request object (required for rate limiting)
         current_user: Current authenticated user from get_current_user dependency
 
     Returns:
@@ -195,5 +221,6 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 
     Raises:
         HTTPException 401: If token is invalid or user not found
+        HTTPException 429: If rate limit exceeded
     """
     return current_user

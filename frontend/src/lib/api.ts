@@ -125,7 +125,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle 401 errors
+// Response interceptor - handle 401 and 429 errors
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
@@ -138,9 +138,32 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+
+    // Handle rate limit errors (429)
+    if (error.response?.status === 429) {
+      const data = error.response.data as { detail?: string; retry_after?: number };
+      const retryAfter = data?.retry_after || 3600; // Default to 1 hour
+      const minutes = Math.ceil(retryAfter / 60);
+
+      // Create custom error with user-friendly message
+      const rateLimitError = new Error(
+        `You're making too many requests. Please wait ${minutes} minute${minutes > 1 ? 's' : ''} and try again.`
+      );
+      (rateLimitError as RateLimitError).isRateLimit = true;
+      (rateLimitError as RateLimitError).retryAfter = retryAfter;
+
+      return Promise.reject(rateLimitError);
+    }
+
     return Promise.reject(error);
   }
 );
+
+// Custom error type for rate limiting
+export interface RateLimitError extends Error {
+  isRateLimit: boolean;
+  retryAfter: number;
+}
 
 // Auth API
 export const auth = {

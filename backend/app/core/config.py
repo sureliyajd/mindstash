@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
     
+    # Rate Limiting (optional, uses in-memory if not set)
+    REDIS_URL: str | None = None  # Example: redis://localhost:6379
+
     # Optional
     SENTRY_DSN: str | None = None
     POSTHOG_API_KEY: str | None = None

@@ -1,11 +1,14 @@
 """
 FastAPI main application
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.database import Base, engine
+from app.core.rate_limit import limiter, get_remote_address, log_rate_limit_exceeded
 
 # Import models (required for SQLAlchemy relationships to work)
 from app.models.user import User
@@ -33,6 +36,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add rate limiter to app state
+app.state.limiter = limiter
+
+
+# Custom rate limit exception handler
+@app.exception_handler(RateLimitExceeded)
+async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """Handle rate limit exceeded errors with user-friendly response"""
+    identifier = get_remote_address(request)
+    if hasattr(request.state, "user") and request.state.user:
+        identifier = f"user:{request.state.user.id}"
+
+    log_rate_limit_exceeded(request, identifier)
+
+    # Extract retry after seconds from the exception
+    retry_after = 60  # Default to 60 seconds
+    if exc.detail:
+        try:
+            # exc.detail format is like "5 per 1 hour"
+            retry_after = 3600  # Default to 1 hour for hourly limits
+        except:
+            pass
+
+    return JSONResponse(
+        status_code=429,
+        content={
+            "detail": "Rate limit exceeded. Please try again later.",
+            "retry_after": retry_after
+        },
+        headers={
+            "Retry-After": str(retry_after)
+        }
+    )
 
 
 @app.get("/")

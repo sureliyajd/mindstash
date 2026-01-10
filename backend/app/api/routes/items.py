@@ -9,8 +9,17 @@ Endpoints:
 - PUT /{item_id} - Update item
 - DELETE /{item_id} - Delete item
 - POST /mark-surfaced - Mark items as surfaced (for Today module tracking)
+
+Rate Limits (per user to prevent abuse & control AI costs):
+- Create: 30/hour (protects AI API costs)
+- List: 200/hour
+- Get: 300/hour
+- Update: 50/hour
+- Delete: 50/hour
+- Mark Surfaced: 100/hour
+- Counts: 100/hour
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func, cast, String
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -19,6 +28,7 @@ from uuid import UUID
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
+from app.core.rate_limit import user_limiter
 from app.api.dependencies import get_current_user
 from app.models.user import User
 from app.models.item import Item
@@ -96,13 +106,17 @@ def build_today_smart_filter():
 
 
 @router.post("/", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
+@user_limiter.limit("30/hour")
 def create_item(
+    request: Request,
     item_data: ItemCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Create a new item with AI categorization.
+
+    Rate Limit: 30 requests per hour per user (protects AI API costs)
 
     This endpoint:
     1. Creates an item in the database with user content
@@ -111,6 +125,7 @@ def create_item(
     4. Returns the complete item with all fields
 
     Args:
+        request: FastAPI request object (required for rate limiting)
         item_data: ItemCreate schema with content (max 500 chars) and optional url
         current_user: Authenticated user from get_current_user dependency
         db: Database session
@@ -120,7 +135,10 @@ def create_item(
 
     Raises:
         HTTPException 400: If content validation fails
+        HTTPException 429: If rate limit exceeded
     """
+    # Set user in request state for rate limiter
+    request.state.user = current_user
     # Create initial item in database
     new_item = Item(
         user_id=current_user.id,
@@ -168,13 +186,17 @@ def create_item(
 
 
 @router.post("/mark-surfaced", response_model=MarkSurfacedResponse)
+@user_limiter.limit("100/hour")
 def mark_items_surfaced(
-    request: MarkSurfacedRequest,
+    request: Request,
+    surfaced_request: MarkSurfacedRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Mark items as surfaced (shown in Today module).
+
+    Rate Limit: 100 requests per hour per user
 
     This endpoint updates the last_surfaced_at timestamp for the specified items,
     which affects the smart resurfacing logic in the Today module. Items that have
@@ -186,7 +208,8 @@ def mark_items_surfaced(
     - User interacts with a specific item from Today
 
     Args:
-        request: MarkSurfacedRequest with list of item IDs
+        request: FastAPI request object (required for rate limiting)
+        surfaced_request: MarkSurfacedRequest with list of item IDs
         current_user: Authenticated user
         db: Database session
 
@@ -195,12 +218,15 @@ def mark_items_surfaced(
 
     Raises:
         HTTPException 400: If no valid item IDs provided
+        HTTPException 429: If rate limit exceeded
     """
+    # Set user in request state for rate limiter
+    request.state.user = current_user
     now = datetime.utcnow()
 
     # Update only items owned by the current user
     updated_count = db.query(Item).filter(
-        Item.id.in_(request.item_ids),
+        Item.id.in_(surfaced_request.item_ids),
         Item.user_id == current_user.id
     ).update(
         {"last_surfaced_at": now},
@@ -222,7 +248,9 @@ def mark_items_surfaced(
 
 
 @router.get("/", response_model=ItemListResponse)
+@user_limiter.limit("200/hour")
 def list_items(
+    request: Request,
     # Module filter (AI-driven views)
     module: Optional[str] = Query(
         None,
@@ -258,6 +286,8 @@ def list_items(
     """
     List items with module filtering, search, and pagination.
 
+    Rate Limit: 200 requests per hour per user
+
     Features:
     - Module filtering (AI-driven views on same dataset)
     - Category filtering (12 MindStash categories)
@@ -280,6 +310,7 @@ def list_items(
     - Example: module=tasks&urgency_filter=high&search=aws
 
     Args:
+        request: FastAPI request object (required for rate limiting)
         module: AI-driven view filter
         category: Category filter (one of 12 categories or "all")
         search: Search term for content, tags, summary
@@ -295,7 +326,11 @@ def list_items(
 
     Raises:
         HTTPException 400: If invalid filter values provided
+        HTTPException 429: If rate limit exceeded
     """
+    # Set user in request state for rate limiter
+    request.state.user = current_user
+
     # Start query with user filter
     query = db.query(Item).filter(Item.user_id == current_user.id)
 
@@ -424,12 +459,16 @@ def list_items(
 
 
 @router.get("/counts")
+@user_limiter.limit("100/hour")
 def get_item_counts(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Get item counts per module for the current user.
+
+    Rate Limit: 100 requests per hour per user
 
     Returns count of items that would appear in each module view.
     Useful for displaying badges/counts in the module navigation.
@@ -445,7 +484,12 @@ def get_item_counts(
             "insights": 5,
             "archived": 0
         }
+
+    Raises:
+        HTTPException 429: If rate limit exceeded
     """
+    # Set user in request state for rate limiter
+    request.state.user = current_user
     # Base query for user's items
     base_query = db.query(Item).filter(Item.user_id == current_user.id)
 
@@ -502,7 +546,9 @@ def get_item_counts(
 
 
 @router.get("/{item_id}", response_model=ItemResponse)
+@user_limiter.limit("300/hour")
 def get_item(
+    request: Request,
     item_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -510,7 +556,10 @@ def get_item(
     """
     Get a single item by ID.
 
+    Rate Limit: 300 requests per hour per user
+
     Args:
+        request: FastAPI request object (required for rate limiting)
         item_id: UUID of the item to retrieve
         current_user: Authenticated user
         db: Database session
@@ -520,7 +569,10 @@ def get_item(
 
     Raises:
         HTTPException 404: If item not found or doesn't belong to user
+        HTTPException 429: If rate limit exceeded
     """
+    # Set user in request state for rate limiter
+    request.state.user = current_user
     item = db.query(Item).filter(
         Item.id == item_id,
         Item.user_id == current_user.id
@@ -536,7 +588,9 @@ def get_item(
 
 
 @router.put("/{item_id}", response_model=ItemResponse)
+@user_limiter.limit("50/hour")
 def update_item(
+    request: Request,
     item_id: UUID,
     item_data: ItemUpdate,
     current_user: User = Depends(get_current_user),
@@ -545,12 +599,15 @@ def update_item(
     """
     Update an existing item.
 
+    Rate Limit: 50 requests per hour per user
+
     Allows updating:
     - content (enforces 500 char limit)
     - url
     - category (validates it's one of 12 valid categories)
 
     Args:
+        request: FastAPI request object (required for rate limiting)
         item_id: UUID of the item to update
         item_data: ItemUpdate schema with optional fields
         current_user: Authenticated user
@@ -562,7 +619,10 @@ def update_item(
     Raises:
         HTTPException 404: If item not found or doesn't belong to user
         HTTPException 400: If invalid category provided
+        HTTPException 429: If rate limit exceeded
     """
+    # Set user in request state for rate limiter
+    request.state.user = current_user
     # Find item and verify ownership
     item = db.query(Item).filter(
         Item.id == item_id,
@@ -589,7 +649,9 @@ def update_item(
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+@user_limiter.limit("50/hour")
 def delete_item(
+    request: Request,
     item_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -597,7 +659,10 @@ def delete_item(
     """
     Delete an item.
 
+    Rate Limit: 50 requests per hour per user
+
     Args:
+        request: FastAPI request object (required for rate limiting)
         item_id: UUID of the item to delete
         current_user: Authenticated user
         db: Database session
@@ -607,7 +672,10 @@ def delete_item(
 
     Raises:
         HTTPException 404: If item not found or doesn't belong to user
+        HTTPException 429: If rate limit exceeded
     """
+    # Set user in request state for rate limiter
+    request.state.user = current_user
     # Find item and verify ownership
     item = db.query(Item).filter(
         Item.id == item_id,
