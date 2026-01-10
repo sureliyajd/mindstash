@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
 // =============================================================================
@@ -53,19 +53,33 @@ export function ModuleSelector({
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
 
-  // Update indicator position when selection changes
+  // Update indicator position when selection changes (use layoutEffect to avoid flash)
+  useLayoutEffect(() => {
+    const updateIndicator = () => {
+      const selectedButton = buttonRefs.current.get(selectedModule);
+      if (selectedButton && containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const buttonRect = selectedButton.getBoundingClientRect();
+
+        setIndicatorStyle({
+          left: buttonRect.left - containerRect.left + containerRef.current.scrollLeft,
+          width: buttonRect.width,
+        });
+      }
+    };
+
+    // Run immediately
+    updateIndicator();
+
+    // Also run after a small delay to handle dynamic content (counts loading)
+    const timer = setTimeout(updateIndicator, 100);
+    return () => clearTimeout(timer);
+  }, [selectedModule, itemCounts]);
+
+  // Scroll selected button into view on mobile (separate effect)
   useEffect(() => {
     const selectedButton = buttonRefs.current.get(selectedModule);
-    if (selectedButton && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const buttonRect = selectedButton.getBoundingClientRect();
-
-      setIndicatorStyle({
-        left: buttonRect.left - containerRect.left + containerRef.current.scrollLeft,
-        width: buttonRect.width,
-      });
-
-      // Scroll selected button into view on mobile
+    if (selectedButton) {
       selectedButton.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
