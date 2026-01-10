@@ -241,7 +241,8 @@ function RegisterForm() {
                 disabled={isLoading}
                 whileHover={{ scale: isLoading ? 1 : 1.01 }}
                 whileTap={{ scale: isLoading ? 1 : 0.99 }}
-                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 py-4 text-base font-semibold text-white shadow-lg shadow-purple-500/25 transition-all duration-200 hover:shadow-purple-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 py-4 text-base font-semibold shadow-lg shadow-purple-500/25 transition-all duration-200 hover:shadow-purple-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ color: 'white' }}
               >
                 {isLoading ? (
                   <Loader2 className="mx-auto h-5 w-5 animate-spin" />
@@ -305,10 +306,10 @@ function RegisterForm() {
                   />
                 </motion.div>
 
-                <h2 className="mt-8 text-3xl font-bold text-white">
+                <h2 className="mt-8 text-3xl font-bold" style={{ color: 'white' }}>
                   Your second brain
                 </h2>
-                <p className="mt-3 text-lg text-purple-100">
+                <p className="mt-3 text-lg" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
                   Never lose a brilliant idea again
                 </p>
 
@@ -317,7 +318,8 @@ function RegisterForm() {
                   {['AI-Powered', '12 Categories', 'Instant Recall'].map((feature) => (
                     <span
                       key={feature}
-                      className="rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-sm"
+                      className="rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium backdrop-blur-sm"
+                      style={{ color: 'white' }}
                     >
                       {feature}
                     </span>

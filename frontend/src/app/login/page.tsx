@@ -116,10 +116,10 @@ function LoginForm() {
                   />
                 </motion.div>
 
-                <h2 className="mt-8 text-3xl font-bold text-white">
+                <h2 className="mt-8 text-3xl font-bold" style={{ color: 'white' }}>
                   Welcome back
                 </h2>
-                <p className="mt-3 text-lg text-purple-100">
+                <p className="mt-3 text-lg" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
                   Your thoughts are waiting for you
                 </p>
               </div>
@@ -247,7 +247,8 @@ function LoginForm() {
                 disabled={isLoginLoading}
                 whileHover={{ scale: isLoginLoading ? 1 : 1.01 }}
                 whileTap={{ scale: isLoginLoading ? 1 : 0.99 }}
-                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 py-4 text-base font-semibold text-white shadow-lg shadow-purple-500/25 transition-all duration-200 hover:shadow-purple-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 py-4 text-base font-semibold shadow-lg shadow-purple-500/25 transition-all duration-200 hover:shadow-purple-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ color: 'white' }}
               >
                 {isLoginLoading ? (
                   <Loader2 className="mx-auto h-5 w-5 animate-spin" />

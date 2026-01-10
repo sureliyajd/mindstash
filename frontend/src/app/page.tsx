@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Brain, Sparkles, Clock, ArrowRight, Zap, Shield, Globe } from 'lucide-react';
+import { Brain, Sparkles, Clock, ArrowRight, Zap, Shield, Globe, Mail } from 'lucide-react';
 
 // =============================================================================
 // ANIMATION VARIANTS - SPOTIFY STYLE
@@ -177,7 +177,8 @@ export default function Home() {
             >
               <Link
                 href="/register"
-                className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-violet-600 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-purple-500/25 transition-all hover:shadow-purple-500/40 hover:scale-105"
+                className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-violet-600 px-8 py-4 text-lg font-semibold shadow-lg shadow-purple-500/25 transition-all hover:shadow-purple-500/40 hover:scale-105"
+                style={{ color: 'white' }}
               >
                 Start for free
                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
@@ -238,13 +239,13 @@ export default function Home() {
                 >
                   <div className="relative h-full rounded-3xl bg-white p-8 shadow-sm ring-1 ring-gray-100 transition-all duration-300 hover:shadow-lg hover:ring-purple-100 hover:-translate-y-1">
                     {/* Step number */}
-                    <div className="absolute -top-4 left-8 flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-sm font-bold text-white shadow-lg">
+                    <div className="absolute -top-4 left-8 flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-sm font-bold shadow-lg" style={{ color: 'white' }}>
                       {index + 1}
                     </div>
 
                     {/* Icon */}
                     <div className={`mb-6 mt-4 flex h-14 w-14 items-center justify-center rounded-2xl ${feature.color}`}>
-                      <Icon className="h-7 w-7 text-white" />
+                      <Icon className="h-7 w-7" style={{ color: 'white' }} />
                     </div>
 
                     {/* Content */}
@@ -391,13 +392,15 @@ export default function Home() {
         >
           <motion.h2
             variants={fadeUp}
-            className="heading-section text-4xl sm:text-5xl lg:text-6xl text-white mb-6"
+            className="heading-section text-4xl sm:text-5xl lg:text-6xl mb-6"
+            style={{ color: 'white' }}
           >
             Ready to remember everything?
           </motion.h2>
           <motion.p
             variants={fadeUp}
-            className="text-lg sm:text-xl text-purple-100 mb-10 max-w-2xl mx-auto"
+            className="text-lg sm:text-xl mb-10 max-w-2xl mx-auto"
+            style={{ color: 'rgba(255, 255, 255, 0.9)' }}
           >
             Start capturing your thoughts today. It&apos;s free to get started.
           </motion.p>
@@ -418,30 +421,48 @@ export default function Home() {
       {/* ===================================================================== */}
       <footer className="border-t border-gray-100 py-12 bg-white">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            {/* Logo */}
-            <div className="flex items-center">
-              <img
-                src="/logo.png"
-                alt="MindStash"
-                className="h-8 sm:h-10 w-auto"
-              />
+          <div className="flex flex-col gap-8">
+            {/* Top row - Logo and Support */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+              {/* Logo */}
+              <div className="flex items-center">
+                <img
+                  src="/logo.png"
+                  alt="MindStash"
+                  className="h-8 sm:h-10 w-auto"
+                />
+              </div>
+
+              {/* Support & Contact */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                <span className="text-sm font-medium text-gray-500">Support & Contact:</span>
+                <div className="flex items-center gap-4">
+                  <a
+                    href="https://heyjaydeep.website/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-purple-600 transition-colors"
+                  >
+                    <Globe className="h-4 w-4" />
+                    heyjaydeep.website
+                  </a>
+                  <a
+                    href="mailto:jaydeepsureliya.jd@gmail.com"
+                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-purple-600 transition-colors"
+                  >
+                    <Mail className="h-4 w-4" />
+                    jaydeepsureliya.jd@gmail.com
+                  </a>
+                </div>
+              </div>
             </div>
 
-            {/* Links */}
-            <div className="flex items-center gap-8">
-              <Link href="/login" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-                Login
-              </Link>
-              <Link href="/register" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-                Sign up
-              </Link>
+            {/* Bottom row - Copyright */}
+            <div className="flex justify-center sm:justify-start border-t border-gray-100 pt-6">
+              <p className="text-sm text-gray-400">
+                {new Date().getFullYear()} MindStash. All rights reserved.
+              </p>
             </div>
-
-            {/* Copyright */}
-            <p className="text-sm text-gray-400">
-              2024 MindStash. All rights reserved.
-            </p>
           </div>
         </div>
       </footer>
