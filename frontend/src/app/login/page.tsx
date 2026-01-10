@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { PublicOnlyRoute } from '@/components/ProtectedRoute';
@@ -149,13 +148,10 @@ function LoginForm() {
 
             {/* Logo for mobile */}
             <motion.div variants={fadeUp} className="mb-8 lg:hidden">
-              <Image
+              <img
                 src="/logo.png"
                 alt="MindStash"
-                width={200}
-                height={56}
-                className="h-14 w-auto"
-                priority
+                className="h-12 w-auto"
               />
             </motion.div>
 

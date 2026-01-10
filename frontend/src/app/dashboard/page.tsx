@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 import { LogOut, RefreshCw, WifiOff, Search as SearchIcon } from 'lucide-react';
 import { CaptureInput } from '@/components/CaptureInput';
 import { ItemCard } from '@/components/ItemCard';
@@ -373,13 +372,10 @@ function DashboardContent() {
       <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center">
-            <Image
+            <img
               src="/logo.png"
               alt="MindStash"
-              width={180}
-              height={50}
-              className="h-12 w-auto"
-              priority
+              className="h-10 sm:h-12 w-auto"
             />
           </div>
           <div className="flex items-center gap-4">
