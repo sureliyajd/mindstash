@@ -27,9 +27,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
-    # AI/LLM APIs
-    ANTHROPIC_API_KEY: str  # For production (Claude Sonnet 4.5)
-    AIML_API_KEY: str  # TEMPORARY: Development only (AI/ML API - OpenAI compatible). Will switch to Anthropic in production.
+    # AI/LLM APIs (at least one is required based on environment)
+    ANTHROPIC_API_KEY: str | None = None  # For production (Claude Sonnet 4.5)
+    AIML_API_KEY: str | None = None  # For development (AI/ML API - OpenAI compatible)
     
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
