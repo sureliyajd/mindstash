@@ -3,14 +3,17 @@ Item routes for MindStash - CRUD operations with AI categorization
 
 Endpoints:
 - POST / - Create item with AI categorization
-- GET / - List items with filtering and pagination
+- GET / - List items with module filtering, search, and pagination
+- GET /counts - Get item counts per module
 - GET /{item_id} - Get single item
 - PUT /{item_id} - Update item
 - DELETE /{item_id} - Delete item
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import Optional
+from sqlalchemy import or_, func, cast, String
+from sqlalchemy.dialects.postgresql import ARRAY
+from typing import Optional, Literal
 from uuid import UUID
 
 from app.core.database import get_db
@@ -27,6 +30,10 @@ from app.schemas.item import (
 from app.services.ai.categorizer import categorize_item
 
 router = APIRouter(tags=["items"])
+
+# Valid module types for filtering
+VALID_MODULES = Literal["all", "today", "tasks", "read_later", "ideas", "insights", "archived"]
+VALID_URGENCIES = Literal["low", "medium", "high"]
 
 
 @router.post("/", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
@@ -82,6 +89,14 @@ def create_item(
         new_item.time_sensitivity = ai_result.get("time_sensitivity", "reference")
         new_item.ai_metadata = ai_result
 
+        # Store AI intelligence signals
+        new_item.intent = ai_result.get("intent", "reference")
+        new_item.action_required = ai_result.get("action_required", False)
+        new_item.urgency = ai_result.get("urgency", "low")
+        new_item.time_context = ai_result.get("time_context", "someday")
+        new_item.resurface_strategy = ai_result.get("resurface_strategy", "manual")
+        new_item.suggested_bucket = ai_result.get("suggested_bucket", "Insights")
+
         db.commit()
         db.refresh(new_item)
 
@@ -95,40 +110,139 @@ def create_item(
 
 @router.get("/", response_model=ItemListResponse)
 def list_items(
-    category: Optional[str] = Query(None, description="Filter by category (one of 12) or 'all'"),
+    # Module filter (AI-driven views)
+    module: Optional[str] = Query(
+        None,
+        description="Filter by module: all, today, tasks, read_later, ideas, insights, archived"
+    ),
+    # Category filter (12 MindStash categories)
+    category: Optional[str] = Query(
+        None,
+        description="Filter by category (one of 12) or 'all'"
+    ),
+    # Search functionality
+    search: Optional[str] = Query(
+        None,
+        min_length=1,
+        max_length=100,
+        description="Search term for content, tags, and summary"
+    ),
+    # Additional filters
+    urgency_filter: Optional[str] = Query(
+        None,
+        description="Filter by urgency: low, medium, high"
+    ),
+    tag: Optional[str] = Query(
+        None,
+        description="Filter by specific tag"
+    ),
+    # Pagination
     page: int = Query(1, ge=1, description="Page number (starts at 1)"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page (max 100)"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    List items with filtering and pagination.
+    List items with module filtering, search, and pagination.
 
     Features:
-    - Filter by category (one of 12 MindStash categories)
+    - Module filtering (AI-driven views on same dataset)
+    - Category filtering (12 MindStash categories)
+    - Full-text search across content, tags, and summary
+    - Urgency and tag filters
     - Pagination with configurable page size
     - Only returns current user's items
     - Ordered by created_at DESC (newest first)
 
+    Modules:
+    - all: No filter (all items)
+    - today: urgency=high OR time_context=immediate
+    - tasks: action_required=True AND intent=task
+    - read_later: intent=learn AND urgency=low
+    - ideas: intent=idea
+    - insights: intent=reflection OR category IN [journal, notes]
+    - archived: (placeholder for future archived status)
+
+    All filters are combinable:
+    - Example: module=tasks&urgency_filter=high&search=aws
+
     Args:
-        category: Optional category filter (one of 12 categories or "all")
+        module: AI-driven view filter
+        category: Category filter (one of 12 categories or "all")
+        search: Search term for content, tags, summary
+        urgency_filter: Filter by urgency level
+        tag: Filter by specific tag
         page: Page number (starts at 1)
         page_size: Items per page (1-100, default 20)
         current_user: Authenticated user
         db: Database session
 
     Returns:
-        ItemListResponse with items, total count, page, and page_size
+        ItemListResponse with filtered items, total count, page, and page_size
 
     Raises:
-        HTTPException 400: If invalid category provided
+        HTTPException 400: If invalid filter values provided
     """
     # Start query with user filter
     query = db.query(Item).filter(Item.user_id == current_user.id)
 
-    # Apply category filter if provided and not "all"
+    # ==========================================================================
+    # 1. Apply Module Filter (AI-driven views)
+    # ==========================================================================
+    if module and module.lower() != "all":
+        valid_modules = ["all", "today", "tasks", "read_later", "ideas", "insights", "archived"]
+
+        if module not in valid_modules:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid module. Must be one of: {', '.join(valid_modules)}"
+            )
+
+        if module == "today":
+            # urgency = high OR time_context = immediate
+            query = query.filter(
+                or_(
+                    Item.urgency == "high",
+                    Item.time_context == "immediate"
+                )
+            )
+
+        elif module == "tasks":
+            # action_required = True AND intent = task
+            query = query.filter(
+                Item.action_required == True,
+                Item.intent == "task"
+            )
+
+        elif module == "read_later":
+            # intent = learn AND urgency = low
+            query = query.filter(
+                Item.intent == "learn",
+                Item.urgency == "low"
+            )
+
+        elif module == "ideas":
+            # intent = idea
+            query = query.filter(Item.intent == "idea")
+
+        elif module == "insights":
+            # intent = reflection OR category IN [journal, notes]
+            query = query.filter(
+                or_(
+                    Item.intent == "reflection",
+                    Item.category.in_(["journal", "notes"])
+                )
+            )
+
+        elif module == "archived":
+            # Placeholder for future archived status field
+            # For now, return empty (no items have archived status yet)
+            query = query.filter(False)  # Returns no items
+
+    # ==========================================================================
+    # 2. Apply Category Filter (if provided alongside module)
+    # ==========================================================================
     if category and category.lower() != "all":
-        # Validate category is one of 12 valid categories
         valid_categories = [
             "read", "watch", "ideas", "tasks", "people", "notes",
             "goals", "buy", "places", "journal", "learn", "save"
@@ -140,10 +254,47 @@ def list_items(
             )
         query = query.filter(Item.category == category)
 
-    # Get total count before pagination
+    # ==========================================================================
+    # 3. Apply Search Filter
+    # ==========================================================================
+    if search:
+        search_term = f"%{search.lower()}%"
+        # Search across content, summary, and tags
+        # For tags (JSONB array), we check if any tag contains the search term
+        query = query.filter(
+            or_(
+                func.lower(Item.content).like(search_term),
+                func.lower(Item.summary).like(search_term),
+                # For JSONB array, cast to text and search
+                func.lower(cast(Item.tags, String)).like(search_term)
+            )
+        )
+
+    # ==========================================================================
+    # 4. Apply Urgency Filter
+    # ==========================================================================
+    if urgency_filter:
+        valid_urgencies = ["low", "medium", "high"]
+        if urgency_filter not in valid_urgencies:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid urgency. Must be one of: {', '.join(valid_urgencies)}"
+            )
+        query = query.filter(Item.urgency == urgency_filter)
+
+    # ==========================================================================
+    # 5. Apply Tag Filter
+    # ==========================================================================
+    if tag:
+        # Filter items where the tag exists in the tags JSONB array
+        # Using PostgreSQL's @> operator for array containment
+        query = query.filter(Item.tags.contains([tag]))
+
+    # ==========================================================================
+    # 6. Get Total Count and Apply Pagination
+    # ==========================================================================
     total = query.count()
 
-    # Apply pagination
     offset = (page - 1) * page_size
     items = query.order_by(Item.created_at.desc()).offset(offset).limit(page_size).all()
 
@@ -153,6 +304,80 @@ def list_items(
         page=page,
         page_size=page_size
     )
+
+
+@router.get("/counts")
+def get_item_counts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get item counts per module for the current user.
+
+    Returns count of items that would appear in each module view.
+    Useful for displaying badges/counts in the module navigation.
+
+    Returns:
+        Dict with module names as keys and counts as values:
+        {
+            "all": 42,
+            "today": 3,
+            "tasks": 7,
+            "read_later": 12,
+            "ideas": 8,
+            "insights": 5,
+            "archived": 0
+        }
+    """
+    # Base query for user's items
+    base_query = db.query(Item).filter(Item.user_id == current_user.id)
+
+    # Count all items
+    all_count = base_query.count()
+
+    # Count "today" items: urgency=high OR time_context=immediate
+    today_count = base_query.filter(
+        or_(
+            Item.urgency == "high",
+            Item.time_context == "immediate"
+        )
+    ).count()
+
+    # Count "tasks" items: action_required=True AND intent=task
+    tasks_count = base_query.filter(
+        Item.action_required == True,
+        Item.intent == "task"
+    ).count()
+
+    # Count "read_later" items: intent=learn AND urgency=low
+    read_later_count = base_query.filter(
+        Item.intent == "learn",
+        Item.urgency == "low"
+    ).count()
+
+    # Count "ideas" items: intent=idea
+    ideas_count = base_query.filter(Item.intent == "idea").count()
+
+    # Count "insights" items: intent=reflection OR category IN [journal, notes]
+    insights_count = base_query.filter(
+        or_(
+            Item.intent == "reflection",
+            Item.category.in_(["journal", "notes"])
+        )
+    ).count()
+
+    # Archived count (placeholder - always 0 for now)
+    archived_count = 0
+
+    return {
+        "all": all_count,
+        "today": today_count,
+        "tasks": tasks_count,
+        "read_later": read_later_count,
+        "ideas": ideas_count,
+        "insights": insights_count,
+        "archived": archived_count,
+    }
 
 
 @router.get("/{item_id}", response_model=ItemResponse)

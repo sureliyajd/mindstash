@@ -3,7 +3,7 @@ Item database model for MindStash 12-category system
 """
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
@@ -38,6 +38,14 @@ class Item(Base):
     priority = Column(String, nullable=True)  # "low", "medium", "high"
     time_sensitivity = Column(String, nullable=True)  # "immediate", "this_week", "review_weekly", "reference"
     ai_metadata = Column(JSONB, nullable=True)  # Full AI response with reasoning
+
+    # AI intelligence signals (deeper reasoning)
+    intent = Column(String, nullable=True)  # "learn", "task", "reminder", "idea", "reflection", "reference"
+    action_required = Column(Boolean, nullable=True)  # Does this need user action?
+    urgency = Column(String, nullable=True)  # "low", "medium", "high"
+    time_context = Column(String, nullable=True)  # "immediate", "next_week", "someday", "conditional", "date"
+    resurface_strategy = Column(String, nullable=True)  # "time_based", "contextual", "weekly_review", "manual"
+    suggested_bucket = Column(String, nullable=True)  # "Today", "Learn Later", "Ideas", "Reminders", "Insights"
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(

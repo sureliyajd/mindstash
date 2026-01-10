@@ -6,11 +6,11 @@ import { motion } from 'framer-motion';
 function Skeleton({ className }: { className?: string }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-lg bg-zinc-800/50 ${className}`}
+      className={`relative overflow-hidden rounded-lg bg-gray-200 ${className}`}
     >
       <motion.div
-        className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-zinc-700/30 to-transparent"
-        animate={{ translateX: ['−100%', '100%'] }}
+        className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-gray-100 to-transparent"
+        animate={{ translateX: ['-100%', '100%'] }}
         transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
       />
     </div>
@@ -20,14 +20,13 @@ function Skeleton({ className }: { className?: string }) {
 // Card skeleton for masonry grid
 export function ItemCardSkeleton() {
   return (
-    <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/50 p-4">
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Skeleton className="h-4 w-4 rounded" />
-          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-6 w-16 rounded-lg" />
         </div>
-        <Skeleton className="h-5 w-10 rounded-full" />
+        <Skeleton className="h-5 w-10 rounded-lg" />
       </div>
 
       {/* Content lines */}
@@ -44,7 +43,9 @@ export function ItemCardSkeleton() {
       </div>
 
       {/* Footer */}
-      <Skeleton className="h-3 w-20" />
+      <div className="border-t border-gray-100 pt-3">
+        <Skeleton className="h-3 w-20" />
+      </div>
     </div>
   );
 }
@@ -52,17 +53,10 @@ export function ItemCardSkeleton() {
 // Dashboard loading skeleton
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-8">
-      {/* Section header skeleton */}
-      <div className="flex items-center gap-2">
-        <Skeleton className="h-4 w-4" />
-        <Skeleton className="h-4 w-16" />
-        <Skeleton className="h-3 w-6" />
-      </div>
-
+    <div className="space-y-4">
       {/* Masonry grid skeleton */}
-      <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
-        {[...Array(8)].map((_, i) => (
+      <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
+        {[...Array(6)].map((_, i) => (
           <div key={i} className="mb-4 break-inside-avoid">
             <ItemCardSkeleton />
           </div>
@@ -75,11 +69,11 @@ export function DashboardSkeleton() {
 // Capture input skeleton
 export function CaptureInputSkeleton() {
   return (
-    <div className="rounded-2xl border border-zinc-800/50 bg-zinc-900/50 p-4">
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       <Skeleton className="mb-4 h-24 w-full rounded-lg" />
       <div className="flex items-center justify-between">
         <Skeleton className="h-3 w-32" />
-        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-8 w-16 rounded-xl" />
       </div>
     </div>
   );
@@ -89,7 +83,7 @@ export function CaptureInputSkeleton() {
 export function InlineSpinner({ className = '' }: { className?: string }) {
   return (
     <motion.div
-      className={`h-4 w-4 rounded-full border-2 border-zinc-600 border-t-indigo-400 ${className}`}
+      className={`h-4 w-4 rounded-full border-2 border-gray-200 border-t-indigo-500 ${className}`}
       animate={{ rotate: 360 }}
       transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
     />
@@ -103,7 +97,7 @@ export function PageLoadingOverlay() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#09090b]/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm"
     >
       <motion.div
         className="flex flex-col items-center gap-3"
@@ -111,7 +105,7 @@ export function PageLoadingOverlay() {
         animate={{ scale: 1 }}
       >
         <InlineSpinner className="h-6 w-6" />
-        <span className="text-sm text-zinc-500">Loading...</span>
+        <span className="text-sm text-gray-500">Loading...</span>
       </motion.div>
     </motion.div>
   );
@@ -124,9 +118,9 @@ export function OfflineBanner() {
       initial={{ y: -50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: -50, opacity: 0 }}
-      className="fixed left-0 right-0 top-0 z-50 bg-amber-500/10 py-2 text-center"
+      className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center gap-2 bg-amber-50 border-b border-amber-200 py-2.5"
     >
-      <span className="text-sm text-amber-400">
+      <span className="text-sm font-medium text-amber-700">
         You&apos;re offline. Changes will sync when you reconnect.
       </span>
     </motion.div>

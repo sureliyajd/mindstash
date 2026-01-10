@@ -1,133 +1,70 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Sparkles, LogOut, RefreshCw, WifiOff } from 'lucide-react';
+import { Sparkles, LogOut, RefreshCw, WifiOff, Search as SearchIcon, Brain } from 'lucide-react';
 import { CaptureInput } from '@/components/CaptureInput';
 import { ItemCard } from '@/components/ItemCard';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { DashboardSkeleton } from '@/components/Skeletons';
 import { useToast } from '@/components/Providers';
-import { useItems } from '@/lib/hooks/useItems';
+import { ModuleSelector, type ModuleType } from '@/components/ModuleSelector';
+import { SearchBar } from '@/components/SearchBar';
+import { FilterPanel, type UrgencyLevel } from '@/components/FilterPanel';
+import { useItems, useItemCounts } from '@/lib/hooks/useItems';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { Item } from '@/lib/api';
-import { isToday, isThisWeek, isThisMonth } from 'date-fns';
+import { Item, Category } from '@/lib/api';
 
-// Section configuration
-interface Section {
-  id: string;
-  title: string;
-  filter: (item: Item) => boolean;
+// =============================================================================
+// EMPTY STATE MESSAGES PER MODULE
+// =============================================================================
+
+const emptyStateMessages: Record<string, { title: string; description: string }> = {
+  all: {
+    title: 'Your mind is clear',
+    description: "Drop your first thought above. We'll remember it for you.",
+  },
+  today: {
+    title: 'Nothing urgent right now',
+    description: 'Enjoy the calm. High-priority items will appear here.',
+  },
+  tasks: {
+    title: 'No tasks at the moment',
+    description: 'Action items you capture will show up here.',
+  },
+  read_later: {
+    title: 'Nothing to learn right now',
+    description: 'Articles and learning content will appear here.',
+  },
+  ideas: {
+    title: 'No ideas captured yet',
+    description: 'Your creative sparks will be collected here.',
+  },
+  insights: {
+    title: 'No insights yet',
+    description: 'Personal reflections and notes will appear here.',
+  },
+};
+
+// =============================================================================
+// EMPTY STATE COMPONENT
+// =============================================================================
+
+interface EmptyStateProps {
+  module: string;
+  searchTerm?: string;
 }
 
-const sections: Section[] = [
-  {
-    id: 'today',
-    title: 'Today',
-    filter: (item) => isToday(new Date(item.created_at)),
-  },
-  {
-    id: 'this-week',
-    title: 'This Week',
-    filter: (item) => {
-      const date = new Date(item.created_at);
-      return isThisWeek(date) && !isToday(date);
-    },
-  },
-  {
-    id: 'this-month',
-    title: 'This Month',
-    filter: (item) => {
-      const date = new Date(item.created_at);
-      return isThisMonth(date) && !isThisWeek(date);
-    },
-  },
-  {
-    id: 'older',
-    title: 'Older',
-    filter: (item) => !isThisMonth(new Date(item.created_at)),
-  },
-];
+function EmptyState({ module, searchTerm }: EmptyStateProps) {
+  const hasSearch = searchTerm && searchTerm.trim().length > 0;
 
-// Collapsible section component
-function MemorySection({
-  title,
-  items,
-  defaultOpen = true,
-  onItemClick,
-  onItemDelete,
-  onItemUndo,
-}: {
-  title: string;
-  items: Item[];
-  defaultOpen?: boolean;
-  onItemClick: (item: Item) => void;
-  onItemDelete: (id: string) => Promise<void>;
-  onItemUndo: (item: Item) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const message = hasSearch
+    ? {
+        title: 'No matches found',
+        description: `No memories match "${searchTerm}"`,
+      }
+    : emptyStateMessages[module] || emptyStateMessages.all;
 
-  if (items.length === 0) return null;
-
-  return (
-    <motion.section
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="mb-8"
-    >
-      {/* Section header */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="group mb-4 flex w-full items-center gap-2 text-left"
-      >
-        <motion.div
-          animate={{ rotate: isOpen ? 0 : -90 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ChevronDown className="h-4 w-4 text-zinc-600" />
-        </motion.div>
-        <h2 className="text-sm font-medium text-zinc-500 transition-colors group-hover:text-zinc-400">
-          {title}
-        </h2>
-        <span className="text-xs text-zinc-700">({items.length})</span>
-      </button>
-
-      {/* Items grid */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
-              {items.map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03, duration: 0.3 }}
-                  className="mb-4 break-inside-avoid"
-                >
-                  <ItemCard
-                    item={item}
-                    onClick={() => onItemClick(item)}
-                    onDelete={onItemDelete}
-                    onUndo={onItemUndo}
-                  />
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.section>
-  );
-}
-
-// Empty state component
-function EmptyState() {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -135,20 +72,25 @@ function EmptyState() {
       transition={{ delay: 0.2 }}
       className="flex flex-col items-center justify-center py-20"
     >
-      <div className="mb-4 rounded-full bg-zinc-800/50 p-4">
-        <Sparkles className="h-8 w-8 text-zinc-600" />
+      <div className="mb-4 rounded-full bg-gray-100 p-4">
+        {hasSearch ? (
+          <SearchIcon className="h-8 w-8 text-gray-400" />
+        ) : (
+          <Sparkles className="h-8 w-8 text-indigo-400" />
+        )}
       </div>
-      <h3 className="mb-2 text-lg font-medium text-zinc-400">
-        Your mind is clear
-      </h3>
-      <p className="max-w-sm text-center text-sm text-zinc-600">
-        Drop your first thought above. We&apos;ll remember it for you.
+      <h3 className="mb-2 text-lg font-medium text-gray-700">{message.title}</h3>
+      <p className="max-w-sm text-center text-sm text-gray-500">
+        {message.description}
       </p>
     </motion.div>
   );
 }
 
-// Error state component
+// =============================================================================
+// ERROR STATE COMPONENT
+// =============================================================================
+
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <motion.div
@@ -156,18 +98,18 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-20"
     >
-      <div className="mb-4 rounded-full bg-red-500/10 p-4">
+      <div className="mb-4 rounded-full bg-red-50 p-4">
         <RefreshCw className="h-8 w-8 text-red-400" />
       </div>
-      <h3 className="mb-2 text-lg font-medium text-zinc-400">
+      <h3 className="mb-2 text-lg font-medium text-gray-700">
         Something went wrong
       </h3>
-      <p className="mb-4 max-w-sm text-center text-sm text-zinc-600">
+      <p className="mb-4 max-w-sm text-center text-sm text-gray-500">
         We couldn&apos;t load your memories. Please try again.
       </p>
       <button
         onClick={onRetry}
-        className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-700"
+        className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
       >
         Try again
       </button>
@@ -175,37 +117,128 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-// Offline banner component
+// =============================================================================
+// OFFLINE BANNER COMPONENT
+// =============================================================================
+
 function OfflineBanner() {
   return (
     <motion.div
       initial={{ y: -50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: -50, opacity: 0 }}
-      className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center gap-2 bg-amber-500/10 py-2 backdrop-blur-sm"
+      className="fixed left-0 right-0 top-0 z-50 flex items-center justify-center gap-2 bg-amber-50 border-b border-amber-200 py-2.5"
     >
-      <WifiOff className="h-4 w-4 text-amber-400" />
-      <span className="text-sm text-amber-400">
+      <WifiOff className="h-4 w-4 text-amber-600" />
+      <span className="text-sm font-medium text-amber-700">
         You&apos;re offline. Changes will sync when you reconnect.
       </span>
     </motion.div>
   );
 }
 
+// =============================================================================
+// CARD GRID COMPONENT
+// =============================================================================
+
+interface CardGridProps {
+  items: Item[];
+  onViewDetails: (item: Item) => void;
+  onDelete: (id: string) => Promise<void>;
+  onUndo: (item: Item) => void;
+  isFetching?: boolean;
+}
+
+function CardGrid({ items, onViewDetails, onDelete, onUndo, isFetching }: CardGridProps) {
+  return (
+    <div className="relative">
+      {/* Subtle loading overlay when fetching */}
+      <AnimatePresence>
+        {isFetching && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-20"
+          >
+            <div className="rounded-full bg-white px-4 py-2 shadow-lg border border-gray-200">
+              <span className="text-sm text-gray-600">Updating...</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Masonry grid */}
+      <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
+        <AnimatePresence mode="popLayout">
+          {items.map((item, index) => (
+            <motion.div
+              key={item.id}
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ delay: index * 0.02, duration: 0.3 }}
+              className="mb-4 break-inside-avoid"
+            >
+              <ItemCard
+                item={item}
+                onViewDetails={() => onViewDetails(item)}
+                onDelete={onDelete}
+                onUndo={onUndo}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// MAIN DASHBOARD CONTENT
+// =============================================================================
+
 function DashboardContent() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
+
+  // ==========================================================================
+  // FILTER STATE
+  // ==========================================================================
+  const [selectedModule, setSelectedModule] = useState<ModuleType>('all');
+  const [searchValue, setSearchValue] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [urgencyFilter, setUrgencyFilter] = useState<UrgencyLevel | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+
+  // ==========================================================================
+  // FETCH ITEMS WITH FILTERS
+  // ==========================================================================
   const {
     items,
     isLoading,
+    isFetching,
     isError,
     refetch,
     createItem,
     deleteItem,
     restoreItem,
     isCreating,
-  } = useItems();
+  } = useItems({
+    module: selectedModule,
+    search: searchTerm,
+    urgencyFilter: urgencyFilter || undefined,
+    selectedTags,
+  });
 
+  // Fetch item counts per module
+  const { counts: itemCounts } = useItemCounts();
+
+  // ==========================================================================
+  // UI STATE
+  // ==========================================================================
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isOnline, setIsOnline] = useState(true);
 
@@ -224,17 +257,47 @@ function DashboardContent() {
     };
   }, []);
 
-  // Group items by section
-  const groupedItems = useMemo(() => {
-    const groups: Record<string, Item[]> = {};
-    sections.forEach((section) => {
-      groups[section.id] = items.filter(section.filter);
+  // ==========================================================================
+  // FILTER ITEMS BY CATEGORY (client-side for now)
+  // ==========================================================================
+  const filteredItems = useMemo(() => {
+    if (!selectedCategory) return items;
+    return items.filter((item) => item.category === selectedCategory);
+  }, [items, selectedCategory]);
+
+  // ==========================================================================
+  // EXTRACT AVAILABLE TAGS FROM ALL ITEMS
+  // ==========================================================================
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    items.forEach((item) => {
+      if (item.tags && Array.isArray(item.tags)) {
+        item.tags.forEach((tag) => tagSet.add(tag));
+      }
     });
-    return groups;
+    return Array.from(tagSet).sort();
   }, [items]);
 
-  // Check if there are any items
-  const hasItems = items.length > 0;
+  // ==========================================================================
+  // HANDLERS
+  // ==========================================================================
+
+  // Handle debounced search
+  const handleSearch = useCallback((term: string) => {
+    setSearchTerm(term);
+  }, []);
+
+  // Handle module change
+  const handleModuleChange = useCallback((module: ModuleType) => {
+    setSelectedModule(module);
+  }, []);
+
+  // Clear all filters
+  const handleClearFilters = useCallback(() => {
+    setUrgencyFilter(null);
+    setSelectedTags([]);
+    setSelectedCategory(null);
+  }, []);
 
   // Handle item creation
   const handleCreate = async (content: string, url?: string) => {
@@ -265,8 +328,8 @@ function DashboardContent() {
     }
   };
 
-  // Handle item click (expand)
-  const handleItemClick = (item: Item) => {
+  // Handle view details (opens modal)
+  const handleViewDetails = (item: Item) => {
     setSelectedItem(item);
   };
 
@@ -276,24 +339,33 @@ function DashboardContent() {
     showToast('Logged out successfully', 'success');
   };
 
+  // ==========================================================================
+  // DERIVED STATE
+  // ==========================================================================
+  const hasItems = filteredItems.length > 0;
+  const hasActiveFilters = urgencyFilter !== null || selectedTags.length > 0 || selectedCategory !== null;
+
   return (
-    <div className="min-h-screen bg-[#09090b]">
+    <div className="min-h-screen bg-gray-50">
       {/* Offline banner */}
       <AnimatePresence>{!isOnline && <OfflineBanner />}</AnimatePresence>
 
       {/* Header */}
-      <header className="border-b border-zinc-800/50">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <h1 className="text-lg font-medium text-white">MindStash</h1>
+      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2">
+            <Brain className="h-6 w-6 text-indigo-600" />
+            <h1 className="text-xl font-semibold text-gray-900">MindStash</h1>
+          </div>
           <div className="flex items-center gap-4">
             {user && (
-              <span className="hidden text-sm text-zinc-600 sm:block">
+              <span className="hidden text-sm text-gray-500 sm:block">
                 {user.email}
               </span>
             )}
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Sign out</span>
@@ -303,32 +375,55 @@ function DashboardContent() {
       </header>
 
       {/* Main content */}
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        {/* Capture Input - Sticky */}
-        <div className="sticky top-0 z-30 -mx-4 bg-[#09090b]/80 px-4 pb-6 pt-2 backdrop-blur-lg sm:-mx-6 sm:px-6">
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+        {/* Controls section */}
+        <div className="space-y-4 pb-6">
+          {/* Capture Input */}
           <CaptureInput onSubmit={handleCreate} isSubmitting={isCreating} />
+
+          {/* Search Bar */}
+          <SearchBar
+            value={searchValue}
+            onChange={setSearchValue}
+            onSearch={handleSearch}
+          />
+
+          {/* Module Selector */}
+          <ModuleSelector
+            selectedModule={selectedModule}
+            onModuleChange={handleModuleChange}
+            itemCounts={itemCounts}
+          />
+
+          {/* Filter Panel */}
+          <FilterPanel
+            urgencyFilter={urgencyFilter}
+            selectedTags={selectedTags}
+            availableTags={availableTags}
+            selectedCategory={selectedCategory}
+            onUrgencyChange={setUrgencyFilter}
+            onTagsChange={setSelectedTags}
+            onCategoryChange={setSelectedCategory}
+            onClearFilters={handleClearFilters}
+          />
         </div>
 
-        {/* Memory Sections */}
-        <div className="mt-4">
+        {/* Content area */}
+        <div>
           {isLoading ? (
             <DashboardSkeleton />
           ) : isError ? (
             <ErrorState onRetry={refetch} />
           ) : hasItems ? (
-            sections.map((section) => (
-              <MemorySection
-                key={section.id}
-                title={section.title}
-                items={groupedItems[section.id]}
-                defaultOpen={section.id === 'today' || section.id === 'this-week'}
-                onItemClick={handleItemClick}
-                onItemDelete={handleDelete}
-                onItemUndo={restoreItem}
-              />
-            ))
+            <CardGrid
+              items={filteredItems}
+              onViewDetails={handleViewDetails}
+              onDelete={handleDelete}
+              onUndo={restoreItem}
+              isFetching={isFetching && !isLoading}
+            />
           ) : (
-            <EmptyState />
+            <EmptyState module={selectedModule} searchTerm={searchTerm} />
           )}
         </div>
       </main>
@@ -340,25 +435,25 @@ function DashboardContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
             onClick={() => setSelectedItem(null)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl"
+              className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Category badge */}
               {selectedItem.category && (
-                <span className="mb-3 inline-block rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-400">
+                <span className="mb-3 inline-block rounded-lg bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700">
                   {selectedItem.category}
                 </span>
               )}
 
               {/* Content */}
-              <p className="mb-4 text-lg text-zinc-200">{selectedItem.content}</p>
+              <p className="mb-4 text-lg text-gray-800">{selectedItem.content}</p>
 
               {/* Tags */}
               {selectedItem.tags && selectedItem.tags.length > 0 && (
@@ -366,7 +461,7 @@ function DashboardContent() {
                   {selectedItem.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-md bg-zinc-800/50 px-2 py-1 text-xs text-zinc-500"
+                      className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-600"
                     >
                       {tag}
                     </span>
@@ -376,18 +471,16 @@ function DashboardContent() {
 
               {/* Summary */}
               {selectedItem.summary && (
-                <p className="mb-4 text-sm text-zinc-500">
-                  {selectedItem.summary}
-                </p>
+                <p className="mb-4 text-sm text-gray-500 italic">{selectedItem.summary}</p>
               )}
 
               {/* Metadata */}
-              <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
-                <span className="text-xs text-zinc-600">
+              <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+                <span className="text-xs text-gray-500">
                   {new Date(selectedItem.created_at).toLocaleDateString()}
                 </span>
                 {selectedItem.confidence && (
-                  <span className="text-xs text-zinc-600">
+                  <span className="text-xs text-gray-500">
                     {Math.round(selectedItem.confidence * 100)}% confidence
                   </span>
                 )}
@@ -396,7 +489,7 @@ function DashboardContent() {
               {/* Close button */}
               <button
                 onClick={() => setSelectedItem(null)}
-                className="mt-4 w-full rounded-lg bg-zinc-800 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-300"
+                className="mt-4 w-full rounded-xl bg-gray-100 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
               >
                 Close
               </button>
@@ -407,6 +500,10 @@ function DashboardContent() {
     </div>
   );
 }
+
+// =============================================================================
+// PAGE EXPORT
+// =============================================================================
 
 export default function DashboardPage() {
   return (

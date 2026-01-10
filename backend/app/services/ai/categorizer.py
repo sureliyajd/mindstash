@@ -39,6 +39,13 @@ VALID_CATEGORIES = [
     "save"      # 🔖 General bookmarks
 ]
 
+# AI Intelligence Signal Enum Values
+VALID_INTENTS = ["learn", "task", "reminder", "idea", "reflection", "reference"]
+VALID_URGENCIES = ["low", "medium", "high"]
+VALID_TIME_CONTEXTS = ["immediate", "next_week", "someday", "conditional", "date"]
+VALID_RESURFACE_STRATEGIES = ["time_based", "contextual", "weekly_review", "manual"]
+VALID_BUCKETS = ["Today", "Learn Later", "Ideas", "Reminders", "Insights"]
+
 SYSTEM_PROMPT = """You are a smart content organizer for MindStash. Analyze user input and categorize into exactly ONE of these 12 categories:
 
 1. read - Articles, blogs, documentation
@@ -67,8 +74,28 @@ Return this exact JSON structure:
   "confidence": 0.95,
   "priority": "low|medium|high",
   "time_sensitivity": "immediate|this_week|review_weekly|reference",
-  "reasoning": "brief explanation"
-}}"""
+  "reasoning": "brief explanation",
+  "intent": "learn|task|reminder|idea|reflection|reference",
+  "action_required": true|false,
+  "urgency": "low|medium|high",
+  "time_context": "immediate|next_week|someday|conditional|date",
+  "resurface_strategy": "time_based|contextual|weekly_review|manual",
+  "suggested_bucket": "Today|Learn Later|Ideas|Reminders|Insights"
+}}
+
+Intent definitions:
+- learn: Articles, videos, educational content to consume
+- task: Action items, todos that need to be done
+- reminder: Time-based follow-ups, things to remember
+- idea: Creative concepts, business ideas to explore
+- reflection: Personal thoughts, journal entries
+- reference: Save for future lookup, bookmarks
+
+Resurface strategy definitions:
+- time_based: Show based on calendar/schedule
+- contextual: Show when related to current activity
+- weekly_review: Include in weekly digest
+- manual: User decides when to see"""
 
 # =============================================================================
 # CATEGORIZATION FUNCTION
@@ -152,6 +179,20 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         result.setdefault("time_sensitivity", "reference")
         result.setdefault("reasoning", "Automated categorization")
 
+        # Validate and set AI intelligence signal fields
+        if result.get("intent") not in VALID_INTENTS:
+            result["intent"] = "reference"
+        if not isinstance(result.get("action_required"), bool):
+            result["action_required"] = False
+        if result.get("urgency") not in VALID_URGENCIES:
+            result["urgency"] = "low"
+        if result.get("time_context") not in VALID_TIME_CONTEXTS:
+            result["time_context"] = "someday"
+        if result.get("resurface_strategy") not in VALID_RESURFACE_STRATEGIES:
+            result["resurface_strategy"] = "manual"
+        if result.get("suggested_bucket") not in VALID_BUCKETS:
+            result["suggested_bucket"] = "Insights"
+
         return result
 
     except json.JSONDecodeError as e:
@@ -165,7 +206,13 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
             "confidence": 0.3,
             "priority": "medium",
             "time_sensitivity": "reference",
-            "reasoning": f"Error parsing AI response: {str(e)}"
+            "reasoning": f"Error parsing AI response: {str(e)}",
+            "intent": "reference",
+            "action_required": False,
+            "urgency": "low",
+            "time_context": "someday",
+            "resurface_strategy": "manual",
+            "suggested_bucket": "Insights"
         }
 
     except Exception as e:
@@ -178,5 +225,11 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
             "confidence": 0.1,
             "priority": "medium",
             "time_sensitivity": "reference",
-            "reasoning": f"Error during categorization: {str(e)}"
+            "reasoning": f"Error during categorization: {str(e)}",
+            "intent": "reference",
+            "action_required": False,
+            "urgency": "low",
+            "time_context": "someday",
+            "resurface_strategy": "manual",
+            "suggested_bucket": "Insights"
         }

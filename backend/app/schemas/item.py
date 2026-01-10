@@ -68,6 +68,15 @@ class ItemResponse(ItemBase):
     priority: Optional[str] = Field(None, description="Priority: low, medium, or high")
     time_sensitivity: Optional[str] = Field(None, description="Time sensitivity: immediate, this_week, review_weekly, or reference")
     ai_metadata: Optional[Dict[str, Any]] = Field(None, description="Full AI response with reasoning")
+
+    # AI intelligence signals (deeper reasoning)
+    intent: Optional[str] = Field(None, description="Intent: learn, task, reminder, idea, reflection, or reference")
+    action_required: Optional[bool] = Field(None, description="Does this need user action?")
+    urgency: Optional[str] = Field(None, description="Urgency: low, medium, or high")
+    time_context: Optional[str] = Field(None, description="Time context: immediate, next_week, someday, conditional, or date")
+    resurface_strategy: Optional[str] = Field(None, description="Resurface strategy: time_based, contextual, weekly_review, or manual")
+    suggested_bucket: Optional[str] = Field(None, description="Suggested bucket: Today, Learn Later, Ideas, Reminders, or Insights")
+
     created_at: datetime
     updated_at: datetime
 
