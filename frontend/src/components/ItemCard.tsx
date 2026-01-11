@@ -140,7 +140,7 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
       exit={{ opacity: 0, scale: 0.98 }}
       whileHover={isOptimistic ? undefined : { y: -2 }}
       transition={{ duration: 0.2 }}
-      className="group relative"
+      className={`group relative ${showMenu ? 'z-50' : ''}`}
     >
       {/* Card */}
       <motion.div
