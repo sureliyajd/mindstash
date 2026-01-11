@@ -106,6 +106,15 @@ export function useItems(options: UseItemsOptions = {}) {
         time_context: null,
         resurface_strategy: null,
         suggested_bucket: null,
+        // Notification fields
+        notification_date: null,
+        notification_frequency: null,
+        next_notification_at: null,
+        last_notified_at: null,
+        notification_enabled: true,
+        // Completion tracking
+        is_completed: false,
+        completed_at: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
