@@ -37,7 +37,6 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const processingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const isButtonClickRef = useRef(false);
 
   const hasContent = content.trim().length > 0;
   const charCount = content.length;
@@ -142,19 +141,8 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
 
   const handleBlur = () => {
     setIsFocused(false);
-    // Use setTimeout to check if blur was caused by button click
-    // On mobile, blur fires before click, so we need a small delay
-    setTimeout(() => {
-      // Skip auto-submit if the button was clicked (prevents double submission on mobile)
-      if (isButtonClickRef.current) {
-        isButtonClickRef.current = false;
-        return;
-      }
-      // Auto-submit on blur if there's content
-      if (hasContent && !isSubmitting && !isOverLimit) {
-        handleSubmit();
-      }
-    }, 100);
+    // Only update focus state - do not auto-submit
+    // User must explicitly click the save button to submit
   };
 
   return (
@@ -301,8 +289,6 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
 
             {/* Submit button */}
             <motion.button
-              onMouseDown={() => { isButtonClickRef.current = true; }}
-              onTouchStart={() => { isButtonClickRef.current = true; }}
               onClick={handleSubmit}
               disabled={isSubmitting || !hasContent || isOverLimit}
               className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
