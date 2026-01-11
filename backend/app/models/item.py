@@ -50,6 +50,17 @@ class Item(Base):
     # Smart resurfacing tracking
     last_surfaced_at = Column(DateTime, nullable=True, index=True)  # When item was last shown in "Today" module
 
+    # Notification system fields
+    notification_date = Column(DateTime, nullable=True, index=True)  # AI-predicted or user-set notification date
+    notification_frequency = Column(String, nullable=True)  # "once", "daily", "weekly", "monthly", "never"
+    next_notification_at = Column(DateTime, nullable=True, index=True)  # When next notification should be sent
+    last_notified_at = Column(DateTime, nullable=True)  # When last notification was sent
+    notification_enabled = Column(Boolean, default=True, nullable=False)  # User can disable notifications
+
+    # Completion tracking
+    is_completed = Column(Boolean, default=False, nullable=False, index=True)  # User marked as done
+    completed_at = Column(DateTime, nullable=True)  # When marked complete
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(
         DateTime,

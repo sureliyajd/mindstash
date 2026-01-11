@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
 import {
   X,
   Pencil,
@@ -30,9 +31,13 @@ import {
   Activity,
   CheckCircle2,
   Circle,
+  Bell,
+  BellOff,
+  Check,
+  Repeat,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Item, Category } from '@/lib/api';
+import { Item, Category, NotificationFrequency } from '@/lib/api';
 
 // =============================================================================
 // CATEGORY CONFIG
@@ -109,6 +114,15 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
   low: { label: 'Low Priority', color: 'text-emerald-600' },
 };
 
+// Notification frequency config
+const notificationFrequencyConfig: Record<NotificationFrequency, { label: string; description: string }> = {
+  once: { label: 'One time', description: 'Notify once and stop' },
+  daily: { label: 'Daily', description: 'Every day at the set time' },
+  weekly: { label: 'Weekly', description: 'Every week on the same day' },
+  monthly: { label: 'Monthly', description: 'Every month on the same date' },
+  never: { label: 'Never', description: 'No notifications' },
+};
+
 // =============================================================================
 // PROPS
 // =============================================================================
@@ -119,6 +133,7 @@ interface ItemDetailModalProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onToggleComplete?: (completed: boolean) => void;
 }
 
 // =============================================================================
@@ -131,7 +146,10 @@ export function ItemDetailModal({
   onClose,
   onEdit,
   onDelete,
+  onToggleComplete,
 }: ItemDetailModalProps) {
+  const [isCompleting, setIsCompleting] = useState(false);
+
   const category = (item.category as Category) || 'save';
   const categoryInfo = categoryConfig[category] || categoryConfig.save;
   const Icon = categoryInfo.icon;
@@ -146,10 +164,37 @@ export function ItemDetailModal({
   const priority = item.priority;
   const suggestedBucket = item.suggested_bucket;
 
+  // Notification fields
+  const notificationDate = item.notification_date;
+  const notificationFrequency = item.notification_frequency;
+  const nextNotificationAt = item.next_notification_at;
+  const notificationEnabled = item.notification_enabled;
+  const isCompleted = item.is_completed;
+  const completedAt = item.completed_at;
+
   // Format timestamps
   const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
   const createdDate = format(new Date(item.created_at), 'MMMM d, yyyy \'at\' h:mm a');
   const updatedDate = format(new Date(item.updated_at), 'MMMM d, yyyy \'at\' h:mm a');
+
+  // Format notification date
+  const formattedNotificationDate = notificationDate
+    ? format(new Date(notificationDate), 'MMMM d, yyyy \'at\' h:mm a')
+    : null;
+  const formattedNextNotification = nextNotificationAt
+    ? format(new Date(nextNotificationAt), 'MMMM d, yyyy \'at\' h:mm a')
+    : null;
+
+  // Handle completion toggle
+  const handleToggleComplete = async () => {
+    if (!onToggleComplete || isCompleting) return;
+    setIsCompleting(true);
+    try {
+      await onToggleComplete(!isCompleted);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -222,12 +267,50 @@ export function ItemDetailModal({
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
             <div className="space-y-6 p-6">
+              {/* Completion Status Banner */}
+              {isCompleted && (
+                <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+                    <Check className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-700">Completed</p>
+                    {completedAt && (
+                      <p className="text-xs text-emerald-600">
+                        {format(new Date(completedAt), 'MMMM d, yyyy \'at\' h:mm a')}
+                      </p>
+                    )}
+                  </div>
+                  {onToggleComplete && (
+                    <button
+                      onClick={handleToggleComplete}
+                      disabled={isCompleting}
+                      className="ml-auto rounded-lg bg-emerald-100 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-200 transition-colors disabled:opacity-50"
+                    >
+                      Mark Incomplete
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Main Content */}
-              <div className="rounded-2xl bg-gray-50 p-5">
-                <p className="text-lg leading-relaxed text-gray-800">
+              <div className={`rounded-2xl bg-gray-50 p-5 ${isCompleted ? 'opacity-60' : ''}`}>
+                <p className={`text-lg leading-relaxed text-gray-800 ${isCompleted ? 'line-through' : ''}`}>
                   {item.content}
                 </p>
               </div>
+
+              {/* Completion Button (if not completed) */}
+              {!isCompleted && onToggleComplete && (
+                <button
+                  onClick={handleToggleComplete}
+                  disabled={isCompleting}
+                  className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors w-full justify-center disabled:opacity-50"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {isCompleting ? 'Marking...' : 'Mark as Complete'}
+                </button>
+              )}
 
               {/* URL if present */}
               {item.url && (
@@ -259,6 +342,75 @@ export function ItemDetailModal({
                       {tag}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {/* Notification Section */}
+              {(notificationDate || notificationEnabled) && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-[#EA7B7B]" />
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                      Notification Settings
+                    </h3>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#EA7B7B]/20 bg-[#EA7B7B]/5 p-5">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+                        notificationEnabled && !isCompleted
+                          ? 'bg-[#EA7B7B]/20'
+                          : 'bg-gray-200'
+                      }`}>
+                        {notificationEnabled && !isCompleted ? (
+                          <Bell className="h-6 w-6 text-[#EA7B7B]" />
+                        ) : (
+                          <BellOff className="h-6 w-6 text-gray-400" />
+                        )}
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-semibold ${
+                            notificationEnabled && !isCompleted
+                              ? 'text-[#C44545]'
+                              : 'text-gray-500'
+                          }`}>
+                            {notificationEnabled && !isCompleted
+                              ? 'Notifications Enabled'
+                              : isCompleted
+                                ? 'Notifications Stopped (Completed)'
+                                : 'Notifications Disabled'
+                            }
+                          </span>
+                          {notificationFrequency && notificationFrequency !== 'never' && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#EA7B7B]/10 px-2 py-0.5 text-xs font-medium text-[#C44545]">
+                              <Repeat className="h-3 w-3" />
+                              {notificationFrequencyConfig[notificationFrequency]?.label || notificationFrequency}
+                            </span>
+                          )}
+                        </div>
+
+                        {formattedNotificationDate && (
+                          <p className="mt-1 text-sm text-gray-600">
+                            <span className="font-medium">Scheduled:</span> {formattedNotificationDate}
+                          </p>
+                        )}
+
+                        {formattedNextNotification && notificationEnabled && !isCompleted && (
+                          <p className="mt-1 text-sm text-[#C44545]">
+                            <span className="font-medium">Next notification:</span> {formattedNextNotification}
+                          </p>
+                        )}
+
+                        {notificationFrequency && notificationFrequencyConfig[notificationFrequency] && (
+                          <p className="mt-2 text-xs text-gray-500">
+                            {notificationFrequencyConfig[notificationFrequency].description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

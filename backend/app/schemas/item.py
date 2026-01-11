@@ -28,6 +28,7 @@ VALID_URGENCIES = Literal["low", "medium", "high"]
 VALID_INTENTS = Literal["learn", "task", "reminder", "idea", "reflection", "reference"]
 VALID_TIME_CONTEXTS = Literal["immediate", "next_week", "someday", "conditional", "date"]
 VALID_RESURFACE_STRATEGIES = Literal["time_based", "contextual", "weekly_review", "manual"]
+VALID_NOTIFICATION_FREQUENCIES = Literal["once", "daily", "weekly", "monthly", "never"]
 
 
 class ItemBase(BaseModel):
@@ -60,6 +61,14 @@ class ItemUpdate(BaseModel):
     time_context: Optional[VALID_TIME_CONTEXTS] = None
     resurface_strategy: Optional[VALID_RESURFACE_STRATEGIES] = None
     summary: Optional[str] = Field(None, max_length=200)
+
+    # Notification fields
+    notification_date: Optional[datetime] = None
+    notification_frequency: Optional[VALID_NOTIFICATION_FREQUENCIES] = None
+    notification_enabled: Optional[bool] = None
+
+    # Completion tracking
+    is_completed: Optional[bool] = None
 
     @validator('content')
     def validate_content(cls, v):
@@ -98,6 +107,17 @@ class ItemResponse(ItemBase):
 
     # Smart resurfacing tracking
     last_surfaced_at: Optional[datetime] = Field(None, description="When item was last shown in Today module")
+
+    # Notification system fields
+    notification_date: Optional[datetime] = Field(None, description="AI-predicted or user-set notification date")
+    notification_frequency: Optional[str] = Field(None, description="Notification frequency: once, daily, weekly, monthly, never")
+    next_notification_at: Optional[datetime] = Field(None, description="When next notification should be sent")
+    last_notified_at: Optional[datetime] = Field(None, description="When last notification was sent")
+    notification_enabled: Optional[bool] = Field(True, description="Whether notifications are enabled for this item")
+
+    # Completion tracking
+    is_completed: Optional[bool] = Field(False, description="Whether item has been marked as completed")
+    completed_at: Optional[datetime] = Field(None, description="When item was marked complete")
 
     created_at: datetime
     updated_at: datetime

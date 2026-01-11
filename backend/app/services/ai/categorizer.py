@@ -4,6 +4,8 @@ AI Categorization Service for MindStash 12-Category System
 Using Anthropic Claude API for production-ready categorization
 """
 import json
+import re
+from datetime import datetime, timedelta
 from typing import Optional
 from anthropic import Anthropic
 
@@ -45,6 +47,7 @@ VALID_URGENCIES = ["low", "medium", "high"]
 VALID_TIME_CONTEXTS = ["immediate", "next_week", "someday", "conditional", "date"]
 VALID_RESURFACE_STRATEGIES = ["time_based", "contextual", "weekly_review", "manual"]
 VALID_BUCKETS = ["Today", "Learn Later", "Ideas", "Reminders", "Insights"]
+VALID_NOTIFICATION_FREQUENCIES = ["once", "daily", "weekly", "monthly", "never"]
 
 SYSTEM_PROMPT = """You are a smart content organizer for MindStash. Analyze user input and categorize into exactly ONE of these 12 categories:
 
@@ -80,7 +83,13 @@ Return this exact JSON structure:
   "urgency": "low|medium|high",
   "time_context": "immediate|next_week|someday|conditional|date",
   "resurface_strategy": "time_based|contextual|weekly_review|manual",
-  "suggested_bucket": "Today|Learn Later|Ideas|Reminders|Insights"
+  "suggested_bucket": "Today|Learn Later|Ideas|Reminders|Insights",
+  "notification_prediction": {{
+    "should_notify": true|false,
+    "notification_date": "relative date string",
+    "frequency": "once|daily|weekly|monthly|never",
+    "reasoning": "why this timing"
+  }}
 }}
 
 Intent definitions:
@@ -95,7 +104,166 @@ Resurface strategy definitions:
 - time_based: Show based on calendar/schedule
 - contextual: Show when related to current activity
 - weekly_review: Include in weekly digest
-- manual: User decides when to see"""
+- manual: User decides when to see
+
+NOTIFICATION PREDICTION RULES:
+Analyze if this input needs a notification/reminder.
+
+should_notify = true if:
+- Time-specific events (Sunday, tomorrow, next week, deadline)
+- Action items with implied timing
+- Learning goals (suggest monthly check-ins)
+- People follow-ups (suggest before the event)
+- Tasks with due dates or deadlines
+
+should_notify = false if:
+- Pure reference information
+- Completed thoughts/reflections
+- General bookmarks without timing
+- Journal entries
+
+notification_date values (relative strings):
+- "tomorrow_morning" - Tomorrow at 9 AM
+- "tomorrow_evening" - Tomorrow at 6 PM
+- "next_saturday_evening" - The coming Saturday at 6 PM (day before Sunday)
+- "next_sunday_morning" - The coming Sunday at 9 AM
+- "next_monday_morning" - The coming Monday at 9 AM
+- "next_week" - 7 days from now at 9 AM
+- "in_3_days" - 3 days from now at 9 AM
+- "1_month_from_now" - 30 days from now at 9 AM
+- "end_of_week" - This Friday at 5 PM
+
+frequency values:
+- "once" - One-time notification (events, deadlines, tasks)
+- "daily" - Daily reminder (habits, daily tasks)
+- "weekly" - Weekly check-in (goals, reviews)
+- "monthly" - Monthly reminder (learning, long-term goals)
+- "never" - No notification needed (reference items)
+
+Examples:
+Input: "Call John for football on Sunday"
+→ notification_date: "next_saturday_evening", frequency: "once"
+
+Input: "Learn to solve Rubik's cube"
+→ notification_date: "1_month_from_now", frequency: "monthly"
+
+Input: "Buy groceries tomorrow"
+→ notification_date: "tomorrow_morning", frequency: "once"
+
+Input: "Interesting article about AI"
+→ should_notify: false, frequency: "never"
+
+Input: "Review my goals weekly"
+→ notification_date: "end_of_week", frequency: "weekly"
+
+Input: "Meeting with client next Monday"
+→ notification_date: "next_sunday_evening", frequency: "once" (notify day before)"""
+
+
+# =============================================================================
+# DATE PARSING UTILITIES
+# =============================================================================
+
+
+def parse_relative_date(relative_date: str) -> Optional[datetime]:
+    """
+    Convert relative date strings to actual datetime objects.
+
+    Args:
+        relative_date: String like "tomorrow_morning", "next_sunday_9am", etc.
+
+    Returns:
+        datetime object or None if parsing fails
+    """
+    if not relative_date:
+        return None
+
+    now = datetime.utcnow()
+    relative_date = relative_date.lower().strip()
+
+    # Helper to get next occurrence of a weekday
+    def next_weekday(weekday: int, hour: int = 9) -> datetime:
+        """Get next occurrence of weekday (0=Monday, 6=Sunday)"""
+        days_ahead = weekday - now.weekday()
+        if days_ahead <= 0:  # Target day already happened this week
+            days_ahead += 7
+        return now.replace(hour=hour, minute=0, second=0, microsecond=0) + timedelta(days=days_ahead)
+
+    # Parse different formats
+    if relative_date in ["tomorrow_morning", "tomorrow_9am", "tomorrow"]:
+        return (now + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    elif relative_date in ["tomorrow_evening", "tomorrow_6pm"]:
+        return (now + timedelta(days=1)).replace(hour=18, minute=0, second=0, microsecond=0)
+
+    elif relative_date in ["next_saturday_evening", "saturday_evening"]:
+        return next_weekday(5, 18)  # Saturday at 6 PM
+
+    elif relative_date in ["next_sunday_morning", "sunday_morning", "next_sunday"]:
+        return next_weekday(6, 9)  # Sunday at 9 AM
+
+    elif relative_date in ["next_sunday_evening", "sunday_evening"]:
+        return next_weekday(6, 18)  # Sunday at 6 PM
+
+    elif relative_date in ["next_monday_morning", "monday_morning", "next_monday"]:
+        return next_weekday(0, 9)  # Monday at 9 AM
+
+    elif relative_date in ["next_tuesday_morning", "tuesday_morning", "next_tuesday"]:
+        return next_weekday(1, 9)
+
+    elif relative_date in ["next_wednesday_morning", "wednesday_morning", "next_wednesday"]:
+        return next_weekday(2, 9)
+
+    elif relative_date in ["next_thursday_morning", "thursday_morning", "next_thursday"]:
+        return next_weekday(3, 9)
+
+    elif relative_date in ["next_friday_morning", "friday_morning", "next_friday"]:
+        return next_weekday(4, 9)
+
+    elif relative_date in ["next_week", "in_a_week", "1_week"]:
+        return (now + timedelta(days=7)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    elif relative_date in ["in_3_days", "3_days"]:
+        return (now + timedelta(days=3)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    elif relative_date in ["1_month_from_now", "next_month", "in_a_month"]:
+        return (now + timedelta(days=30)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    elif relative_date in ["end_of_week", "this_friday", "friday_evening"]:
+        # Get this Friday at 5 PM
+        days_until_friday = (4 - now.weekday()) % 7
+        if days_until_friday == 0 and now.hour >= 17:
+            days_until_friday = 7
+        return (now + timedelta(days=days_until_friday)).replace(hour=17, minute=0, second=0, microsecond=0)
+
+    elif relative_date in ["today_evening", "this_evening"]:
+        return now.replace(hour=18, minute=0, second=0, microsecond=0)
+
+    elif relative_date in ["in_2_weeks", "2_weeks"]:
+        return (now + timedelta(days=14)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    # Try to parse patterns like "in_X_days"
+    match = re.match(r"in_(\d+)_days?", relative_date)
+    if match:
+        days = int(match.group(1))
+        return (now + timedelta(days=days)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    # Try to parse patterns like "X_weeks"
+    match = re.match(r"(\d+)_weeks?", relative_date)
+    if match:
+        weeks = int(match.group(1))
+        return (now + timedelta(weeks=weeks)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    # Try to parse patterns like "X_months"
+    match = re.match(r"(\d+)_months?", relative_date)
+    if match:
+        months = int(match.group(1))
+        return (now + timedelta(days=30 * months)).replace(hour=9, minute=0, second=0, microsecond=0)
+
+    # If nothing matches, return None
+    print(f"⚠️  Could not parse relative date: {relative_date}")
+    return None
+
 
 # =============================================================================
 # CATEGORIZATION FUNCTION
@@ -104,7 +272,7 @@ Resurface strategy definitions:
 
 def categorize_item(content: str, url: Optional[str] = None) -> dict:
     """
-    Categorize content using AI (12-category system)
+    Categorize content using AI (12-category system) with notification prediction.
 
     Args:
         content: User input text (max 500 characters)
@@ -119,13 +287,17 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
             - priority: "low", "medium", or "high"
             - time_sensitivity: "immediate", "this_week", "review_weekly", or "reference"
             - reasoning: Brief explanation of categorization
+            - notification_date: datetime or None
+            - notification_frequency: "once", "daily", "weekly", "monthly", "never"
+            - next_notification_at: datetime or None (same as notification_date initially)
+            - should_notify: boolean
 
     Example:
-        >>> result = categorize_item("Read article about Python FastAPI")
-        >>> result["category"]
-        "read"
-        >>> result["tags"]
-        ["python", "fastapi", "programming"]
+        >>> result = categorize_item("Call friend for football on Sunday")
+        >>> result["notification_date"]
+        datetime(2024, 1, 6, 18, 0, 0)  # Saturday evening
+        >>> result["notification_frequency"]
+        "once"
     """
     try:
         # Prepare prompt
@@ -139,7 +311,7 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         # =============================================================================
         response = client.messages.create(
             model=CURRENT_MODEL,
-            max_tokens=500,
+            max_tokens=800,
             temperature=0.7,
             messages=[{
                 "role": "user",
@@ -151,7 +323,7 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         result_text = response.content[0].text
 
         # Debug: Print raw response
-        print(f"🔍 Raw AI response: {result_text[:200]}...")
+        print(f"🔍 Raw AI response: {result_text[:300]}...")
 
         # Clean response - extract JSON if wrapped in markdown code blocks
         if "```json" in result_text:
@@ -193,43 +365,79 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         if result.get("suggested_bucket") not in VALID_BUCKETS:
             result["suggested_bucket"] = "Insights"
 
+        # =============================================================================
+        # NOTIFICATION PREDICTION PROCESSING
+        # =============================================================================
+        notification_prediction = result.get("notification_prediction", {})
+
+        should_notify = notification_prediction.get("should_notify", False)
+        notification_date_str = notification_prediction.get("notification_date", "")
+        notification_frequency = notification_prediction.get("frequency", "never")
+
+        # Validate notification frequency
+        if notification_frequency not in VALID_NOTIFICATION_FREQUENCIES:
+            notification_frequency = "never"
+
+        # Parse relative date to actual datetime
+        notification_date = None
+        next_notification_at = None
+
+        if should_notify and notification_date_str:
+            notification_date = parse_relative_date(notification_date_str)
+            next_notification_at = notification_date  # Initially the same
+
+            if notification_date:
+                print(f"📅 Notification scheduled: {notification_date.isoformat()} ({notification_frequency})")
+            else:
+                print(f"⚠️  Could not parse notification date: {notification_date_str}")
+                should_notify = False
+
+        # If should_notify is false, ensure no notifications
+        if not should_notify:
+            notification_frequency = "never"
+            notification_date = None
+            next_notification_at = None
+
+        # Add notification fields to result
+        result["notification_date"] = notification_date
+        result["notification_frequency"] = notification_frequency
+        result["next_notification_at"] = next_notification_at
+        result["should_notify"] = should_notify
+        result["notification_reasoning"] = notification_prediction.get("reasoning", "")
+
         return result
 
     except json.JSONDecodeError as e:
         print(f"❌ JSON parsing error: {e}")
         print(f"❌ Response was: {result_text if 'result_text' in locals() else 'No response'}")
         # Fallback response
-        return {
-            "category": "save",
-            "tags": [],
-            "summary": content[:100],
-            "confidence": 0.3,
-            "priority": "medium",
-            "time_sensitivity": "reference",
-            "reasoning": f"Error parsing AI response: {str(e)}",
-            "intent": "reference",
-            "action_required": False,
-            "urgency": "low",
-            "time_context": "someday",
-            "resurface_strategy": "manual",
-            "suggested_bucket": "Insights"
-        }
+        return _get_fallback_response(content, f"Error parsing AI response: {str(e)}")
 
     except Exception as e:
         print(f"❌ Categorization error: {e}")
         # Fallback response
-        return {
-            "category": "save",
-            "tags": [],
-            "summary": content[:100],
-            "confidence": 0.1,
-            "priority": "medium",
-            "time_sensitivity": "reference",
-            "reasoning": f"Error during categorization: {str(e)}",
-            "intent": "reference",
-            "action_required": False,
-            "urgency": "low",
-            "time_context": "someday",
-            "resurface_strategy": "manual",
-            "suggested_bucket": "Insights"
-        }
+        return _get_fallback_response(content, f"Error during categorization: {str(e)}")
+
+
+def _get_fallback_response(content: str, error_reason: str) -> dict:
+    """Return a fallback response when AI categorization fails."""
+    return {
+        "category": "save",
+        "tags": [],
+        "summary": content[:100],
+        "confidence": 0.1,
+        "priority": "medium",
+        "time_sensitivity": "reference",
+        "reasoning": error_reason,
+        "intent": "reference",
+        "action_required": False,
+        "urgency": "low",
+        "time_context": "someday",
+        "resurface_strategy": "manual",
+        "suggested_bucket": "Insights",
+        "notification_date": None,
+        "notification_frequency": "never",
+        "next_notification_at": None,
+        "should_notify": False,
+        "notification_reasoning": ""
+    }

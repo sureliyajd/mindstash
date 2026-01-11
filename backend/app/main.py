@@ -15,7 +15,7 @@ from app.models.user import User
 from app.models.item import Item
 
 # Import routers
-from app.api.routes import auth, items
+from app.api.routes import auth, items, notifications
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -94,6 +94,7 @@ def health_check():
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(items.router, prefix="/api/items", tags=["Items"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 
 
 if __name__ == "__main__":

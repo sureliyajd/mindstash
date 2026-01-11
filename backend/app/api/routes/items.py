@@ -174,6 +174,12 @@ def create_item(
         new_item.resurface_strategy = ai_result.get("resurface_strategy", "manual")
         new_item.suggested_bucket = ai_result.get("suggested_bucket", "Insights")
 
+        # Store notification prediction fields
+        new_item.notification_date = ai_result.get("notification_date")
+        new_item.notification_frequency = ai_result.get("notification_frequency", "never")
+        new_item.next_notification_at = ai_result.get("next_notification_at")
+        new_item.notification_enabled = ai_result.get("should_notify", False)
+
         db.commit()
         db.refresh(new_item)
 
@@ -245,6 +251,78 @@ def mark_items_surfaced(
         updated_count=updated_count,
         message=f"Successfully marked {updated_count} item(s) as surfaced"
     )
+
+
+@router.post("/{item_id}/complete", response_model=ItemResponse)
+@user_limiter.limit("100/hour")
+def mark_item_complete(
+    request: Request,
+    item_id: UUID,
+    completed: bool = Query(..., description="True to mark complete, False to mark incomplete"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Mark an item as complete or incomplete.
+
+    Rate Limit: 100 requests per hour per user
+
+    This endpoint:
+    1. Updates the is_completed status of an item
+    2. Sets completed_at timestamp when marking complete
+    3. Disables future notifications for recurring items when completed
+
+    Args:
+        request: FastAPI request object (required for rate limiting)
+        item_id: UUID of the item to update
+        completed: True to mark as complete, False to mark as incomplete
+        current_user: Authenticated user
+        db: Database session
+
+    Returns:
+        ItemResponse with updated item details
+
+    Raises:
+        HTTPException 404: If item not found or doesn't belong to user
+        HTTPException 429: If rate limit exceeded
+    """
+    # Set user in request state for rate limiter
+    request.state.user = current_user
+
+    # Find item and verify ownership
+    item = db.query(Item).filter(
+        Item.id == item_id,
+        Item.user_id == current_user.id
+    ).first()
+
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found"
+        )
+
+    # Update completion status
+    item.is_completed = completed
+
+    if completed:
+        item.completed_at = datetime.utcnow()
+        # If completed and was recurring, stop future notifications
+        if item.notification_frequency in ["weekly", "monthly", "daily"]:
+            item.notification_enabled = False
+            item.next_notification_at = None
+    else:
+        item.completed_at = None
+        # Re-enable notifications if marking as incomplete and had notification date
+        if item.notification_date:
+            item.notification_enabled = True
+            # Reset next_notification_at to notification_date if in future
+            if item.notification_date > datetime.utcnow():
+                item.next_notification_at = item.notification_date
+
+    db.commit()
+    db.refresh(item)
+
+    return item
 
 
 @router.get("/", response_model=ItemListResponse)

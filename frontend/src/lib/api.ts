@@ -39,6 +39,7 @@ export type Urgency = 'low' | 'medium' | 'high';
 export type TimeContext = 'immediate' | 'next_week' | 'someday' | 'conditional' | 'date';
 export type ResurfaceStrategy = 'time_based' | 'contextual' | 'weekly_review' | 'manual';
 export type SuggestedBucket = 'Today' | 'Learn Later' | 'Ideas' | 'Reminders' | 'Insights';
+export type NotificationFrequency = 'once' | 'daily' | 'weekly' | 'monthly' | 'never';
 
 export interface Item {
   id: string;
@@ -59,6 +60,15 @@ export interface Item {
   time_context: TimeContext | null;
   resurface_strategy: ResurfaceStrategy | null;
   suggested_bucket: SuggestedBucket | null;
+  // Notification fields
+  notification_date: string | null;
+  notification_frequency: NotificationFrequency | null;
+  next_notification_at: string | null;
+  last_notified_at: string | null;
+  notification_enabled: boolean;
+  // Completion tracking
+  is_completed: boolean;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -87,6 +97,12 @@ export interface ItemUpdate {
   time_context?: TimeContext;
   resurface_strategy?: ResurfaceStrategy;
   summary?: string;
+  // Notification fields
+  notification_date?: string;
+  notification_frequency?: NotificationFrequency;
+  notification_enabled?: boolean;
+  // Completion tracking
+  is_completed?: boolean;
 }
 
 // Create axios instance
@@ -268,6 +284,11 @@ export const items = {
   markSurfaced: async (itemIds: string[]): Promise<void> => {
     await api.post('/api/items/mark-surfaced/', { item_ids: itemIds });
   },
+
+  markComplete: async (itemId: string, completed: boolean): Promise<Item> => {
+    const response = await api.post<Item>(`/api/items/${itemId}/complete?completed=${completed}`);
+    return response.data;
+  },
 };
 
 // Item counts per module
@@ -280,5 +301,44 @@ export interface ItemCounts {
   insights: number;
   archived: number;
 }
+
+// Notification types
+export interface UpcomingNotification {
+  id: string;
+  content: string;
+  category: Category | null;
+  notification_date: string | null;
+  next_notification_at: string | null;
+  notification_frequency: NotificationFrequency | null;
+  summary: string | null;
+}
+
+export interface DigestPreview {
+  user_email: string;
+  urgent_count: number;
+  tasks_count: number;
+  upcoming_count: number;
+  items_saved_this_week: number;
+  completed_this_week: number;
+  urgent_items: Array<{ id: string; content: string; category: string }>;
+  pending_tasks: Array<{ id: string; content: string; category: string }>;
+  upcoming_notifications: Array<{ id: string; content: string; notification_date: string | null }>;
+}
+
+// Notifications API
+export const notifications = {
+  getUpcoming: async (daysAhead: number = 7): Promise<{ items: UpcomingNotification[]; count: number }> => {
+    const response = await api.get<{ status: string; count: number; days_ahead: number; items: UpcomingNotification[] }>(
+      '/api/notifications/upcoming',
+      { params: { days_ahead: daysAhead } }
+    );
+    return { items: response.data.items, count: response.data.count };
+  },
+
+  getDigestPreview: async (): Promise<DigestPreview> => {
+    const response = await api.get<{ status: string; data: DigestPreview }>('/api/notifications/digest-preview');
+    return response.data.data;
+  },
+};
 
 export default api;
