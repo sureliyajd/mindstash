@@ -152,7 +152,7 @@ export function ModuleSelector({
       >
         {/* Sliding indicator */}
         <motion.div
-          className="absolute inset-y-1.5 rounded-xl bg-purple-100"
+          className="absolute inset-y-1.5 rounded-xl bg-[#EA7B7B]/15"
           initial={false}
           animate={{
             left: indicatorStyle.left,
@@ -187,10 +187,10 @@ export function ModuleSelector({
               className={`
                 relative z-10 flex items-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2.5
                 text-sm font-semibold transition-colors duration-200
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-[#EA7B7B]/50
                 ${
                   isSelected
-                    ? 'text-purple-700'
+                    ? 'text-[#C44545]'
                     : 'text-gray-500 hover:text-gray-700'
                 }
               `}
@@ -209,7 +209,7 @@ export function ModuleSelector({
                     rounded-full px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums
                     ${
                       isSelected
-                        ? 'bg-purple-200 text-purple-700'
+                        ? 'bg-[#EA7B7B]/20 text-[#C44545]'
                         : 'bg-gray-100 text-gray-500'
                     }
                   `}

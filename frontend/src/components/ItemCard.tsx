@@ -30,22 +30,22 @@ import { formatDistanceToNow } from 'date-fns';
 import { Item, Category } from '@/lib/api';
 
 // =============================================================================
-// CATEGORY CONFIG - PURPLE ACCENT THEME
+// CATEGORY CONFIG - MINDSTASH BRAND COLORS
 // =============================================================================
 
 const categoryConfig: Record<Category, { icon: typeof BookOpen; label: string; color: string; bgColor: string }> = {
-  read: { icon: BookOpen, label: 'Read', color: 'text-blue-600', bgColor: 'bg-blue-50 border-blue-100' },
-  watch: { icon: Video, label: 'Watch', color: 'text-purple-600', bgColor: 'bg-purple-50 border-purple-100' },
-  ideas: { icon: Lightbulb, label: 'Ideas', color: 'text-amber-600', bgColor: 'bg-amber-50 border-amber-100' },
-  tasks: { icon: CheckSquare, label: 'Tasks', color: 'text-emerald-600', bgColor: 'bg-emerald-50 border-emerald-100' },
-  people: { icon: Users, label: 'People', color: 'text-pink-600', bgColor: 'bg-pink-50 border-pink-100' },
-  notes: { icon: FileText, label: 'Notes', color: 'text-slate-600', bgColor: 'bg-slate-50 border-slate-100' },
-  goals: { icon: Target, label: 'Goals', color: 'text-red-600', bgColor: 'bg-red-50 border-red-100' },
-  buy: { icon: ShoppingCart, label: 'Buy', color: 'text-orange-600', bgColor: 'bg-orange-50 border-orange-100' },
-  places: { icon: MapPin, label: 'Places', color: 'text-teal-600', bgColor: 'bg-teal-50 border-teal-100' },
-  journal: { icon: BookMarked, label: 'Journal', color: 'text-indigo-600', bgColor: 'bg-indigo-50 border-indigo-100' },
-  learn: { icon: GraduationCap, label: 'Learn', color: 'text-cyan-600', bgColor: 'bg-cyan-50 border-cyan-100' },
-  save: { icon: Bookmark, label: 'Saved', color: 'text-gray-600', bgColor: 'bg-gray-50 border-gray-100' },
+  read: { icon: BookOpen, label: 'Read', color: 'text-[#5AACA8]', bgColor: 'bg-[#79C9C5]/10 border-[#79C9C5]/30' },
+  watch: { icon: Video, label: 'Watch', color: 'text-[#5AACA8]', bgColor: 'bg-[#79C9C5]/10 border-[#79C9C5]/30' },
+  ideas: { icon: Lightbulb, label: 'Ideas', color: 'text-[#C9A030]', bgColor: 'bg-[#FACE68]/15 border-[#FACE68]/30' },
+  tasks: { icon: CheckSquare, label: 'Tasks', color: 'text-[#D65E3F]', bgColor: 'bg-[#FF8364]/10 border-[#FF8364]/30' },
+  people: { icon: Users, label: 'People', color: 'text-[#C44545]', bgColor: 'bg-[#EA7B7B]/10 border-[#EA7B7B]/30' },
+  notes: { icon: FileText, label: 'Notes', color: 'text-[#5EB563]', bgColor: 'bg-[#93DA97]/10 border-[#93DA97]/30' },
+  goals: { icon: Target, label: 'Goals', color: 'text-[#C9A030]', bgColor: 'bg-[#FACE68]/15 border-[#FACE68]/30' },
+  buy: { icon: ShoppingCart, label: 'Buy', color: 'text-[#C44545]', bgColor: 'bg-[#EA7B7B]/10 border-[#EA7B7B]/30' },
+  places: { icon: MapPin, label: 'Places', color: 'text-[#5AACA8]', bgColor: 'bg-[#79C9C5]/10 border-[#79C9C5]/30' },
+  journal: { icon: BookMarked, label: 'Journal', color: 'text-[#5EB563]', bgColor: 'bg-[#93DA97]/10 border-[#93DA97]/30' },
+  learn: { icon: GraduationCap, label: 'Learn', color: 'text-[#5AACA8]', bgColor: 'bg-[#79C9C5]/10 border-[#79C9C5]/30' },
+  save: { icon: Bookmark, label: 'Saved', color: 'text-[#C44545]', bgColor: 'bg-[#EA7B7B]/10 border-[#EA7B7B]/30' },
 };
 
 // Intent labels for quick display
@@ -58,11 +58,11 @@ const intentLabels: Record<string, string> = {
   reference: 'Reference',
 };
 
-// Urgency colors
+// Urgency colors - Brand palette
 const urgencyColors: Record<string, string> = {
-  high: 'bg-red-50 text-red-700 border-red-100',
-  medium: 'bg-amber-50 text-amber-700 border-amber-100',
-  low: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  high: 'bg-[#FF8364]/15 text-[#D65E3F] border-[#FF8364]/30',
+  medium: 'bg-[#FACE68]/15 text-[#C9A030] border-[#FACE68]/30',
+  low: 'bg-[#93DA97]/15 text-[#5EB563] border-[#93DA97]/30',
 };
 
 interface ItemCardProps {
@@ -108,13 +108,13 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
   // Get status badge based on AI signals
   const getStatusBadge = () => {
     if (urgency === 'high' && actionRequired) {
-      return { label: 'Needs Attention', color: 'bg-red-50 text-red-700' };
+      return { label: 'Needs Attention', color: 'bg-[#FF8364]/15 text-[#D65E3F]' };
     }
     if (urgency === 'high') {
-      return { label: 'Urgent', color: 'bg-amber-50 text-amber-700' };
+      return { label: 'Urgent', color: 'bg-[#FACE68]/15 text-[#C9A030]' };
     }
     if (actionRequired) {
-      return { label: 'Action Required', color: 'bg-purple-50 text-purple-700' };
+      return { label: 'Action Required', color: 'bg-[#EA7B7B]/15 text-[#C44545]' };
     }
     return null;
   };
@@ -146,14 +146,14 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
       <motion.div
         layout
         className={`relative overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-200 ${
-          isOptimistic ? 'cursor-wait border-gray-100' : 'cursor-pointer border-gray-100 hover:border-purple-200 hover:shadow-lg'
-        } ${isExpanded ? 'ring-2 ring-purple-100 border-purple-200' : ''}`}
+          isOptimistic ? 'cursor-wait border-gray-100' : 'cursor-pointer border-gray-100 hover:border-[#EA7B7B]/30 hover:shadow-lg'
+        } ${isExpanded ? 'ring-2 ring-[#EA7B7B]/20 border-[#EA7B7B]/30' : ''}`}
         onClick={handleCardClick}
       >
         {/* Loading indicator */}
         {isOptimistic && (
           <div className="absolute right-4 top-4 z-10">
-            <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+            <Loader2 className="h-4 w-4 animate-spin text-[#EA7B7B]" />
           </div>
         )}
 
@@ -177,9 +177,9 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
               )}
               {!isOptimistic && confidence > 0 && (
                 <span className={`rounded-lg px-2 py-1 font-mono text-[10px] font-semibold tabular-nums ${
-                  confidence >= 0.9 ? 'bg-emerald-50 text-emerald-700' :
-                  confidence >= 0.7 ? 'bg-gray-100 text-gray-600' :
-                  'bg-amber-50 text-amber-700'
+                  confidence >= 0.9 ? 'bg-[#93DA97]/15 text-[#5EB563]' :
+                  confidence >= 0.7 ? 'bg-[#FACE68]/15 text-[#C9A030]' :
+                  'bg-[#EA7B7B]/15 text-[#C44545]'
                 }`}>
                   {Math.round(confidence * 100)}%
                 </span>
@@ -243,8 +243,8 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
 
                   {/* AI Summary */}
                   {item.summary && (
-                    <div className="rounded-xl bg-purple-50 p-4">
-                      <p className="text-sm text-purple-900">{item.summary}</p>
+                    <div className="rounded-xl bg-[#79C9C5]/10 p-4">
+                      <p className="text-sm text-[#3D8583]">{item.summary}</p>
                     </div>
                   )}
 
@@ -252,7 +252,7 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
                   <div className="flex flex-wrap gap-2">
                     {/* Intent */}
                     {intent && intentLabels[intent] && (
-                      <div className="inline-flex items-center gap-1.5 rounded-lg bg-violet-50 px-3 py-1.5 text-violet-700">
+                      <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#EA7B7B]/10 px-3 py-1.5 text-[#C44545]">
                         <Zap className="h-3 w-3" />
                         <span className="text-[11px] font-semibold">{intentLabels[intent]}</span>
                       </div>
@@ -268,7 +268,7 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
 
                     {/* Action Required */}
                     {actionRequired && (
-                      <div className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-amber-700">
+                      <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#FACE68]/15 px-3 py-1.5 text-[#C9A030]">
                         <CheckSquare className="h-3 w-3" />
                         <span className="text-[11px] font-semibold">Action Needed</span>
                       </div>

@@ -97,17 +97,17 @@ export function EmptyState({ module = 'all', isFirstTime = false }: EmptyStatePr
       {isFirstTime && (
         <motion.div
           variants={itemVariants}
-          className="mb-6 rounded-2xl bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100 px-6 py-4"
+          className="mb-6 rounded-2xl bg-[#EA7B7B]/10 border border-[#EA7B7B]/20 px-6 py-4"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-violet-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EA7B7B]">
               <Brain className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-purple-900">
+              <p className="text-sm font-semibold text-[#9B3535]">
                 Welcome to MindStash!
               </p>
-              <p className="text-xs text-purple-600">
+              <p className="text-xs text-[#C44545]">
                 Your AI-powered second brain awaits.
               </p>
             </div>

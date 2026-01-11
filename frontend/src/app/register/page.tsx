@@ -100,8 +100,8 @@ function RegisterForm() {
     <div className="min-h-screen bg-white">
       {/* Background decoration */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-violet-100 via-purple-50 to-transparent opacity-70 blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-gradient-to-tl from-fuchsia-50 via-purple-50 to-transparent opacity-60 blur-3xl" />
+        <div className="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-[#79C9C5]/10 opacity-70 blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-[#EA7B7B]/10 opacity-60 blur-3xl" />
       </div>
 
       {/* Main container */}
@@ -167,7 +167,7 @@ function RegisterForm() {
                   autoComplete="email"
                   autoFocus
                   disabled={isLoading}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-[#EA7B7B] focus:bg-white focus:ring-4 focus:ring-[#EA7B7B]/10 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="you@example.com"
                 />
               </div>
@@ -190,7 +190,7 @@ function RegisterForm() {
                     autoComplete="new-password"
                     minLength={8}
                     disabled={isLoading}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 pr-12 text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 pr-12 text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-[#EA7B7B] focus:bg-white focus:ring-4 focus:ring-[#EA7B7B]/10 disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="At least 8 characters"
                   />
                   <button
@@ -241,7 +241,7 @@ function RegisterForm() {
                 disabled={isLoading}
                 whileHover={{ scale: isLoading ? 1 : 1.01 }}
                 whileTap={{ scale: isLoading ? 1 : 0.99 }}
-                className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 py-4 text-base font-semibold shadow-lg shadow-purple-500/25 transition-all duration-200 hover:shadow-purple-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-xl bg-[#EA7B7B] py-4 text-base font-semibold shadow-lg shadow-[#EA7B7B]/25 transition-all duration-200 hover:bg-[#D66B6B] hover:shadow-[#EA7B7B]/40 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{ color: 'white' }}
               >
                 {isLoading ? (
@@ -268,7 +268,7 @@ function RegisterForm() {
               Already have an account?{' '}
               <Link
                 href="/login"
-                className="font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+                className="font-semibold text-[#EA7B7B] hover:text-[#FF8364] transition-colors"
               >
                 Sign in
               </Link>
@@ -284,8 +284,8 @@ function RegisterForm() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
           >
-            {/* Purple gradient background */}
-            <div className="aspect-square rounded-3xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 p-12 shadow-2xl shadow-purple-500/20">
+            {/* Solid pastel teal background */}
+            <div className="aspect-square rounded-3xl bg-[#79C9C5] p-12 shadow-2xl shadow-[#79C9C5]/20">
               {/* Decorative pattern */}
               <div className="absolute inset-0 rounded-3xl opacity-10" style={{
                 backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',

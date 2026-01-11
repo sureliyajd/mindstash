@@ -85,7 +85,7 @@ export function SearchBar({
       <div
         className={`relative flex items-center overflow-hidden rounded-xl border bg-white transition-all duration-200 ${
           isFocused
-            ? 'border-indigo-300 shadow-md shadow-indigo-50'
+            ? 'border-[#EA7B7B]/40 shadow-md shadow-[#EA7B7B]/10'
             : 'border-gray-200 shadow-sm'
         }`}
       >
@@ -93,7 +93,7 @@ export function SearchBar({
         <div className="flex items-center justify-center pl-4">
           <Search
             className={`h-4 w-4 transition-colors duration-200 ${
-              isFocused ? 'text-indigo-500' : 'text-gray-400'
+              isFocused ? 'text-[#EA7B7B]' : 'text-gray-400'
             }`}
           />
         </div>

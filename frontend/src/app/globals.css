@@ -6,25 +6,26 @@
    ============================================================================= */
 
 /* =============================================================================
-   CSS VARIABLES - PURPLE PALETTE WITH LIGHT MODE
+   CSS VARIABLES - MINDSTASH CUSTOM BRAND PALETTE
    ============================================================================= */
 
 :root {
-  /* Primary Purple Palette */
-  --purple-50: #faf5ff;
-  --purple-100: #f3e8ff;
-  --purple-200: #e9d5ff;
-  --purple-300: #d8b4fe;
-  --purple-400: #c084fc;
-  --purple-500: #a855f7;
-  --purple-600: #9333ea;
-  --purple-700: #7c3aed;
-  --purple-800: #6b21a8;
-  --purple-900: #581c87;
+  /* MindStash Brand Colors - Warm, Human-Centered */
+  --brand-coral: #EA7B7B;      /* Primary CTAs, important actions */
+  --brand-yellow: #FACE68;     /* Highlights, secondary actions, success */
+  --brand-teal: #79C9C5;       /* Info states, calm actions, learning */
+  --brand-orange: #FF8364;     /* Urgent items, attention-needed states */
+  --brand-green: #93DA97;      /* Success, completed states, low-priority */
 
-  /* Secondary - Violet accents */
-  --violet-500: #8b5cf6;
-  --violet-600: #7c3aed;
+  /* Coral variations */
+  --coral-50: #FEF2F2;
+  --coral-100: #FDE8E8;
+  --coral-200: #FBCDCD;
+  --coral-300: #F7A6A6;
+  --coral-400: #EA7B7B;
+  --coral-500: #E05858;
+  --coral-600: #C44545;
+  --coral-700: #9B3535;
 
   /* Neutral Grays - Light Mode */
   --gray-50: #fafafa;
@@ -44,10 +45,10 @@
   --foreground: #18181b;
   --foreground-muted: #71717a;
 
-  /* Brand Colors */
-  --brand-primary: #9333ea;
-  --brand-secondary: #a855f7;
-  --brand-accent: #c084fc;
+  /* Brand Colors (semantic aliases) */
+  --brand-primary: #EA7B7B;
+  --brand-secondary: #FF8364;
+  --brand-accent: #79C9C5;
 
   /* Spacing Scale - Generous like Spotify */
   --space-xs: 0.5rem;    /* 8px */
@@ -131,12 +132,12 @@ code, kbd, samp, pre {
 }
 
 /* =============================================================================
-   SELECTION STYLING - PURPLE
+   SELECTION STYLING - CORAL
    ============================================================================= */
 
 ::selection {
-  background: rgba(147, 51, 234, 0.2);
-  color: var(--purple-900);
+  background: rgba(234, 123, 123, 0.2);
+  color: var(--coral-700);
 }
 
 /* =============================================================================
@@ -162,11 +163,11 @@ code, kbd, samp, pre {
 }
 
 /* =============================================================================
-   FOCUS STYLES - PURPLE ACCENT
+   FOCUS STYLES - CORAL ACCENT
    ============================================================================= */
 
 :focus-visible {
-  outline: 2px solid var(--purple-500);
+  outline: 2px solid var(--brand-coral);
   outline-offset: 2px;
 }
 
@@ -259,21 +260,18 @@ code, kbd, samp, pre {
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* Purple gradient backgrounds */
-.gradient-purple {
-  background: linear-gradient(135deg, var(--purple-500) 0%, var(--violet-500) 100%);
+/* Brand solid backgrounds */
+.bg-brand {
+  background: var(--brand-coral);
 }
 
-.gradient-purple-soft {
-  background: linear-gradient(135deg, var(--purple-100) 0%, var(--purple-50) 100%);
+.bg-brand-soft {
+  background: var(--coral-100);
 }
 
-/* Text gradient */
+/* Text accent color */
 .text-gradient-purple {
-  background: linear-gradient(135deg, var(--purple-600) 0%, var(--violet-600) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--brand-coral);
 }
 
 /* Spotify-style hover card */
@@ -288,7 +286,7 @@ code, kbd, samp, pre {
 
 /* Button styles */
 .btn-primary {
-  background: linear-gradient(135deg, var(--purple-600) 0%, var(--purple-700) 100%);
+  background: var(--brand-coral);
   color: white;
   font-weight: 600;
   border-radius: 9999px;
@@ -297,7 +295,8 @@ code, kbd, samp, pre {
 
 .btn-primary:hover {
   transform: scale(1.02);
-  box-shadow: 0 8px 24px -4px rgba(147, 51, 234, 0.4);
+  background: #D66B6B;
+  box-shadow: 0 8px 24px -4px rgba(234, 123, 123, 0.4);
 }
 
 .btn-secondary {

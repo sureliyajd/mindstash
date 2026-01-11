@@ -40,28 +40,28 @@ export interface FilterPanelProps {
 }
 
 // =============================================================================
-// CONSTANTS - PURPLE ACCENT THEME
+// CONSTANTS - MINDSTASH BRAND COLORS
 // =============================================================================
 
 const categoryConfig: { id: Category; icon: typeof BookOpen; label: string; color: string }[] = [
-  { id: 'read', icon: BookOpen, label: 'Read', color: 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100' },
-  { id: 'watch', icon: Video, label: 'Watch', color: 'text-purple-600 bg-purple-50 border-purple-100 hover:bg-purple-100' },
-  { id: 'ideas', icon: Lightbulb, label: 'Ideas', color: 'text-amber-600 bg-amber-50 border-amber-100 hover:bg-amber-100' },
-  { id: 'tasks', icon: CheckSquare, label: 'Tasks', color: 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100' },
-  { id: 'people', icon: Users, label: 'People', color: 'text-pink-600 bg-pink-50 border-pink-100 hover:bg-pink-100' },
-  { id: 'notes', icon: FileText, label: 'Notes', color: 'text-slate-600 bg-slate-50 border-slate-100 hover:bg-slate-100' },
-  { id: 'goals', icon: Target, label: 'Goals', color: 'text-red-600 bg-red-50 border-red-100 hover:bg-red-100' },
-  { id: 'buy', icon: ShoppingCart, label: 'Buy', color: 'text-orange-600 bg-orange-50 border-orange-100 hover:bg-orange-100' },
-  { id: 'places', icon: MapPin, label: 'Places', color: 'text-teal-600 bg-teal-50 border-teal-100 hover:bg-teal-100' },
-  { id: 'journal', icon: BookMarked, label: 'Journal', color: 'text-indigo-600 bg-indigo-50 border-indigo-100 hover:bg-indigo-100' },
-  { id: 'learn', icon: GraduationCap, label: 'Learn', color: 'text-cyan-600 bg-cyan-50 border-cyan-100 hover:bg-cyan-100' },
-  { id: 'save', icon: Bookmark, label: 'Saved', color: 'text-gray-600 bg-gray-50 border-gray-100 hover:bg-gray-100' },
+  { id: 'read', icon: BookOpen, label: 'Read', color: 'text-[#5AACA8] bg-[#79C9C5]/10 border-[#79C9C5]/30 hover:bg-[#79C9C5]/20' },
+  { id: 'watch', icon: Video, label: 'Watch', color: 'text-[#5AACA8] bg-[#79C9C5]/10 border-[#79C9C5]/30 hover:bg-[#79C9C5]/20' },
+  { id: 'ideas', icon: Lightbulb, label: 'Ideas', color: 'text-[#C9A030] bg-[#FACE68]/15 border-[#FACE68]/30 hover:bg-[#FACE68]/25' },
+  { id: 'tasks', icon: CheckSquare, label: 'Tasks', color: 'text-[#D65E3F] bg-[#FF8364]/10 border-[#FF8364]/30 hover:bg-[#FF8364]/20' },
+  { id: 'people', icon: Users, label: 'People', color: 'text-[#C44545] bg-[#EA7B7B]/10 border-[#EA7B7B]/30 hover:bg-[#EA7B7B]/20' },
+  { id: 'notes', icon: FileText, label: 'Notes', color: 'text-[#5EB563] bg-[#93DA97]/10 border-[#93DA97]/30 hover:bg-[#93DA97]/20' },
+  { id: 'goals', icon: Target, label: 'Goals', color: 'text-[#C9A030] bg-[#FACE68]/15 border-[#FACE68]/30 hover:bg-[#FACE68]/25' },
+  { id: 'buy', icon: ShoppingCart, label: 'Buy', color: 'text-[#C44545] bg-[#EA7B7B]/10 border-[#EA7B7B]/30 hover:bg-[#EA7B7B]/20' },
+  { id: 'places', icon: MapPin, label: 'Places', color: 'text-[#5AACA8] bg-[#79C9C5]/10 border-[#79C9C5]/30 hover:bg-[#79C9C5]/20' },
+  { id: 'journal', icon: BookMarked, label: 'Journal', color: 'text-[#5EB563] bg-[#93DA97]/10 border-[#93DA97]/30 hover:bg-[#93DA97]/20' },
+  { id: 'learn', icon: GraduationCap, label: 'Learn', color: 'text-[#5AACA8] bg-[#79C9C5]/10 border-[#79C9C5]/30 hover:bg-[#79C9C5]/20' },
+  { id: 'save', icon: Bookmark, label: 'Saved', color: 'text-[#C44545] bg-[#EA7B7B]/10 border-[#EA7B7B]/30 hover:bg-[#EA7B7B]/20' },
 ];
 
 const urgencyOptions: { value: UrgencyLevel; label: string; color: string }[] = [
-  { value: 'high', label: 'High', color: 'text-red-700 bg-red-50 border-red-100 hover:bg-red-100' },
-  { value: 'medium', label: 'Medium', color: 'text-amber-700 bg-amber-50 border-amber-100 hover:bg-amber-100' },
-  { value: 'low', label: 'Low', color: 'text-emerald-700 bg-emerald-50 border-emerald-100 hover:bg-emerald-100' },
+  { value: 'high', label: 'High', color: 'text-[#D65E3F] bg-[#FF8364]/15 border-[#FF8364]/30 hover:bg-[#FF8364]/25' },
+  { value: 'medium', label: 'Medium', color: 'text-[#C9A030] bg-[#FACE68]/15 border-[#FACE68]/30 hover:bg-[#FACE68]/25' },
+  { value: 'low', label: 'Low', color: 'text-[#5EB563] bg-[#93DA97]/15 border-[#93DA97]/30 hover:bg-[#93DA97]/25' },
 ];
 
 // =============================================================================
@@ -151,7 +151,7 @@ export function FilterPanel({
         <div className="flex items-center gap-3">
           <span className="font-semibold text-gray-700">Filters</span>
           {hasActiveFilters && (
-            <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-700">
+            <span className="rounded-full bg-[#EA7B7B]/15 px-2.5 py-0.5 text-xs font-bold text-[#C44545]">
               <span className="font-mono tabular-nums">{activeFilterCount}</span> active
             </span>
           )}
@@ -249,7 +249,7 @@ export function FilterPanel({
                         value={tagSearch}
                         onChange={(e) => setTagSearch(e.target.value)}
                         placeholder="Search tags..."
-                        className="w-full rounded-xl border border-gray-100 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 outline-none transition-colors focus:border-purple-300 focus:bg-white focus:ring-2 focus:ring-purple-100"
+                        className="w-full rounded-xl border border-gray-100 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 outline-none transition-colors focus:border-[#EA7B7B]/40 focus:bg-white focus:ring-2 focus:ring-[#EA7B7B]/10"
                       />
                       {tagSearch && (
                         <button
@@ -272,7 +272,7 @@ export function FilterPanel({
                           onClick={() => handleTagClick(tag)}
                           className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-all duration-200 ${
                             isSelected
-                              ? 'border-purple-200 bg-purple-100 text-purple-700 ring-1 ring-purple-200'
+                              ? 'border-[#EA7B7B]/30 bg-[#EA7B7B]/15 text-[#C44545] ring-1 ring-[#EA7B7B]/30'
                               : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200 hover:bg-gray-100'
                           }`}
                           aria-pressed={isSelected}
@@ -327,22 +327,22 @@ export function FilterPanel({
           className="mt-3 flex flex-wrap items-center gap-2"
         >
           {selectedCategory && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-100 px-3 py-1.5 text-xs font-semibold text-purple-700">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#EA7B7B]/15 px-3 py-1.5 text-xs font-semibold text-[#C44545]">
               {categoryConfig.find((c) => c.id === selectedCategory)?.label}
               <button
                 onClick={() => onCategoryChange(null)}
-                className="hover:text-purple-900"
+                className="hover:text-[#9B3535]"
               >
                 <X className="h-3 w-3" />
               </button>
             </span>
           )}
           {urgencyFilter && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#FACE68]/20 px-3 py-1.5 text-xs font-semibold text-[#C9A030]">
               {urgencyFilter} priority
               <button
                 onClick={() => onUrgencyChange(null)}
-                className="hover:text-amber-900"
+                className="hover:text-[#9A7A20]"
               >
                 <X className="h-3 w-3" />
               </button>

@@ -7,10 +7,10 @@ Endpoints:
 - POST /refresh - Refresh access token
 
 Rate Limits (IP-based to prevent brute force):
-- Register: 5/hour
-- Login: 10/hour
-- Refresh: 20/hour
-- Get current user: 200/hour
+- Register: 20/hour
+- Login: 60/hour (increased for better dev experience)
+- Refresh: 100/hour
+- Get current user: 500/hour
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from sqlalchemy.orm import Session
@@ -33,12 +33,12 @@ router = APIRouter(tags=["authentication"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/hour")
+@limiter.limit("20/hour")
 def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     """
     Register a new user.
 
-    Rate Limit: 5 requests per hour per IP (prevents mass account creation)
+    Rate Limit: 20 requests per hour per IP (prevents mass account creation)
 
     Args:
         request: FastAPI request object (required for rate limiting)
@@ -77,12 +77,12 @@ def register(request: Request, user_data: UserCreate, db: Session = Depends(get_
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("10/hour")
+@limiter.limit("60/hour")
 def login(request: Request, user_credentials: UserLogin, db: Session = Depends(get_db)):
     """
     User login with email and password.
 
-    Rate Limit: 10 requests per hour per IP (prevents brute force attacks)
+    Rate Limit: 60 requests per hour per IP (prevents brute force attacks)
 
     Args:
         request: FastAPI request object (required for rate limiting)
@@ -125,12 +125,12 @@ def login(request: Request, user_credentials: UserLogin, db: Session = Depends(g
 
 
 @router.post("/refresh", response_model=TokenResponse)
-@limiter.limit("20/hour")
+@limiter.limit("100/hour")
 def refresh_token(request: Request, authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
     """
     Refresh access token using refresh token.
 
-    Rate Limit: 20 requests per hour per IP
+    Rate Limit: 100 requests per hour per IP
 
     Args:
         request: FastAPI request object (required for rate limiting)
@@ -202,12 +202,12 @@ def refresh_token(request: Request, authorization: Optional[str] = Header(None),
 
 
 @router.get("/me", response_model=UserResponse)
-@limiter.limit("200/hour")
+@limiter.limit("500/hour")
 def get_current_user_info(request: Request, current_user: User = Depends(get_current_user)):
     """
     Get current authenticated user information.
 
-    Rate Limit: 200 requests per hour per IP
+    Rate Limit: 500 requests per hour per IP
 
     This is a protected endpoint that demonstrates the get_current_user dependency.
     Requires a valid JWT access token in the Authorization header.

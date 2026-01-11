@@ -171,7 +171,7 @@ export function ItemDetailModal({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+          <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4">
             <div className="flex items-center gap-3">
               {/* Category badge */}
               <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${categoryInfo.bgColor}`}>
@@ -273,16 +273,16 @@ export function ItemDetailModal({
 
                 {/* AI Summary */}
                 {item.summary && (
-                  <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 p-5">
+                  <div className="rounded-2xl bg-[#79C9C5]/10 p-5">
                     <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100">
-                        <Brain className="h-5 w-5 text-indigo-600" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#79C9C5]/20">
+                        <Brain className="h-5 w-5 text-[#5AACA8]" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#5AACA8]">
                           AI Summary
                         </p>
-                        <p className="mt-1 text-base text-indigo-900">
+                        <p className="mt-1 text-base text-[#3D8583]">
                           {item.summary}
                         </p>
                       </div>

@@ -50,7 +50,7 @@ export function AIProcessing({
   if (variant === 'card') {
     return (
       <motion.div
-        className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border border-teal-500/20 px-4 py-3"
+        className="flex items-center gap-3 rounded-xl bg-[#79C9C5]/10 border border-[#79C9C5]/30 px-4 py-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"

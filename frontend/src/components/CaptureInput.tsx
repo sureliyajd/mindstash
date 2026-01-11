@@ -159,9 +159,9 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
           error
             ? 'border-red-200 shadow-lg shadow-red-100/50'
             : isSubmitting
-              ? 'border-purple-200 shadow-lg shadow-purple-100/50'
+              ? 'border-[#EA7B7B]/30 shadow-lg shadow-[#EA7B7B]/10'
               : isFocused
-                ? 'border-purple-300 shadow-lg shadow-purple-100/50'
+                ? 'border-[#EA7B7B]/40 shadow-lg shadow-[#EA7B7B]/10'
                 : 'border-gray-200'
         }`}
       >
@@ -190,17 +190,17 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden border-t border-purple-100 bg-purple-50"
+              className="overflow-hidden border-t border-[#EA7B7B]/20 bg-[#EA7B7B]/5"
             >
               <div className="flex items-center gap-3 px-5 py-3">
                 <div className="relative">
-                  <Brain className="h-5 w-5 text-purple-600" />
+                  <Brain className="h-5 w-5 text-[#EA7B7B]" />
                   <motion.div
                     className="absolute inset-0"
                     animate={{ opacity: [0.5, 1, 0.5] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
                   >
-                    <Sparkles className="h-5 w-5 text-purple-400" />
+                    <Sparkles className="h-5 w-5 text-[#FF8364]" />
                   </motion.div>
                 </div>
                 <div className="flex-1">
@@ -211,7 +211,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -5 }}
                       transition={{ duration: 0.2 }}
-                      className="text-sm font-medium text-purple-700"
+                      className="text-sm font-medium text-[#C44545]"
                     >
                       {processingMessages[processingMessageIndex]}
                     </motion.p>
@@ -221,7 +221,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
                   {[0, 1, 2].map((i) => (
                     <motion.div
                       key={i}
-                      className="h-1.5 w-1.5 rounded-full bg-purple-500"
+                      className="h-1.5 w-1.5 rounded-full bg-[#EA7B7B]"
                       animate={{
                         scale: [1, 1.3, 1],
                         opacity: [0.5, 1, 0.5],
@@ -255,7 +255,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
                 <span className="text-xs font-medium">Saved & organized</span>
               </motion.div>
             ) : isSubmitting ? (
-              <span className="text-xs font-medium text-purple-600">AI is thinking...</span>
+              <span className="text-xs font-medium text-[#EA7B7B]">AI is thinking...</span>
             ) : (
               <span className="hidden text-xs text-gray-400 sm:block">
                 {isFocused ? (
@@ -295,7 +295,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
               disabled={isSubmitting || !hasContent || isOverLimit}
               className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
                 hasContent && !isOverLimit && !isSubmitting
-                  ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md shadow-purple-500/25 hover:shadow-lg hover:shadow-purple-500/30'
+                  ? 'bg-[#EA7B7B] text-white shadow-md shadow-[#EA7B7B]/25 hover:bg-[#D66B6B] hover:shadow-lg hover:shadow-[#EA7B7B]/30'
                   : 'cursor-not-allowed bg-gray-100 text-gray-400'
               }`}
               whileHover={hasContent && !isOverLimit && !isSubmitting ? { scale: 1.02 } : {}}
