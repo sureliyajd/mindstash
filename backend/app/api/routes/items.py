@@ -164,7 +164,15 @@ def create_item(
         new_item.confidence = ai_result.get("confidence", 0.5)
         new_item.priority = ai_result.get("priority", "medium")
         new_item.time_sensitivity = ai_result.get("time_sensitivity", "reference")
-        new_item.ai_metadata = ai_result
+
+        # Sanitize ai_metadata: convert datetime objects to ISO strings for JSONB storage
+        ai_metadata_sanitized = {}
+        for key, value in ai_result.items():
+            if isinstance(value, datetime):
+                ai_metadata_sanitized[key] = value.isoformat()
+            else:
+                ai_metadata_sanitized[key] = value
+        new_item.ai_metadata = ai_metadata_sanitized
 
         # Store AI intelligence signals
         new_item.intent = ai_result.get("intent", "reference")
