@@ -68,14 +68,23 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
     };
   }, [isSubmitting]);
 
-  // Auto-resize textarea
-  useEffect(() => {
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
     if (textarea) {
+      // Reset height to auto to get accurate scrollHeight
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+      // Set height based on content, with min 80px and max 300px for mobile friendliness
+      const minHeight = 80;
+      const maxHeight = 300;
+      const newHeight = Math.max(minHeight, Math.min(textarea.scrollHeight, maxHeight));
+      textarea.style.height = `${newHeight}px`;
     }
-  }, [content]);
+  }, []);
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [content, adjustTextareaHeight]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -113,9 +122,9 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
       setContent('');
       setShowSuccess(true);
 
-      // Reset textarea height
+      // Reset textarea height to minimum
       if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = '80px';
       }
 
       // Hide success after 2 seconds
@@ -158,9 +167,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
             ? 'border-red-200 shadow-lg shadow-red-100/50'
             : isSubmitting
               ? 'border-[#EA7B7B]/30 shadow-lg shadow-[#EA7B7B]/10'
-              : isFocused
-                ? 'border-[#EA7B7B]/40 shadow-lg shadow-[#EA7B7B]/10'
-                : 'border-gray-200'
+              : 'border-gray-200'
         }`}
       >
         {/* Textarea */}
@@ -176,9 +183,8 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
           onKeyDown={handleKeyDown}
           placeholder="Drop anything here - a thought, link, reminder, idea..."
           disabled={isSubmitting}
-          rows={3}
-          className="w-full resize-none bg-transparent px-5 py-4 text-base text-gray-800 placeholder-gray-400 outline-none disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ minHeight: '100px' }}
+          className="w-full resize-none border-0 bg-transparent px-4 py-4 text-base text-gray-800 placeholder-gray-400 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:!outline-none focus-visible:!ring-0 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5"
+          style={{ minHeight: '80px', maxHeight: '300px', overflowY: 'auto' }}
         />
 
         {/* AI Processing Indicator */}

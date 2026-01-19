@@ -187,8 +187,8 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
             </div>
           </div>
 
-          {/* Content */}
-          <p className={`text-sm leading-relaxed text-gray-700 ${isExpanded ? '' : 'line-clamp-3'}`}>
+          {/* Content - whitespace-pre-wrap preserves newlines */}
+          <p className={`text-sm leading-relaxed text-gray-700 whitespace-pre-wrap break-words ${isExpanded ? '' : 'line-clamp-3'}`}>
             {item.content}
           </p>
 

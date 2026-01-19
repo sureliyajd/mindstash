@@ -295,7 +295,7 @@ export function ItemDetailModal({
 
               {/* Main Content */}
               <div className={`rounded-2xl bg-gray-50 p-5 ${isCompleted ? 'opacity-60' : ''}`}>
-                <p className={`text-lg leading-relaxed text-gray-800 ${isCompleted ? 'line-through' : ''}`}>
+                <p className={`text-lg leading-relaxed text-gray-800 whitespace-pre-wrap break-words ${isCompleted ? 'line-through' : ''}`}>
                   {item.content}
                 </p>
               </div>
