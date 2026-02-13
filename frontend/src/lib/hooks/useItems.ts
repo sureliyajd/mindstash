@@ -106,6 +106,8 @@ export function useItems(options: UseItemsOptions = {}) {
         time_context: null,
         resurface_strategy: null,
         suggested_bucket: null,
+        // Surfacing tracking
+        last_surfaced_at: null,
         // Notification fields
         notification_date: null,
         notification_frequency: null,

@@ -121,3 +121,6 @@ coverage/
 
 # Optional eslint cache
 .eslintcache
+
+# Social media post drafts (personal, auto-generated)
+social-posts/

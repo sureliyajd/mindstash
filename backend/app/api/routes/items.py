@@ -46,7 +46,7 @@ from app.services.ai.categorizer import categorize_item
 router = APIRouter(tags=["items"])
 
 # Valid module types for filtering
-VALID_MODULES = Literal["all", "today", "tasks", "read_later", "ideas", "insights", "archived"]
+VALID_MODULES = Literal["all", "today", "tasks", "read_later", "ideas", "insights", "archived", "reminders"]
 VALID_URGENCIES = Literal["low", "medium", "high"]
 
 
@@ -424,7 +424,7 @@ def list_items(
     # 1. Apply Module Filter (combines category + AI intent for intuitive filtering)
     # ==========================================================================
     if module and module.lower() != "all":
-        valid_modules = ["all", "today", "tasks", "read_later", "ideas", "insights", "archived"]
+        valid_modules = ["all", "today", "tasks", "read_later", "ideas", "insights", "archived", "reminders"]
 
         if module not in valid_modules:
             raise HTTPException(
@@ -476,6 +476,13 @@ def list_items(
             # Placeholder for future archived status field
             # For now, return empty (no items have archived status yet)
             query = query.filter(False)  # Returns no items
+
+        elif module == "reminders":
+            # Items with notifications enabled and a next notification date
+            query = query.filter(
+                Item.notification_enabled == True,
+                Item.next_notification_at.isnot(None)
+            )
 
     # ==========================================================================
     # 2. Apply Category Filter (if provided alongside module)
@@ -534,7 +541,11 @@ def list_items(
     total = query.count()
 
     offset = (page - 1) * page_size
-    items = query.order_by(Item.created_at.desc()).offset(offset).limit(page_size).all()
+    # Reminders module sorts by soonest notification first
+    if module == "reminders":
+        items = query.order_by(Item.next_notification_at.asc()).offset(offset).limit(page_size).all()
+    else:
+        items = query.order_by(Item.created_at.desc()).offset(offset).limit(page_size).all()
 
     return ItemListResponse(
         items=items,
@@ -620,6 +631,12 @@ def get_item_counts(
     # Archived count (placeholder - always 0 for now)
     archived_count = 0
 
+    # Count "reminders" items: notification_enabled AND next_notification_at IS NOT NULL
+    reminders_count = base_query.filter(
+        Item.notification_enabled == True,
+        Item.next_notification_at.isnot(None)
+    ).count()
+
     return {
         "all": all_count,
         "today": today_count,
@@ -628,6 +645,7 @@ def get_item_counts(
         "ideas": ideas_count,
         "insights": insights_count,
         "archived": archived_count,
+        "reminders": reminders_count,
     }
 
 

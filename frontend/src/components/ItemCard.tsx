@@ -65,14 +65,63 @@ const urgencyColors: Record<string, string> = {
   low: 'bg-[#93DA97]/15 text-[#5EB563] border-[#93DA97]/30',
 };
 
+// Resurface strategy labels for compact display
+const resurfaceLabels: Record<string, string> = {
+  time_based: 'Time-based',
+  contextual: 'Contextual',
+  weekly_review: 'Weekly',
+  manual: 'Manual',
+};
+
+// =============================================================================
+// "WHY TODAY?" - SURFACING REASON LOGIC
+// =============================================================================
+
+function getSurfacingReason(item: Item): string | null {
+  const now = new Date();
+  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const createdAt = new Date(item.created_at);
+  const lastSurfaced = item.last_surfaced_at ? new Date(item.last_surfaced_at) : null;
+
+  // 1. High urgency
+  if (item.urgency === 'high') return 'High urgency item';
+
+  // 2. Immediate time context
+  if (item.time_context === 'immediate') return 'Needs immediate attention';
+
+  // 3. Weekly review items created over a week ago
+  if (item.time_context === 'next_week' && createdAt <= sevenDaysAgo) {
+    return 'Weekly review - created over a week ago';
+  }
+
+  // 4. New action item never reviewed
+  if (item.action_required && !lastSurfaced) {
+    return 'New action item - never reviewed';
+  }
+
+  // 5. Action reminder not seen in 3+ days
+  if (item.action_required && lastSurfaced && lastSurfaced < threeDaysAgo) {
+    return 'Action reminder - not seen in 3+ days';
+  }
+
+  // 6. Learning review - weekly resurface
+  if (item.intent === 'learn' && (!lastSurfaced || lastSurfaced < sevenDaysAgo)) {
+    return 'Learning review - weekly resurface';
+  }
+
+  return null;
+}
+
 interface ItemCardProps {
   item: Item;
+  currentModule?: string;
   onViewDetails?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }
 
-export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProps) {
+export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete }: ItemCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -121,6 +170,9 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
 
   const statusBadge = getStatusBadge();
 
+  // "Why today?" surfacing reason (only for Today module)
+  const surfacingReason = currentModule === 'today' ? getSurfacingReason(item) : null;
+
   // Handle card click for expand/collapse
   const handleCardClick = useCallback(
     (e: React.MouseEvent) => {
@@ -158,6 +210,14 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
         )}
 
         <div className="p-5">
+          {/* "Why today?" banner - only in Today module */}
+          {surfacingReason && !isOptimistic && (
+            <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-[11px] font-medium text-blue-600">
+              <Zap className="h-3 w-3 shrink-0" />
+              <span>Why today? {surfacingReason}</span>
+            </div>
+          )}
+
           {/* Header: Category + Status */}
           <div className="mb-4 flex items-start justify-between gap-2">
             {/* Category badge */}
@@ -191,6 +251,29 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
           <p className={`text-sm leading-relaxed text-gray-700 whitespace-pre-wrap break-words ${isExpanded ? '' : 'line-clamp-3'}`}>
             {item.content}
           </p>
+
+          {/* Compact AI Signals - always visible */}
+          {!isOptimistic && (urgency || actionRequired || item.resurface_strategy) && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {urgency && urgencyColors[urgency] && (
+                <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold capitalize ${urgencyColors[urgency]}`}>
+                  <AlertCircle className="h-2.5 w-2.5" />
+                  {urgency}
+                </span>
+              )}
+              {actionRequired && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-[#FACE68]/15 border border-[#FACE68]/30 px-2 py-0.5 text-[10px] font-semibold text-[#C9A030]">
+                  <Zap className="h-2.5 w-2.5" />
+                  Action
+                </span>
+              )}
+              {item.resurface_strategy && resurfaceLabels[item.resurface_strategy] && item.resurface_strategy !== 'manual' && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-[#79C9C5]/10 border border-[#79C9C5]/30 px-2 py-0.5 text-[10px] font-semibold text-[#5AACA8]">
+                  {resurfaceLabels[item.resurface_strategy]}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Tags */}
           {!isOptimistic && item.tags && item.tags.length > 0 && (
@@ -248,32 +331,15 @@ export function ItemCard({ item, onViewDetails, onEdit, onDelete }: ItemCardProp
                     </div>
                   )}
 
-                  {/* Quick AI signals row */}
-                  <div className="flex flex-wrap gap-2">
-                    {/* Intent */}
-                    {intent && intentLabels[intent] && (
+                  {/* Intent badge (urgency & action moved to compact row above) */}
+                  {intent && intentLabels[intent] && (
+                    <div className="flex flex-wrap gap-2">
                       <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#EA7B7B]/10 px-3 py-1.5 text-[#C44545]">
                         <Zap className="h-3 w-3" />
                         <span className="text-[11px] font-semibold">{intentLabels[intent]}</span>
                       </div>
-                    )}
-
-                    {/* Urgency */}
-                    {urgency && urgencyColors[urgency] && (
-                      <div className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 ${urgencyColors[urgency]}`}>
-                        <AlertCircle className="h-3 w-3" />
-                        <span className="text-[11px] font-semibold capitalize">{urgency}</span>
-                      </div>
-                    )}
-
-                    {/* Action Required */}
-                    {actionRequired && (
-                      <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#FACE68]/15 px-3 py-1.5 text-[#C9A030]">
-                        <CheckSquare className="h-3 w-3" />
-                        <span className="text-[11px] font-semibold">Action Needed</span>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* URL if present */}
                   {item.url && (

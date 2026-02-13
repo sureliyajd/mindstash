@@ -102,13 +102,14 @@ function OfflineBanner() {
 
 interface CardGridProps {
   items: Item[];
+  currentModule: string;
   onViewDetails: (item: Item) => void;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
   isFetching?: boolean;
 }
 
-function CardGrid({ items, onViewDetails, onEdit, onDelete, isFetching }: CardGridProps) {
+function CardGrid({ items, currentModule, onViewDetails, onEdit, onDelete, isFetching }: CardGridProps) {
   return (
     <div className="relative">
       {/* Subtle loading overlay when fetching */}
@@ -142,6 +143,7 @@ function CardGrid({ items, onViewDetails, onEdit, onDelete, isFetching }: CardGr
             >
               <ItemCard
                 item={item}
+                currentModule={currentModule}
                 onViewDetails={() => onViewDetails(item)}
                 onEdit={() => onEdit(item)}
                 onDelete={() => onDelete(item)}
@@ -440,6 +442,7 @@ function DashboardContent() {
           ) : hasItems ? (
             <CardGrid
               items={filteredItems}
+              currentModule={selectedModule}
               onViewDetails={handleViewDetails}
               onEdit={handleEdit}
               onDelete={handleDeleteClick}

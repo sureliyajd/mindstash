@@ -60,6 +60,8 @@ export interface Item {
   time_context: TimeContext | null;
   resurface_strategy: ResurfaceStrategy | null;
   suggested_bucket: SuggestedBucket | null;
+  // Surfacing tracking
+  last_surfaced_at: string | null;
   // Notification fields
   notification_date: string | null;
   notification_frequency: NotificationFrequency | null;
@@ -300,6 +302,7 @@ export interface ItemCounts {
   ideas: number;
   insights: number;
   archived: number;
+  reminders: number;
 }
 
 // Notification types

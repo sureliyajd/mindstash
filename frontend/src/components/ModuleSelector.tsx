@@ -13,7 +13,8 @@ export type ModuleType =
   | 'tasks'
   | 'read_later'
   | 'ideas'
-  | 'insights';
+  | 'insights'
+  | 'reminders';
 
 export interface ModuleConfig {
   id: ModuleType;
@@ -37,6 +38,7 @@ const modules: ModuleConfig[] = [
   { id: 'read_later', label: 'Read Later' },
   { id: 'ideas', label: 'Ideas' },
   { id: 'insights', label: 'Insights' },
+  { id: 'reminders', label: 'Reminders' },
 ];
 
 // =============================================================================

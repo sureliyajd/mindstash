@@ -4,12 +4,15 @@ AI Categorization Service for MindStash 12-Category System
 Using Anthropic Claude API for production-ready categorization
 """
 import json
+import logging
 import re
 from datetime import datetime, timedelta
 from typing import Optional
 from anthropic import Anthropic
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # API CLIENT SETUP
@@ -49,7 +52,18 @@ VALID_RESURFACE_STRATEGIES = ["time_based", "contextual", "weekly_review", "manu
 VALID_BUCKETS = ["Today", "Learn Later", "Ideas", "Reminders", "Insights"]
 VALID_NOTIFICATION_FREQUENCIES = ["once", "daily", "weekly", "monthly", "never"]
 
-SYSTEM_PROMPT = """You are a smart content organizer for MindStash. Analyze user input and categorize into exactly ONE of these 12 categories:
+# Notification date resolution constants
+PREFERRED_TIME_HOURS = {"morning": 9, "afternoon": 14, "evening": 18}
+MAX_DAYS_FROM_NOW = 365
+MIN_LEAD_MINUTES = 30
+
+WEEKDAY_MAP = {
+    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+    "friday": 4, "saturday": 5, "sunday": 6,
+}
+TIME_OF_DAY_MAP = {"morning": 9, "afternoon": 14, "evening": 18, "night": 20}
+
+SYSTEM_PROMPT_TEMPLATE = """You are a smart content organizer for MindStash. Analyze user input and categorize into exactly ONE of these 12 categories:
 
 1. read - Articles, blogs, documentation
 2. watch - Videos, courses, talks
@@ -65,6 +79,8 @@ SYSTEM_PROMPT = """You are a smart content organizer for MindStash. Analyze user
 12. save - General bookmarks
 
 CRITICAL: Respond with ONLY valid JSON, no additional text or explanation.
+
+Today's date is: {current_date}
 
 User input: {content}
 URL: {url}
@@ -86,7 +102,9 @@ Return this exact JSON structure:
   "suggested_bucket": "Today|Learn Later|Ideas|Reminders|Insights",
   "notification_prediction": {{
     "should_notify": true|false,
-    "notification_date": "relative date string",
+    "days_from_now": integer_number_of_days,
+    "preferred_time": "morning|afternoon|evening",
+    "notification_date": "optional relative date string fallback",
     "frequency": "once|daily|weekly|monthly|never",
     "reasoning": "why this timing"
   }}
@@ -108,6 +126,7 @@ Resurface strategy definitions:
 
 NOTIFICATION PREDICTION RULES:
 Analyze if this input needs a notification/reminder.
+Use today's date ({current_date}) to calculate the exact number of days from now.
 
 should_notify = true if:
 - Time-specific events (Sunday, tomorrow, next week, deadline)
@@ -122,16 +141,20 @@ should_notify = false if:
 - General bookmarks without timing
 - Journal entries
 
-notification_date values (relative strings):
-- "tomorrow_morning" - Tomorrow at 9 AM
-- "tomorrow_evening" - Tomorrow at 6 PM
-- "next_saturday_evening" - The coming Saturday at 6 PM (day before Sunday)
-- "next_sunday_morning" - The coming Sunday at 9 AM
-- "next_monday_morning" - The coming Monday at 9 AM
-- "next_week" - 7 days from now at 9 AM
-- "in_3_days" - 3 days from now at 9 AM
-- "1_month_from_now" - 30 days from now at 9 AM
-- "end_of_week" - This Friday at 5 PM
+days_from_now: Calculate the number of days from today to the notification date.
+- 0 = today
+- 1 = tomorrow
+- Count the actual days using today's date
+- For "next weekend", count days until that Saturday
+- For "next to next weekend", count days until the Saturday after next
+
+preferred_time: When the notification should fire.
+- "morning" = 9 AM
+- "afternoon" = 2 PM
+- "evening" = 6 PM
+
+notification_date: Optional fallback relative date string (e.g. "next_saturday_evening").
+Only used if days_from_now is not provided.
 
 frequency values:
 - "once" - One-time notification (events, deadlines, tasks)
@@ -141,23 +164,26 @@ frequency values:
 - "never" - No notification needed (reference items)
 
 Examples:
-Input: "Call John for football on Sunday"
-→ notification_date: "next_saturday_evening", frequency: "once"
+Input: "Call John for football on Sunday" (today is Wednesday)
+→ days_from_now: 2, preferred_time: "evening", frequency: "once" (notify day before, Saturday evening)
 
 Input: "Learn to solve Rubik's cube"
-→ notification_date: "1_month_from_now", frequency: "monthly"
+→ days_from_now: 30, preferred_time: "morning", frequency: "monthly"
 
 Input: "Buy groceries tomorrow"
-→ notification_date: "tomorrow_morning", frequency: "once"
+→ days_from_now: 1, preferred_time: "morning", frequency: "once"
 
 Input: "Interesting article about AI"
 → should_notify: false, frequency: "never"
 
 Input: "Review my goals weekly"
-→ notification_date: "end_of_week", frequency: "weekly"
+→ days_from_now: 5, preferred_time: "evening", frequency: "weekly" (next Friday)
 
 Input: "Meeting with client next Monday"
-→ notification_date: "next_sunday_evening", frequency: "once" (notify day before)"""
+→ days_from_now: 4, preferred_time: "evening", frequency: "once" (notify day before, Sunday evening)
+
+Input: "Pay bills next to next weekend"
+→ days_from_now: 12, preferred_time: "morning", frequency: "once" (count days to the Saturday after next)"""
 
 
 # =============================================================================
@@ -260,9 +286,96 @@ def parse_relative_date(relative_date: str) -> Optional[datetime]:
         months = int(match.group(1))
         return (now + timedelta(days=30 * months)).replace(hour=9, minute=0, second=0, microsecond=0)
 
+    # Dynamic weekday + time-of-day matching as catch-all
+    for day_name, day_num in WEEKDAY_MAP.items():
+        if day_name in relative_date:
+            hour = 9  # default morning
+            for time_name, time_hour in TIME_OF_DAY_MAP.items():
+                if time_name in relative_date:
+                    hour = time_hour
+                    break
+            return next_weekday(day_num, hour)
+
     # If nothing matches, return None
-    print(f"⚠️  Could not parse relative date: {relative_date}")
+    logger.warning("Could not parse relative date: %s", relative_date)
     return None
+
+
+def resolve_notification_date(prediction: dict) -> datetime:
+    """
+    Resolve a notification datetime from AI prediction using 3-tier fallback.
+
+    Tier 1: days_from_now (int) + preferred_time (str) — new format
+    Tier 2: notification_date (str) via parse_relative_date() — legacy fallback
+    Tier 3: Tomorrow at 9 AM — last resort when should_notify=True
+
+    Always returns a valid datetime. Never returns None.
+    """
+    now = datetime.utcnow()
+
+    # --- Tier 1: days_from_now + preferred_time ---
+    days_raw = prediction.get("days_from_now")
+    if days_raw is not None:
+        try:
+            days = int(days_raw)
+        except (ValueError, TypeError):
+            days = None
+
+        if days is not None:
+            days = max(0, min(days, MAX_DAYS_FROM_NOW))
+
+            preferred_time = str(prediction.get("preferred_time", "morning")).lower()
+            hour = PREFERRED_TIME_HOURS.get(preferred_time, 9)
+
+            result = (now + timedelta(days=days)).replace(
+                hour=hour, minute=0, second=0, microsecond=0
+            )
+
+            # If result is in the past or less than MIN_LEAD_MINUTES from now, bump +1 day
+            if result <= now + timedelta(minutes=MIN_LEAD_MINUTES):
+                result += timedelta(days=1)
+
+            logger.info(
+                "Notification resolved via Tier 1 (days_from_now=%d, time=%s): %s",
+                days, preferred_time, result.isoformat(),
+            )
+            return result
+
+    # --- Tier 2: notification_date string via parse_relative_date() ---
+    date_str = prediction.get("notification_date", "")
+    if date_str:
+        parsed = parse_relative_date(str(date_str))
+        if parsed is not None:
+            # Validate: if in the past, bump +1 day
+            if parsed <= now + timedelta(minutes=MIN_LEAD_MINUTES):
+                parsed += timedelta(days=1)
+            logger.info(
+                "Notification resolved via Tier 2 (notification_date='%s'): %s",
+                date_str, parsed.isoformat(),
+            )
+            return parsed
+
+    # --- Tier 3: Default to tomorrow 9 AM ---
+    fallback = (now + timedelta(days=1)).replace(
+        hour=9, minute=0, second=0, microsecond=0
+    )
+    logger.warning(
+        "Notification resolved via Tier 3 (fallback tomorrow 9 AM): %s. "
+        "Prediction was: %s",
+        fallback.isoformat(), prediction,
+    )
+    return fallback
+
+
+def build_system_prompt(content: str, url: Optional[str] = None) -> str:
+    """Build the system prompt with current date injected."""
+    now = datetime.utcnow()
+    current_date = now.strftime("%A, %B %d, %Y")
+    return SYSTEM_PROMPT_TEMPLATE.format(
+        content=content[:500],
+        url=url or "None",
+        current_date=current_date,
+    )
 
 
 # =============================================================================
@@ -300,11 +413,8 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         "once"
     """
     try:
-        # Prepare prompt
-        prompt = SYSTEM_PROMPT.format(
-            content=content[:500],  # Enforce 500-char limit
-            url=url or "None"
-        )
+        # Prepare prompt with current date injected
+        prompt = build_system_prompt(content, url)
 
         # =============================================================================
         # API CALL - Anthropic Claude API
@@ -322,8 +432,7 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         # Extract response text
         result_text = response.content[0].text
 
-        # Debug: Print raw response
-        print(f"🔍 Raw AI response: {result_text[:300]}...")
+        logger.info("Raw AI response: %s...", result_text[:300])
 
         # Clean response - extract JSON if wrapped in markdown code blocks
         if "```json" in result_text:
@@ -336,7 +445,7 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
 
         # Validate category is one of 12
         if result.get("category") not in VALID_CATEGORIES:
-            print(f"⚠️  Invalid category '{result.get('category')}' returned, using fallback 'save'")
+            logger.warning("Invalid category '%s' returned, using fallback 'save'", result.get("category"))
             result["category"] = "save"
 
         # Validate confidence is between 0 and 1
@@ -371,32 +480,27 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         notification_prediction = result.get("notification_prediction", {})
 
         should_notify = notification_prediction.get("should_notify", False)
-        notification_date_str = notification_prediction.get("notification_date", "")
         notification_frequency = notification_prediction.get("frequency", "never")
 
         # Validate notification frequency
         if notification_frequency not in VALID_NOTIFICATION_FREQUENCIES:
             notification_frequency = "never"
 
-        # Parse relative date to actual datetime
+        # Resolve notification date using 3-tier fallback
         notification_date = None
         next_notification_at = None
 
-        if should_notify and notification_date_str:
-            notification_date = parse_relative_date(notification_date_str)
-            next_notification_at = notification_date  # Initially the same
-
-            if notification_date:
-                print(f"📅 Notification scheduled: {notification_date.isoformat()} ({notification_frequency})")
-            else:
-                print(f"⚠️  Could not parse notification date: {notification_date_str}")
-                should_notify = False
+        if should_notify:
+            notification_date = resolve_notification_date(notification_prediction)
+            next_notification_at = notification_date
+            logger.info(
+                "Notification scheduled: %s (%s)",
+                notification_date.isoformat(), notification_frequency,
+            )
 
         # If should_notify is false, ensure no notifications
         if not should_notify:
             notification_frequency = "never"
-            notification_date = None
-            next_notification_at = None
 
         # Add notification fields to result
         result["notification_date"] = notification_date
@@ -408,14 +512,12 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         return result
 
     except json.JSONDecodeError as e:
-        print(f"❌ JSON parsing error: {e}")
-        print(f"❌ Response was: {result_text if 'result_text' in locals() else 'No response'}")
-        # Fallback response
+        logger.error("JSON parsing error: %s", e)
+        logger.error("Response was: %s", result_text if 'result_text' in locals() else 'No response')
         return _get_fallback_response(content, f"Error parsing AI response: {str(e)}")
 
     except Exception as e:
-        print(f"❌ Categorization error: {e}")
-        # Fallback response
+        logger.error("Categorization error: %s", e)
         return _get_fallback_response(content, f"Error during categorization: {str(e)}")
 
 
