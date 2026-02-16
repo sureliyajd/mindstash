@@ -13,9 +13,10 @@ from app.core.rate_limit import limiter, get_remote_address, log_rate_limit_exce
 # Import models (required for SQLAlchemy relationships to work)
 from app.models.user import User
 from app.models.item import Item
+from app.models.chat import ChatSession, ChatMessage, UserMemory
 
 # Import routers
-from app.api.routes import auth, items, notifications
+from app.api.routes import auth, items, notifications, chat
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -95,6 +96,7 @@ def health_check():
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(items.router, prefix="/api/items", tags=["Items"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 
 
 if __name__ == "__main__":

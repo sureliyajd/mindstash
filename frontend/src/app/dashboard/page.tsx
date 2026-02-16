@@ -15,6 +15,7 @@ import { ItemDetailModal } from '@/components/ItemDetailModal';
 import { ItemEditModal } from '@/components/ItemEditModal';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { EmptyState } from '@/components/EmptyState';
+import { ChatPanel } from '@/components/chat/ChatPanel';
 import { useItems, useItemCounts, useMarkSurfaced } from '@/lib/hooks/useItems';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Item, Category, ItemUpdate } from '@/lib/api';
@@ -485,6 +486,9 @@ function DashboardContent() {
           itemContent={deleteItem.content}
         />
       )}
+
+      {/* Chat Panel */}
+      <ChatPanel />
     </div>
   );
 }

@@ -344,4 +344,56 @@ export const notifications = {
   },
 };
 
+// Chat API (uses raw fetch for SSE streaming)
+export const chat = {
+  sendMessage: async (message: string, sessionId?: string): Promise<Response> => {
+    const token = getToken();
+    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${baseURL}/api/chat/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ message, session_id: sessionId }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearToken();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
+      throw new Error(`Chat request failed: ${response.status}`);
+    }
+    return response;
+  },
+
+  getSessions: async (limit = 20): Promise<{ sessions: ChatSession[]; total: number }> => {
+    const response = await api.get('/api/chat/sessions', { params: { limit } });
+    return response.data;
+  },
+
+  getSessionMessages: async (
+    sessionId: string,
+    limit = 50
+  ): Promise<Array<{ id: string; role: string; content: string | null; tool_calls: unknown[] | null; created_at: string }>> => {
+    const response = await api.get(`/api/chat/sessions/${sessionId}/messages`, {
+      params: { limit },
+    });
+    return response.data;
+  },
+};
+
+// Chat session type (re-exported for convenience)
+export interface ChatSession {
+  id: string;
+  title: string | null;
+  agent_type: string;
+  is_active: boolean;
+  created_at: string;
+  last_active_at: string;
+  message_count: number;
+}
+
 export default api;

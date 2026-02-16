@@ -31,8 +31,10 @@ class User(Base):
         nullable=False
     )
     
-    # Relationship to items
+    # Relationships
     items = relationship("Item", back_populates="owner", cascade="all, delete-orphan")
+    chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
+    memories = relationship("UserMemory", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User {self.email}>"
