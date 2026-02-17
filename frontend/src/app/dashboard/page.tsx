@@ -107,10 +107,11 @@ interface CardGridProps {
   onViewDetails: (item: Item) => void;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
+  onToggleComplete: (item: Item, completed: boolean) => void;
   isFetching?: boolean;
 }
 
-function CardGrid({ items, currentModule, onViewDetails, onEdit, onDelete, isFetching }: CardGridProps) {
+function CardGrid({ items, currentModule, onViewDetails, onEdit, onDelete, onToggleComplete, isFetching }: CardGridProps) {
   return (
     <div className="relative">
       {/* Subtle loading overlay when fetching */}
@@ -148,6 +149,7 @@ function CardGrid({ items, currentModule, onViewDetails, onEdit, onDelete, isFet
                 onViewDetails={() => onViewDetails(item)}
                 onEdit={() => onEdit(item)}
                 onDelete={() => onDelete(item)}
+                onToggleComplete={(completed) => onToggleComplete(item, completed)}
               />
             </motion.div>
           ))}
@@ -187,6 +189,7 @@ function DashboardContent() {
     createItem,
     updateItem,
     deleteItem: deleteItemMutation,
+    markComplete,
     restoreItem,
     isCreating,
     isUpdating,
@@ -333,6 +336,27 @@ function DashboardContent() {
     setDetailItem(null); // Close detail modal if open
   }, []);
 
+  // Handle mark complete/incomplete
+  const handleMarkComplete = useCallback(
+    async (item: Item, completed: boolean) => {
+      try {
+        await markComplete({ id: item.id, completed });
+        // Sync open detail modal state
+        if (detailItem?.id === item.id) {
+          setDetailItem((prev) =>
+            prev
+              ? { ...prev, is_completed: completed, completed_at: completed ? new Date().toISOString() : null }
+              : null
+          );
+        }
+        showToast(completed ? 'Marked as complete!' : 'Marked as incomplete', 'success');
+      } catch {
+        showToast('Failed to update item', 'error');
+      }
+    },
+    [markComplete, detailItem, showToast]
+  );
+
   // Handle confirm delete
   const handleConfirmDelete = useCallback(async () => {
     if (!deleteItem) return;
@@ -447,6 +471,7 @@ function DashboardContent() {
               onViewDetails={handleViewDetails}
               onEdit={handleEdit}
               onDelete={handleDeleteClick}
+              onToggleComplete={handleMarkComplete}
               isFetching={isFetching && !isLoading}
             />
           ) : (
@@ -463,6 +488,7 @@ function DashboardContent() {
           onClose={() => setDetailItem(null)}
           onEdit={() => handleEdit(detailItem)}
           onDelete={() => handleDeleteClick(detailItem)}
+          onToggleComplete={(completed) => handleMarkComplete(detailItem, completed)}
         />
       )}
 

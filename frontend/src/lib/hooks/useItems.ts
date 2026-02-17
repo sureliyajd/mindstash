@@ -221,6 +221,31 @@ export function useItems(options: UseItemsOptions = {}) {
     },
   });
 
+  // Mark item complete/incomplete mutation with optimistic update
+  const markCompleteMutation = useMutation({
+    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
+      items.markComplete(id, completed),
+    onMutate: async ({ id, completed }) => {
+      await queryClient.cancelQueries({ queryKey: ITEMS_QUERY_KEY });
+      const previousData = queryClient.getQueryData<ItemListResponse>(queryKey);
+      queryClient.setQueryData<ItemListResponse>(queryKey, (old) => ({
+        ...old!,
+        items: old?.items.map((item) =>
+          item.id === id
+            ? { ...item, is_completed: completed, completed_at: completed ? new Date().toISOString() : null }
+            : item
+        ) || [],
+      }));
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) queryClient.setQueryData(queryKey, context.previousData);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY });
+    },
+  });
+
   // Helper to restore a deleted item (for undo)
   const restoreItem = (item: Item) => {
     queryClient.setQueryData<ItemListResponse>(
@@ -246,10 +271,12 @@ export function useItems(options: UseItemsOptions = {}) {
     createItem: createMutation.mutateAsync,
     updateItem: updateMutation.mutateAsync,
     deleteItem: deleteMutation.mutateAsync,
+    markComplete: markCompleteMutation.mutateAsync,
     restoreItem,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    isMarkingComplete: markCompleteMutation.isPending,
     createError: createMutation.error,
     updateError: updateMutation.error,
     deleteError: deleteMutation.error,

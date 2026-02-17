@@ -15,11 +15,15 @@ import type {
 } from '../types/chat';
 
 const SESSION_KEY = 'mindstash_chat_session';
+const BRIEFING_KEY = 'mindstash_last_briefing';
+
+/** The magic trigger message for daily briefing. Hidden from user in UI. */
+export const BRIEFING_TRIGGER = '[BRIEFING]';
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const sessionIdRef = useRef<string | undefined>(undefined);
   const hasRestoredRef = useRef(false);
   const queryClient = useQueryClient();
@@ -95,10 +99,10 @@ export function useChat() {
 
       // Nothing to restore
       localStorage.removeItem(SESSION_KEY);
-      sessionIdRef.current = undefined;
     };
 
     restore().finally(() => setIsLoadingHistory(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restoreSession]);
 
   const parseSSEStream = useCallback(
@@ -249,16 +253,19 @@ export function useChat() {
   );
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, { hidden = false }: { hidden?: boolean } = {}) => {
       if (!content.trim() || isStreaming) return;
 
-      const userMsg: ChatMessage = {
-        id: `user-${Date.now()}`,
-        role: 'user',
-        content: content.trim(),
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, userMsg]);
+      // Only add user bubble if not hidden (briefing trigger is hidden)
+      if (!hidden) {
+        const userMsg: ChatMessage = {
+          id: `user-${Date.now()}`,
+          role: 'user',
+          content: content.trim(),
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMsg]);
+      }
       setIsStreaming(true);
 
       try {
@@ -282,6 +289,32 @@ export function useChat() {
     [isStreaming, parseSSEStream]
   );
 
+  /**
+   * Send a daily briefing request. Hidden from user bubbles.
+   * Only triggers if not already briefed today (localStorage check).
+   */
+  const sendBriefingRequest = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    const today = new Date().toDateString();
+    if (localStorage.getItem(BRIEFING_KEY) === today) return;
+
+    localStorage.setItem(BRIEFING_KEY, today);
+    await sendMessage(BRIEFING_TRIGGER, { hidden: true });
+  }, [sendMessage]);
+
+  // Auto-trigger daily briefing after history has loaded
+  const hasSentBriefingRef = useRef(false);
+  useEffect(() => {
+    if (isLoadingHistory || hasSentBriefingRef.current) return;
+    hasSentBriefingRef.current = true;
+
+    // Small delay to let the UI settle before triggering briefing
+    const timer = setTimeout(() => {
+      sendBriefingRequest();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [isLoadingHistory, sendBriefingRequest]);
+
   const clearChat = useCallback(() => {
     setMessages([]);
     sessionIdRef.current = undefined;
@@ -295,6 +328,7 @@ export function useChat() {
     isStreaming,
     isLoadingHistory,
     sendMessage,
+    sendBriefingRequest,
     clearChat,
     sessionId: sessionIdRef.current,
   };

@@ -25,6 +25,7 @@ import {
   Calendar,
   AlertCircle,
   Zap,
+  CheckCircle2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Item, Category } from '@/lib/api';
@@ -119,9 +120,10 @@ interface ItemCardProps {
   onViewDetails?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onToggleComplete?: (completed: boolean) => void;
 }
 
-export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete }: ItemCardProps) {
+export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete, onToggleComplete }: ItemCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -188,7 +190,7 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete 
     <motion.div
       layout
       initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: isOptimistic ? 0.6 : 1, y: 0 }}
+      animate={{ opacity: isOptimistic ? 0.6 : item.is_completed ? 0.75 : 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
       whileHover={isOptimistic ? undefined : { y: -2 }}
       transition={{ duration: 0.2 }}
@@ -230,7 +232,13 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete 
 
             {/* Status + Confidence */}
             <div className="flex items-center gap-2">
-              {statusBadge && !isOptimistic && (
+              {item.is_completed && !isOptimistic && (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-[#93DA97]/20 border border-[#93DA97]/40 px-2 py-1 text-[10px] font-semibold text-[#5EB563]">
+                  <CheckCircle2 className="h-2.5 w-2.5" />
+                  Done
+                </span>
+              )}
+              {statusBadge && !isOptimistic && !item.is_completed && (
                 <span className={`rounded-lg px-2 py-1 text-[10px] font-bold ${statusBadge.color}`}>
                   {statusBadge.label}
                 </span>
@@ -248,7 +256,7 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete 
           </div>
 
           {/* Content - whitespace-pre-wrap preserves newlines */}
-          <p className={`text-sm leading-relaxed text-gray-700 whitespace-pre-wrap break-words ${isExpanded ? '' : 'line-clamp-3'}`}>
+          <p className={`text-sm leading-relaxed text-gray-700 whitespace-pre-wrap break-words ${isExpanded ? '' : 'line-clamp-3'} ${item.is_completed ? 'line-through opacity-50' : ''}`}>
             {item.content}
           </p>
 
@@ -428,6 +436,19 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete 
                 >
                   <Maximize2 className="h-4 w-4" />
                   View details
+                </button>
+              )}
+              {onToggleComplete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    onToggleComplete(!item.is_completed);
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <CheckCircle2 className="h-4 w-4 text-[#5EB563]" />
+                  {item.is_completed ? 'Mark Incomplete' : 'Mark as Complete'}
                 </button>
               )}
               {onEdit && (

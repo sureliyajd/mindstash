@@ -180,6 +180,21 @@ GET_DIGEST_PREVIEW_SCHEMA = {
     },
 }
 
+GENERATE_DAILY_BRIEFING_SCHEMA = {
+    "name": "generate_daily_briefing",
+    "description": (
+        "Generate a comprehensive daily briefing for the user. Combines item counts, "
+        "urgent items, pending tasks, upcoming notifications (next 3 days), and weekly stats "
+        "into a single payload. Use this when the user asks for a daily briefing or when "
+        "the message is '[BRIEFING]'."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+    },
+}
+
 
 # =============================================================================
 # TOOL HANDLERS
@@ -469,6 +484,26 @@ def handle_get_digest_preview(db: Session, user_id: UUID, params: dict) -> dict:
     return get_digest_preview(user_id, db)
 
 
+def handle_generate_daily_briefing(db: Session, user_id: UUID, params: dict) -> dict:
+    """Combine counts, urgent items, upcoming notifications, and weekly stats into one briefing payload."""
+    counts = handle_get_counts(db, user_id, {})
+    digest = handle_get_digest_preview(db, user_id, {})
+    notifications = handle_get_upcoming_notifications(db, user_id, {"days": 3})
+
+    return {
+        "counts": counts,
+        "urgent_items": digest.get("urgent_items", []),
+        "urgent_count": digest.get("urgent_count", 0),
+        "pending_tasks": digest.get("pending_tasks", []),
+        "tasks_count": digest.get("tasks_count", 0),
+        "upcoming_notifications": notifications.get("items", []),
+        "upcoming_count": notifications.get("count", 0),
+        "items_saved_this_week": digest.get("items_saved_this_week", 0),
+        "completed_this_week": digest.get("completed_this_week", 0),
+        "generated_at": datetime.utcnow().isoformat(),
+    }
+
+
 # =============================================================================
 # REGISTER ALL TOOLS
 # =============================================================================
@@ -484,6 +519,7 @@ def register_all_tools():
         ("get_counts", GET_COUNTS_SCHEMA, handle_get_counts),
         ("get_upcoming_notifications", GET_UPCOMING_NOTIFICATIONS_SCHEMA, handle_get_upcoming_notifications),
         ("get_digest_preview", GET_DIGEST_PREVIEW_SCHEMA, handle_get_digest_preview),
+        ("generate_daily_briefing", GENERATE_DAILY_BRIEFING_SCHEMA, handle_generate_daily_briefing),
     ]
     for name, schema, handler in tools:
         registry.register(name, schema, handler)

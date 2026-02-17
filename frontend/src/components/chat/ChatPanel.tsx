@@ -20,6 +20,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useChat } from '@/lib/hooks/useChat';
+import { BRIEFING_TRIGGER } from '@/lib/hooks/useChat';
 import type { ChatMessage, ToolCallStatus } from '@/lib/types/chat';
 
 // =============================================================================
@@ -35,6 +36,7 @@ const toolIcons: Record<string, typeof Search> = {
   get_counts: BarChart3,
   get_upcoming_notifications: Bell,
   get_digest_preview: BookOpen,
+  generate_daily_briefing: Sparkles,
 };
 
 // =============================================================================
@@ -137,7 +139,7 @@ function MarkdownContent({ content }: { content: string }) {
 // CHAT BUBBLE
 // =============================================================================
 
-function ChatBubble({ message }: { message: ChatMessage }) {
+function ChatBubble({ message, isBriefing }: { message: ChatMessage; isBriefing?: boolean }) {
   const isUser = message.role === 'user';
 
   return (
@@ -153,6 +155,14 @@ function ChatBubble({ message }: { message: ChatMessage }) {
             : 'bg-white border border-gray-100 text-gray-800'
         }`}
       >
+        {/* Daily Briefing header */}
+        {isBriefing && (
+          <div className="mb-2 flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-[#EA7B7B]" />
+            <span className="text-xs font-medium text-gray-400">Daily Briefing</span>
+          </div>
+        )}
+
         {/* Tool call indicators */}
         {message.toolCalls && message.toolCalls.length > 0 && (
           <div className="mb-2 space-y-1.5">
@@ -196,7 +206,14 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 // WELCOME STATE
 // =============================================================================
 
-function WelcomeState() {
+function WelcomeState({ onSuggest }: { onSuggest: (text: string) => void }) {
+  const suggestions = [
+    'Give me my daily briefing',
+    'Show me my urgent tasks',
+    'What ideas did I save recently?',
+    'Save a note: check quarterly report',
+  ];
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EA7B7B]/10">
@@ -208,18 +225,15 @@ function WelcomeState() {
       <p className="text-sm text-gray-500">
         Ask me anything about your saved thoughts, tasks, or ideas.
       </p>
-      <div className="mt-6 space-y-2 text-left">
-        {[
-          'How many items do I have?',
-          'Show me my urgent tasks',
-          'Save a note: check quarterly report',
-        ].map((suggestion) => (
-          <div
+      <div className="mt-6 w-full space-y-2">
+        {suggestions.map((suggestion) => (
+          <button
             key={suggestion}
-            className="rounded-xl border border-gray-100 px-3 py-2 text-xs text-gray-500"
+            onClick={() => onSuggest(suggestion)}
+            className="w-full rounded-xl border border-gray-100 px-3 py-2.5 text-left text-xs text-gray-500 transition-colors hover:border-[#EA7B7B]/30 hover:bg-[#EA7B7B]/5 hover:text-gray-700"
           >
             &ldquo;{suggestion}&rdquo;
-          </div>
+          </button>
         ))}
       </div>
     </div>
@@ -316,6 +330,32 @@ export function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Filter out [BRIEFING] user messages and detect briefing responses
+  const visibleMessages = messages.filter(
+    (msg) => !(msg.role === 'user' && msg.content === BRIEFING_TRIGGER)
+  );
+
+  // Build a set of message IDs that are briefing responses
+  // A briefing response is the assistant message immediately after a [BRIEFING] user message
+  const briefingResponseIds = new Set<string>();
+  for (let i = 0; i < messages.length; i++) {
+    if (
+      messages[i].role === 'user' &&
+      messages[i].content === BRIEFING_TRIGGER &&
+      i + 1 < messages.length &&
+      messages[i + 1].role === 'assistant'
+    ) {
+      briefingResponseIds.add(messages[i + 1].id);
+    }
+  }
+
+  const handleSuggest = useCallback(
+    (text: string) => {
+      sendMessage(text);
+    },
+    [sendMessage]
+  );
+
   return (
     <>
       {/* Toggle button - hidden when panel is open */}
@@ -385,12 +425,16 @@ export function ChatPanel() {
               <div className="flex-1 overflow-y-auto px-4 py-4">
                 {isLoadingHistory ? (
                   <LoadingHistory />
-                ) : messages.length === 0 ? (
-                  <WelcomeState />
+                ) : visibleMessages.length === 0 ? (
+                  <WelcomeState onSuggest={handleSuggest} />
                 ) : (
                   <div className="space-y-3">
-                    {messages.map((msg) => (
-                      <ChatBubble key={msg.id} message={msg} />
+                    {visibleMessages.map((msg) => (
+                      <ChatBubble
+                        key={msg.id}
+                        message={msg}
+                        isBriefing={briefingResponseIds.has(msg.id)}
+                      />
                     ))}
                     <div ref={messagesEndRef} />
                   </div>

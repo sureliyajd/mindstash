@@ -45,7 +45,21 @@ Guidelines:
 - If a tool returns an error, explain it naturally
 - When users ask "how many items" or want an overview, use the get_counts tool
 - When users want to find something, use search_items
-- For digest/summary requests, use get_digest_preview"""
+- For digest/summary requests, use get_digest_preview
+
+Daily Briefing:
+When the user's message is exactly "[BRIEFING]", generate a warm, personalized daily briefing:
+1. Call generate_daily_briefing to get today's data
+2. Format a natural-language summary with:
+   - A time-aware greeting (Good morning/afternoon/evening)
+   - Urgent items needing attention (with context on why they're urgent)
+   - Weekly progress stats (items saved, completed)
+   - Upcoming reminders in the next 3 days
+   - A proactive suggestion (review ideas, complete pending tasks, etc.)
+3. Use markdown formatting with **bold** and bullet points
+4. Keep it concise — under 200 words
+5. End with an engaging question to encourage interaction
+6. If there are no urgent items or reminders, still provide an encouraging summary"""
 
 
 def _get_or_create_session(
@@ -237,6 +251,7 @@ def run_agent(
                     "get_counts": "Getting overview...",
                     "get_upcoming_notifications": "Checking notifications...",
                     "get_digest_preview": "Preparing digest...",
+                    "generate_daily_briefing": "Preparing your daily briefing...",
                 }
                 yield _sse_event("tool_start", {
                     "tool": tb.name,
