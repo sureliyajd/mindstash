@@ -86,7 +86,7 @@ function RegisterForm() {
             setError(detail || 'Please check your input and try again');
           }
         } else if (!err.response) {
-          setError('Unable to connect. Please check your internet connection.');
+          setError('Cannot reach the server. Please make sure the backend is running.');
         } else {
           setError(detail || 'Something went wrong. Please try again.');
         }

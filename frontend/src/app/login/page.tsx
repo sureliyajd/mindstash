@@ -66,7 +66,7 @@ function LoginForm() {
         } else if (status === 422) {
           setError('Please enter a valid email address');
         } else if (!err.response) {
-          setError('Unable to connect. Please check your internet connection.');
+          setError('Cannot reach the server. Please make sure the backend is running.');
         } else {
           setError(detail || 'Something went wrong. Please try again.');
         }
