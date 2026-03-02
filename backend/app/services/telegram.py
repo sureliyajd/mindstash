@@ -2,9 +2,11 @@
 Telegram integration service for MindStash.
 
 Handles link-code generation, account activation via /start,
-incoming message processing (categorize + save), and Telegram Bot API calls.
+incoming message processing (categorize + save), AI agent chat via Telegram,
+and Telegram Bot API calls.
 """
 import logging
+import re
 import secrets
 import string
 from datetime import datetime, timedelta
@@ -14,6 +16,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.database import SessionLocal
 from app.models.item import Item
 from app.models.telegram_link import TelegramLink
 from app.services.ai.categorizer import categorize_item
@@ -87,6 +90,175 @@ async def get_bot_username() -> str:
     except Exception as e:
         logger.warning("getMe failed: %s", e)
     return "MindStashBot"
+
+
+# ---------------------------------------------------------------------------
+# Sync helpers (for use in background tasks — can't use async there)
+# ---------------------------------------------------------------------------
+
+TELEGRAM_MAX_MESSAGE_LENGTH = 4096
+
+
+def send_message_sync(chat_id: int, text: str, parse_mode: str = "HTML") -> bool:
+    """Send a text message using sync httpx (for background tasks)."""
+    try:
+        with httpx.Client(timeout=10) as c:
+            resp = c.post(
+                _bot_api_url("sendMessage"),
+                json={"chat_id": chat_id, "text": text, "parse_mode": parse_mode},
+            )
+            if resp.status_code != 200:
+                logger.error("Telegram sendMessage (sync) failed: %s", resp.text)
+                return False
+            return True
+    except Exception as e:
+        logger.error("Telegram sendMessage (sync) error: %s", e)
+        return False
+
+
+def send_typing_action_sync(chat_id: int) -> None:
+    """Send 'typing...' indicator to Telegram chat."""
+    try:
+        with httpx.Client(timeout=5) as c:
+            c.post(
+                _bot_api_url("sendChatAction"),
+                json={"chat_id": chat_id, "action": "typing"},
+            )
+    except Exception:
+        pass  # Non-critical — just a UX nicety
+
+
+# ---------------------------------------------------------------------------
+# Markdown → Telegram HTML converter
+# ---------------------------------------------------------------------------
+
+def markdown_to_telegram_html(text: str) -> str:
+    """
+    Convert common Markdown formatting to Telegram-safe HTML.
+
+    Handles: bold, inline code, code blocks, links, bullets, headers.
+    """
+    # Code blocks first (before other transforms touch the content)
+    text = re.sub(r"```(?:\w*)\n?(.*?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
+
+    # Inline code
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+
+    # Bold: **text**
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
+
+    # Italic: *text* (but not inside <b> tags which already consumed **)
+    text = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<i>\1</i>", text)
+
+    # Links: [text](url)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
+
+    # Bullets: - item → • item
+    text = re.sub(r"^[-*] ", "• ", text, flags=re.MULTILINE)
+
+    # Strip # headers (keep text)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+
+    return text.strip()
+
+
+# ---------------------------------------------------------------------------
+# Message splitter (Telegram 4096-char limit)
+# ---------------------------------------------------------------------------
+
+def split_telegram_message(text: str) -> list[str]:
+    """
+    Split text into chunks that fit within Telegram's 4096-char limit.
+
+    Splits at paragraph boundaries first, then sentence boundaries.
+    """
+    if len(text) <= TELEGRAM_MAX_MESSAGE_LENGTH:
+        return [text]
+
+    chunks: list[str] = []
+    remaining = text
+
+    while remaining:
+        if len(remaining) <= TELEGRAM_MAX_MESSAGE_LENGTH:
+            chunks.append(remaining)
+            break
+
+        # Try to split at a paragraph boundary
+        cut = remaining[:TELEGRAM_MAX_MESSAGE_LENGTH].rfind("\n\n")
+        if cut > TELEGRAM_MAX_MESSAGE_LENGTH // 2:
+            chunks.append(remaining[:cut].rstrip())
+            remaining = remaining[cut:].lstrip()
+            continue
+
+        # Try a single newline
+        cut = remaining[:TELEGRAM_MAX_MESSAGE_LENGTH].rfind("\n")
+        if cut > TELEGRAM_MAX_MESSAGE_LENGTH // 2:
+            chunks.append(remaining[:cut].rstrip())
+            remaining = remaining[cut:].lstrip()
+            continue
+
+        # Try a sentence boundary
+        cut = remaining[:TELEGRAM_MAX_MESSAGE_LENGTH].rfind(". ")
+        if cut > TELEGRAM_MAX_MESSAGE_LENGTH // 2:
+            chunks.append(remaining[: cut + 1])
+            remaining = remaining[cut + 2 :].lstrip()
+            continue
+
+        # Hard split at limit
+        chunks.append(remaining[:TELEGRAM_MAX_MESSAGE_LENGTH])
+        remaining = remaining[TELEGRAM_MAX_MESSAGE_LENGTH:]
+
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# Background agent runner
+# ---------------------------------------------------------------------------
+
+def run_agent_in_background(
+    chat_id: int,
+    user_id: UUID,
+    chat_session_id: UUID | None,
+    text: str,
+) -> None:
+    """
+    Run the AI agent and send the response back to Telegram.
+
+    Designed to be called via FastAPI BackgroundTasks. Creates its own DB
+    session since the request-scoped session is closed by the time this runs.
+    """
+    from app.services.ai.agent import run_agent_collect
+
+    send_typing_action_sync(chat_id)
+
+    db = SessionLocal()
+    try:
+        session_id_str = str(chat_session_id) if chat_session_id else None
+        response_text, returned_session_id = run_agent_collect(
+            text, session_id_str, db, user_id
+        )
+
+        # Persist session ID back to TelegramLink if it's new or changed
+        if returned_session_id:
+            link = get_link_by_chat_id(db, chat_id)
+            if link and str(link.chat_session_id or "") != returned_session_id:
+                link.chat_session_id = returned_session_id
+                db.commit()
+
+        # Convert and send
+        html_text = markdown_to_telegram_html(response_text)
+        for chunk in split_telegram_message(html_text):
+            send_message_sync(chat_id, chunk)
+
+    except Exception as e:
+        logger.exception("run_agent_in_background failed for chat_id=%s", chat_id)
+        send_message_sync(
+            chat_id,
+            "Something went wrong. Please try again.",
+            parse_mode="HTML",
+        )
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------

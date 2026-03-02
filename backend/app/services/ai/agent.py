@@ -321,3 +321,50 @@ def run_agent(
         logger.exception("Agent run failed")
         yield _sse_event("error", {"message": f"Something went wrong: {str(e)}"})
         yield _sse_event("done", {})
+
+
+def run_agent_collect(
+    message: str,
+    session_id: Optional[str],
+    db: Session,
+    user_id: UUID,
+) -> tuple[str, str | None]:
+    """
+    Non-streaming wrapper around run_agent().
+
+    Consumes the SSE generator and returns (collected_text, session_id).
+    Used by Telegram bot where we need the full response as a string.
+    """
+    collected_text_parts: list[str] = []
+    collected_session_id: str | None = None
+
+    for line in run_agent(message, session_id, db, user_id):
+        # Each SSE chunk is "event: <type>\ndata: <json>\n\n"
+        event_type = None
+        data_str = None
+        for part in line.strip().split("\n"):
+            if part.startswith("event: "):
+                event_type = part[7:]
+            elif part.startswith("data: "):
+                data_str = part[6:]
+
+        if not event_type or not data_str:
+            continue
+
+        try:
+            data = json.loads(data_str)
+        except json.JSONDecodeError:
+            continue
+
+        if event_type == "session_id":
+            collected_session_id = data.get("session_id")
+        elif event_type == "text_delta":
+            text = data.get("text", "")
+            if text:
+                collected_text_parts.append(text)
+        elif event_type == "error":
+            err_msg = data.get("message", "Something went wrong")
+            collected_text_parts.append(f"Error: {err_msg}")
+
+    final_text = "\n".join(collected_text_parts) if collected_text_parts else "I couldn't generate a response. Please try again."
+    return final_text, collected_session_id

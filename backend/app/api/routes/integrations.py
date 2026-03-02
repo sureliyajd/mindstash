@@ -121,7 +121,7 @@ async def telegram_webhook(
                 background_tasks.add_task(
                     tg_service.send_message,
                     chat_id,
-                    "Linked! Send me anything to save it to MindStash.",
+                    "Linked! Send me anything — I can search, save, update, and manage your MindStash!",
                 )
             else:
                 background_tasks.add_task(
@@ -155,7 +155,7 @@ async def telegram_webhook(
             )
         return {"ok": True}
 
-    # --- Regular message — save as item ---------------------------------
+    # All commands below require a linked account
     link = tg_service.get_link_by_chat_id(db, chat_id)
     if not link:
         background_tasks.add_task(
@@ -165,6 +165,55 @@ async def telegram_webhook(
         )
         return {"ok": True}
 
-    reply = tg_service.process_message(db, link, text)
-    background_tasks.add_task(tg_service.send_message, chat_id, reply)
+    # --- /help  — list commands -----------------------------------------
+    if text == "/help":
+        help_text = (
+            "<b>MindStash Bot Commands</b>\n\n"
+            "/save &lt;text&gt; — Quick-save a thought (fast, no chat)\n"
+            "/new — Start a fresh conversation\n"
+            "/unlink — Disconnect your Telegram account\n"
+            "/help — Show this message\n\n"
+            "Or just send me any message! I can:\n"
+            "• Search your saved items\n"
+            "• Create, update, and delete items\n"
+            "• Mark tasks complete\n"
+            "• Check your reminders and notifications\n"
+            "• Generate a daily briefing"
+        )
+        background_tasks.add_task(tg_service.send_message, chat_id, help_text)
+        return {"ok": True}
+
+    # --- /new  — start fresh conversation --------------------------------
+    if text == "/new":
+        link.chat_session_id = None
+        db.commit()
+        background_tasks.add_task(
+            tg_service.send_message,
+            chat_id,
+            "Fresh conversation started! What can I help you with?",
+        )
+        return {"ok": True}
+
+    # --- /save <text>  — quick-save shortcut (fast path) ----------------
+    if text.startswith("/save"):
+        save_text = text[5:].strip()
+        if not save_text:
+            background_tasks.add_task(
+                tg_service.send_message,
+                chat_id,
+                "Usage: /save &lt;your thought here&gt;",
+            )
+            return {"ok": True}
+        reply = tg_service.process_message(db, link, save_text)
+        background_tasks.add_task(tg_service.send_message, chat_id, reply)
+        return {"ok": True}
+
+    # --- Regular message — run through AI agent -------------------------
+    background_tasks.add_task(
+        tg_service.run_agent_in_background,
+        chat_id,
+        link.user_id,
+        link.chat_session_id,
+        text,
+    )
     return {"ok": True}

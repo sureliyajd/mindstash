@@ -33,6 +33,12 @@ class TelegramLink(Base):
     link_code_expires_at = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    chat_session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("chat_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     owner = relationship("User", back_populates="telegram_link")
 
