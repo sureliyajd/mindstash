@@ -47,5 +47,7 @@ jobs:
       - name: Health check
         run: |
           sleep 5
-          curl -f http://${{ secrets.EC2_HOST }}/health || exit 1
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            'curl -sf http://localhost:8000/health' || exit 1
           echo "Deployment successful!"
