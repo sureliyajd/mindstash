@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import type { TelegramLinkStatus, TelegramLinkCode } from './types/telegram';
 
 // Token storage key
 const TOKEN_KEY = 'mindstash_token';
@@ -395,5 +396,22 @@ export interface ChatSession {
   last_active_at: string;
   message_count: number;
 }
+
+// Telegram Integration API
+export const telegram = {
+  getStatus: async (): Promise<TelegramLinkStatus> => {
+    const response = await api.get<TelegramLinkStatus>('/api/integrations/telegram/status');
+    return response.data;
+  },
+
+  generateLink: async (): Promise<TelegramLinkCode> => {
+    const response = await api.post<TelegramLinkCode>('/api/integrations/telegram/generate-link');
+    return response.data;
+  },
+
+  unlink: async (): Promise<void> => {
+    await api.delete('/api/integrations/telegram/unlink');
+  },
+};
 
 export default api;

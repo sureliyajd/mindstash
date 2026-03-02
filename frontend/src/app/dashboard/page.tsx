@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2 } from 'lucide-react';
+import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2, Settings } from 'lucide-react';
 import { CaptureInput } from '@/components/CaptureInput';
 import { ItemCard } from '@/components/ItemCard';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -16,6 +16,7 @@ import { ItemEditModal } from '@/components/ItemEditModal';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ChatPanel } from '@/components/chat/ChatPanel';
+import { TelegramConnect } from '@/components/TelegramConnect';
 import { useItems, useItemCounts, useMarkSurfaced } from '@/lib/hooks/useItems';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Item, Category, ItemUpdate } from '@/lib/api';
@@ -260,6 +261,7 @@ function DashboardContent() {
   const [detailItem, setDetailItem] = useState<Item | null>(null);
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [deleteItem, setDeleteItem] = useState<Item | null>(null);
+  const [showTelegram, setShowTelegram] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
 
   // Track online status
@@ -448,6 +450,13 @@ function DashboardContent() {
               </span>
             )}
             <button
+              onClick={() => setShowTelegram(true)}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              title="Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+            <button
               onClick={handleLogout}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
             >
@@ -583,6 +592,12 @@ function DashboardContent() {
           itemContent={deleteItem.content}
         />
       )}
+
+      {/* Telegram Connect Modal */}
+      <TelegramConnect
+        isOpen={showTelegram}
+        onClose={() => setShowTelegram(false)}
+      />
 
       {/* Chat Panel */}
       <ChatPanel />
