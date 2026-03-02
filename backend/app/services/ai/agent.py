@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.chat import ChatSession, ChatMessage
 from app.services.ai.tool_registry import registry
+from app.services.ai.memory import load_active_memories, format_memories_for_prompt
 
 # Ensure tools are registered
 import app.services.ai.agent_tools  # noqa: F401
@@ -189,16 +190,22 @@ def run_agent(
         db_messages = _load_messages(db, session.id)
         api_messages = _db_messages_to_anthropic(db_messages)
 
-        # 4. Get tool schemas
-        tool_schemas = registry.get_schemas(agent_type=session.agent_type)
+        # 4. Load user's long-term memories and build personalized prompt
+        user_memories = load_active_memories(db, user_id)
+        memory_block = format_memories_for_prompt(user_memories)
+        personalized_prompt = SYSTEM_PROMPT + memory_block
 
-        # 5. Agent loop
+        # 5. Get tool schemas (dynamically selected based on user message)
+        from app.services.ai.tool_selector import select_tools
+        tool_schemas = select_tools(user_message=message, agent_type=session.agent_type)
+
+        # 6. Agent loop
         for iteration in range(MAX_ITERATIONS):
             try:
                 response = client.messages.create(
                     model=AGENT_MODEL,
                     max_tokens=2048,
-                    system=SYSTEM_PROMPT,
+                    system=personalized_prompt,
                     tools=tool_schemas,
                     messages=api_messages,
                 )
@@ -301,6 +308,14 @@ def run_agent(
             })
 
         yield _sse_event("done", {})
+
+        # Extract and save long-term memories from this conversation
+        # Runs after "done" — frontend has already closed the stream
+        try:
+            from app.services.ai.memory import extract_and_save_memories
+            extract_and_save_memories(db, user_id, api_messages)
+        except Exception as e:
+            logger.warning("Memory extraction failed (non-critical): %s", e)
 
     except Exception as e:
         logger.exception("Agent run failed")
