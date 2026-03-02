@@ -15,6 +15,7 @@ from sqlalchemy import or_, func, cast, String
 from app.models.item import Item
 from app.services.ai.tool_registry import registry
 from app.services.ai.categorizer import categorize_item
+from app.services.ai.embeddings import embedding_service
 from app.services.notifications.sender import get_upcoming_notifications
 from app.services.notifications.digest import get_digest_preview
 
@@ -237,13 +238,13 @@ def _item_to_dict(item: Item) -> dict:
 
 def handle_search_items(db: Session, user_id: UUID, params: dict) -> dict:
     query = db.query(Item).filter(Item.user_id == user_id)
+    query_vec = None  # Cached embedding vector for reuse in filtering + ordering
 
     module = params.get("module")
     if module and module != "all":
         if module == "today":
             query = query.filter(_build_today_smart_filter())
         elif module == "tasks":
-            from sqlalchemy import and_
             query = query.filter(or_(
                 Item.category == "tasks",
                 (Item.action_required == True) & (Item.intent == "task"),
@@ -272,12 +273,23 @@ def handle_search_items(db: Session, user_id: UUID, params: dict) -> dict:
 
     search = params.get("search")
     if search:
+        # Keyword match (existing behavior)
         term = f"%{search.lower()}%"
-        query = query.filter(or_(
+        keyword_filter = or_(
             func.lower(Item.content).like(term),
             func.lower(Item.summary).like(term),
             func.lower(cast(Item.tags, String)).like(term),
-        ))
+        )
+
+        # Semantic match via pgvector (additive — never replaces keyword)
+        query_vec = embedding_service.embed_text(search)
+        if query_vec is not None:
+            # Hybrid: keyword OR vector similarity within threshold
+            semantic_filter = Item.content_embedding.cosine_distance(query_vec) < 0.7
+            query = query.filter(or_(keyword_filter, semantic_filter))
+        else:
+            # Fallback: keyword only (embedding service unavailable)
+            query = query.filter(keyword_filter)
 
     urgency = params.get("urgency")
     if urgency:
@@ -294,6 +306,13 @@ def handle_search_items(db: Session, user_id: UUID, params: dict) -> dict:
 
     if module == "reminders":
         items_list = query.order_by(Item.next_notification_at.asc()).offset(offset).limit(page_size).all()
+    elif query_vec is not None:
+        # Order by semantic relevance when vector search is active
+        items_list = (
+            query
+            .order_by(Item.content_embedding.cosine_distance(query_vec).asc())
+            .offset(offset).limit(page_size).all()
+        )
     else:
         items_list = query.order_by(Item.created_at.desc()).offset(offset).limit(page_size).all()
 
@@ -352,6 +371,21 @@ def handle_create_item(db: Session, user_id: UUID, params: dict) -> dict:
     except Exception as e:
         logger.warning(f"AI categorization failed during chat create: {e}")
 
+    # Generate embedding for semantic search
+    try:
+        embed_parts = [content]
+        if new_item.summary:
+            embed_parts.append(new_item.summary)
+        if new_item.tags:
+            embed_parts.append(" ".join(new_item.tags))
+        embed_text = " ".join(embed_parts)
+        vec = embedding_service.embed_text(embed_text)
+        if vec is not None:
+            new_item.content_embedding = vec
+            db.commit()
+    except Exception as e:
+        logger.warning(f"Embedding generation failed for new item: {e}")
+
     emoji = CATEGORY_EMOJI.get(new_item.category or "", "📌")
     return {
         "created": True,
@@ -374,12 +408,30 @@ def handle_update_item(db: Session, user_id: UUID, params: dict) -> dict:
         return {"error": "Item not found"}
 
     updatable = ["content", "category", "tags", "priority", "urgency"]
+    needs_reembed = False
     for field in updatable:
         if field in params:
             setattr(item, field, params[field])
+            if field in ("content", "tags"):
+                needs_reembed = True
 
     db.commit()
     db.refresh(item)
+
+    # Regenerate embedding if content or tags changed
+    if needs_reembed:
+        try:
+            embed_parts = [item.content]
+            if item.summary:
+                embed_parts.append(item.summary)
+            if item.tags:
+                embed_parts.append(" ".join(item.tags))
+            vec = embedding_service.embed_text(" ".join(embed_parts))
+            if vec is not None:
+                item.content_embedding = vec
+                db.commit()
+        except Exception as e:
+            logger.warning(f"Embedding regeneration failed for item {item.id}: {e}")
 
     return {"updated": True, "id": str(item.id), "mutated": True, **_item_to_dict(item)}
 

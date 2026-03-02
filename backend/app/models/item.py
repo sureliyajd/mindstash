@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
+from pgvector.sqlalchemy import Vector
 
 from app.core.database import Base
 
@@ -56,6 +57,9 @@ class Item(Base):
     next_notification_at = Column(DateTime, nullable=True, index=True)  # When next notification should be sent
     last_notified_at = Column(DateTime, nullable=True)  # When last notification was sent
     notification_enabled = Column(Boolean, default=True, nullable=False)  # User can disable notifications
+
+    # Vector embedding for semantic search (1536-dim, text-embedding-3-small)
+    content_embedding = Column(Vector(1536), nullable=True)
 
     # Completion tracking
     is_completed = Column(Boolean, default=False, nullable=False, index=True)  # User marked as done

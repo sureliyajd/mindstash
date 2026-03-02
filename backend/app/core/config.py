@@ -30,12 +30,20 @@ class Settings(BaseSettings):
     # AI/LLM APIs (at least one is required based on environment)
     ANTHROPIC_API_KEY: str | None = None  # For production (Claude Sonnet 4.5)
     AIML_API_KEY: str | None = None  # For development (AI/ML API - OpenAI compatible)
+
+    # Embeddings (optional — falls back to AIML_API_KEY if not set)
+    EMBEDDING_API_KEY: str | None = None
+    EMBEDDING_BASE_URL: str | None = None
     
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
     
     # Rate Limiting (optional, uses in-memory if not set)
     REDIS_URL: str | None = None  # Example: redis://localhost:6379
+
+    # Telegram Bot Integration
+    TELEGRAM_BOT_TOKEN: str | None = None
+    TELEGRAM_WEBHOOK_SECRET: str | None = None  # Auto-generated if not set
 
     # Optional
     SENTRY_DSN: str | None = None

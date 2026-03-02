@@ -19,6 +19,8 @@ Rate Limits (per user to prevent abuse & control AI costs):
 - Mark Surfaced: 100/hour
 - Counts: 100/hour
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func, cast, String
@@ -42,6 +44,9 @@ from app.schemas.item import (
     VALID_CATEGORIES
 )
 from app.services.ai.categorizer import categorize_item
+from app.services.ai.embeddings import embedding_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["items"])
 
@@ -195,6 +200,21 @@ def create_item(
         # If AI fails, item still exists with basic data
         print(f"⚠️  AI categorization failed: {e}")
         # Item will have None values for AI fields
+
+    # Generate embedding for semantic search
+    try:
+        embed_parts = [item_data.content]
+        if new_item.summary:
+            embed_parts.append(new_item.summary)
+        if new_item.tags:
+            embed_parts.append(" ".join(new_item.tags))
+        vec = embedding_service.embed_text(" ".join(embed_parts))
+        if vec is not None:
+            new_item.content_embedding = vec
+            db.commit()
+            db.refresh(new_item)
+    except Exception as e:
+        logger.warning(f"Embedding generation failed for item {new_item.id}: {e}")
 
     return new_item
 

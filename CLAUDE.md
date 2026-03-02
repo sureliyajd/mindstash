@@ -6,418 +6,168 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **MindStash** - "Never lose a thought again"
 
-An AI-powered contextual memory system that intelligently categorizes and surfaces saved content. Users capture anything in natural language (max 500 chars), AI automatically organizes it into 12 smart categories, and content is beautifully presented with Framer Motion animations and modern Lucide icons.
+An AI-powered personal knowledge management app. Users capture thoughts (max 500 chars), AI categorizes them into 12 categories with metadata, and an AI chat agent helps search, manage, and surface saved content.
 
 **Tech Stack:**
-- Backend: Python 3.12, FastAPI 0.109.0, SQLAlchemy 2.0.25, PostgreSQL
-- Frontend: Next.js 16.1.1, React 19.2.3, TypeScript 5, Tailwind CSS 4
-- AI: AI/ML API (dev) → Anthropic Claude API (production)
-- State Management: TanStack React Query 5.90.16
-- Animations: Framer Motion (latest)
-- Icons: Lucide React (modern, tree-shakeable)
-- DevOps: Vercel (frontend), Railway (backend), Supabase (database)
+- Backend: Python 3.12, FastAPI, SQLAlchemy 2.0, PostgreSQL, Alembic
+- Frontend: Next.js (App Router), React 19, TypeScript, Tailwind CSS 4, Framer Motion, Lucide React
+- AI: Anthropic Claude (`claude-haiku-4-5-20251001` for agent, AI/ML API for categorization in dev)
+- State: TanStack React Query + custom hooks
+- DevOps: Vercel (frontend), Railway (backend), Supabase (PostgreSQL)
 
 ## Development Commands
 
-### Backend Commands
+### Backend
 
 ```bash
-# Setup and activation
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Running the server
+source venv/bin/activate
 uvicorn app.main:app --reload --port 8000
 
-# Database migrations
+# Migrations
 alembic revision --autogenerate -m "description"
 alembic upgrade head
 alembic downgrade -1
 
-# Testing
+# Tests
 pytest
 pytest tests/test_auth.py -v
 pytest --cov=app tests/
 
-# Code quality
-black app/
-flake8 app/
-mypy app/
+# Linting
+black app/ && flake8 app/ && mypy app/
 ```
 
-### Frontend Commands
+### Frontend
 
 ```bash
-# Setup
 cd frontend
-npm install
-
-# Install MindStash-specific dependencies
-npm install framer-motion lucide-react
-
-# Development
-npm run dev
-
-# Build and production
-npm run build
-npm start
-
-# Testing
-npm test
-npm run test:e2e
-
-# Linting
-npm run lint
+npm run dev          # Development server (port 3000)
+npm run build        # Production build
+npm run lint         # ESLint
 ```
 
-### Environment Setup
+### Environment
 
-Backend `.env` requires:
+Backend `backend/.env`:
 - `DATABASE_URL` - PostgreSQL connection string
-- `ANTHROPIC_API_KEY` - Claude API key from console.anthropic.com (for production)
-- `AIML_API_KEY` - AI/ML API key for development (from aimlapi.com/app/keys)
-- `SECRET_KEY` - Generate with `openssl rand -hex 32`
-- `CORS_ORIGINS` - Frontend URL (JSON array format: `["http://localhost:3000"]`)
+- `SECRET_KEY` - JWT secret (`openssl rand -hex 32`)
+- `ANTHROPIC_API_KEY` - For the AI chat agent (Claude)
+- `AIML_API_KEY` - For AI categorization in dev (OpenAI-compatible)
+- `CORS_ORIGINS` - JSON array, e.g. `["http://localhost:3000"]`
+- `REDIS_URL` - Optional; falls back to in-memory rate limiting
 
-Frontend `.env.local` requires:
-- `NEXT_PUBLIC_API_URL` - Backend URL (default: http://localhost:8000)
+Frontend `frontend/.env.local`:
+- `NEXT_PUBLIC_API_URL` - Backend URL (default: `http://localhost:8000`)
 
 ## Architecture
 
-### Backend Structure
+### Backend (`backend/app/`)
 
 ```
-backend/app/
-├── main.py              # ✅ FastAPI app entry point, CORS middleware, health endpoints
-├── core/
-│   ├── config.py        # ✅ Pydantic settings from environment variables
-│   ├── database.py      # ✅ SQLAlchemy engine, SessionLocal, get_db dependency
-│   └── security.py      # ✅ JWT token creation, password hashing, verify functions
-├── models/              # ✅ SQLAlchemy ORM models
-│   ├── user.py          # ✅ User model with UUID primary key, relationship to items
-│   └── item.py          # ✅ Item model (UPDATED for 12 categories)
-├── schemas/             # ✅ Pydantic validation schemas
-│   ├── user.py          # ✅ UserCreate, UserLogin, UserResponse, TokenResponse
-│   └── item.py          # ✅ ItemCreate, ItemUpdate, ItemResponse (UPDATED)
-├── api/routes/          # 🚧 FastAPI route handlers (to be implemented)
-│   ├── auth.py          # 📋 POST /api/auth/register, /login, /refresh
-│   └── items.py         # 📋 CRUD endpoints for items
-└── services/ai/         # 📋 AI categorization service
-    └── categorizer.py   # 📋 Claude API integration for 12-category system
+main.py                   # App init, CORS, rate limit handler, router registration
+core/
+  config.py               # Pydantic settings (lru_cache singleton)
+  database.py             # SQLAlchemy engine + get_db dependency
+  security.py             # JWT creation/verification, bcrypt hashing
+  rate_limit.py           # slowapi limiter; user_limiter for authenticated routes
+api/
+  dependencies.py         # get_current_user (JWT → User)
+  routes/
+    auth.py               # POST /api/auth/register|login|refresh, GET /api/auth/me
+    items.py              # CRUD /api/items/ + /counts/ + /mark-surfaced/ + /{id}/complete
+    chat.py               # POST /api/chat/ (SSE), GET /api/chat/sessions[/{id}/messages]
+    notifications.py      # GET /api/notifications/upcoming|digest-preview
+models/
+  user.py                 # User (UUID PK, email, hashed_password)
+  item.py                 # Item (12-category + AI intelligence signals + notification fields)
+  chat.py                 # ChatSession, ChatMessage, UserMemory
+schemas/                  # Pydantic request/response models mirroring models
+services/
+  ai/
+    categorizer.py        # AI/ML API (OpenAI-compat) → 12-category JSON response
+    agent.py              # Core agent loop: SSE generator, tool calling, history management
+    tool_registry.py      # ToolRegistry singleton; register/get_schemas/execute
+    agent_tools.py        # Tool implementations registered into registry
+  notifications/
+    digest.py             # Digest data assembly
+    sender.py             # Email sending
+  scheduler.py            # Background scheduled tasks
 ```
 
-**Legend:** ✅ Implemented | 🚧 In Progress | 📋 Planned
+### AI Agent System
 
-### Frontend Structure
+The agent (`services/ai/agent.py`) runs a synchronous tool-calling loop and yields SSE events:
+
+1. `session_id` → chat session ID
+2. `text_delta` → streamed assistant text
+3. `tool_start` → tool execution began (with user-friendly message)
+4. `tool_result` → tool success/failure + `mutated` flag for cache invalidation
+5. `error` / `done` → terminal events
+
+Tools are registered in `tool_registry.py` via `registry.register(name, schema, handler, agent_types)`. Tool handlers live in `agent_tools.py` and receive `(db, user_id, tool_input)`. Currently registered tools: `search_items`, `create_item`, `update_item`, `delete_item`, `mark_complete`, `get_counts`, `get_upcoming_notifications`, `get_digest_preview`, `generate_daily_briefing`.
+
+The special `[BRIEFING]` message triggers a daily briefing flow via the system prompt.
+
+### Item Model — Key Fields
+
+Beyond basic content/url/category, items carry:
+- **AI categorization**: `category`, `tags`, `summary`, `confidence`, `priority`, `time_sensitivity`, `ai_metadata`
+- **AI intelligence signals**: `intent`, `action_required`, `urgency`, `time_context`, `resurface_strategy`, `suggested_bucket`
+- **Notifications**: `notification_date`, `notification_frequency`, `next_notification_at`, `last_notified_at`, `notification_enabled`
+- **Completion**: `is_completed`, `completed_at`
+- **Surfacing**: `last_surfaced_at`
+
+### Frontend (`frontend/src/`)
 
 ```
-frontend/
-├── src/
-│   └── app/             # Next.js App Router
-│       ├── page.tsx     # 📋 Landing page
-│       ├── login/       # 📋 Login page
-│       ├── register/    # 📋 Registration page
-│       └── dashboard/   # 📋 Main dashboard (Masonry grid)
-├── components/          # 📋 Reusable components
-│   ├── ui/              # 📋 shadcn/ui components
-│   ├── ItemCard.tsx     # 📋 Card with Framer Motion animations
-│   ├── CategoryFilter.tsx # 📋 Filter chips with Lucide icons
-│   └── CaptureInput.tsx # 📋 500-char input with counter
-├── lib/
-│   ├── api.ts           # 📋 API client (axios + React Query)
-│   └── animations.ts    # 📋 Framer Motion variants
-└── public/              # Static assets
+app/
+  page.tsx              # Landing page
+  login/ register/      # Auth pages
+  dashboard/page.tsx    # Main dashboard
+  test/page.tsx         # Dev test page
+components/
+  CaptureInput.tsx      # 500-char textarea with counter
+  ItemCard.tsx          # Framer Motion card with category icon + confidence badge
+  FilterPanel.tsx       # Category + module filter chips
+  ModuleSelector.tsx    # Module tabs (Today, Tasks, Read Later, etc.)
+  ChatPanel.tsx         # SSE-streaming chat UI
+  ItemDetailModal.tsx   # Full item view
+  ItemEditModal.tsx     # Edit category, tags, etc.
+  DeleteConfirmModal.tsx
+  SearchBar.tsx
+  AIProcessing.tsx      # AI loading state animation
+  AnimatedBackground.tsx
+  EmptyState.tsx / Skeletons.tsx / Toast.tsx
+  ProtectedRoute.tsx    # Redirects to /login if no token
+  Providers.tsx         # React Query provider
+lib/
+  api.ts                # Axios client + all API methods (auth, items, notifications, chat)
+  hooks/useAuth.ts      # Auth state via React Query
+  hooks/useItems.ts     # Items CRUD mutations + queries
+  hooks/useChat.ts      # SSE chat hook (parses event stream)
+  types/chat.ts         # Chat type definitions
+  aiTranslations.ts     # Human-readable labels for AI field values
 ```
 
-### Database Schema
+The chat API uses native `fetch` (not axios) for SSE streaming. The `useChat` hook parses the event stream and emits `mutated: true` events to trigger React Query cache invalidation for items.
 
-**Users table:** (unchanged)
-- `id` (UUID, primary key)
-- `email` (String, unique, indexed)
-- `hashed_password` (String)
-- `created_at`, `updated_at` (DateTime)
-- Relationship: One-to-many with Items (cascade delete)
+### Database Migrations (Alembic)
 
-**Items table:** (UPDATED for MindStash)
-- `id` (UUID, primary key)
-- `user_id` (UUID, foreign key to users, indexed)
-- `content` (Text, max 500 chars, required)
-- `url` (Text, optional) - auto-extracted from content
-- `category` (String, indexed) - One of 12 categories (see below)
-- `tags` (JSONB) - Array of strings, e.g. ["productivity", "tech"]
-- `summary` (Text) - AI-generated brief description
-- `confidence` (Float) - AI confidence score 0.0-1.0
-- `priority` (String) - "low", "medium", "high"
-- `time_sensitivity` (String) - "immediate", "this_week", "review_weekly", "reference"
-- `ai_metadata` (JSONB) - Full AI response with reasoning
-- `created_at` (DateTime, indexed), `updated_at` (DateTime)
-- Relationship: Many-to-one with User
+Run from `backend/`. Migration chain:
+1. `5767e0525f9a` - initial tables (users, items)
+2. `efe934788a50` - 12-category item fields
+3. `c9d8f48eedbc` - AI intelligence signals
+4. `6de7fae67bb3` - notification + completion fields
+5. `a3f2d9e81c45` - last_surfaced_at
+6. `b1c3e7f9a2d4` - chat + memory tables
 
-### 12 Categories (MindStash Core)
+Always run `alembic revision --autogenerate` after modifying models, review the generated migration, then `alembic upgrade head`.
 
-1. **📚 read** - Articles, blogs, documentation
-2. **🎥 watch** - Videos, courses, talks
-3. **💡 ideas** - Business, product, creative concepts
-4. **✅ tasks** - Todos, action items
-5. **👤 people** - Follow-ups, contacts, messages
-6. **📝 notes** - Reference info, quotes, facts
-7. **🎯 goals** - Long-term objectives, aspirations
-8. **🛒 buy** - Shopping, products to purchase
-9. **📍 places** - Travel, locations, restaurants
-10. **💭 journal** - Personal thoughts, reflections
-11. **🎓 learn** - Skills to acquire, courses
-12. **🔖 save** - General bookmarks, miscellaneous
+## Key Constraints
 
-### AI Categorization Flow (MindStash)
-
-1. User enters text (max 500 chars) in capture input
-2. Frontend shows loading animation (Framer Motion)
-3. Backend receives POST /api/items with content
-4. Item saved to database immediately (without AI fields)
-5. AI service calls API with 12-category prompt
-   - **Development:** Using AI/ML API with GPT-4o (OpenAI-compatible)
-   - **Production:** Will switch to Anthropic Claude Sonnet 4.5
-6. AI returns: category, tags, summary, confidence, priority, time_sensitivity
-7. Item updated with all AI fields
-8. Frontend notified via React Query refetch
-9. Card animates into masonry grid with Framer Motion
-
-**AI System Prompt:**
-```
-You are a smart content organizer for MindStash. Analyze user input and categorize it into exactly ONE of these 12 categories:
-
-1. read - Articles, blogs, documentation to read
-2. watch - Videos, courses, talks to watch
-3. ideas - Business ideas, product concepts, creative inspiration
-4. tasks - Action items, todos, things to do
-5. people - Follow-ups, contacts to reach, messages to send
-6. notes - Reference information, quotes, facts to remember
-7. goals - Long-term objectives, aspirations, life goals
-8. buy - Products to purchase, shopping items
-9. places - Locations to visit, restaurants, travel ideas
-10. journal - Personal thoughts, reflections, diary entries
-11. learn - Skills to acquire, courses to take, learning goals
-12. save - General bookmarks, miscellaneous items
-
-Respond in JSON format:
-{
-  "category": "one of the 12 categories",
-  "tags": ["tag1", "tag2", "tag3"],
-  "summary": "brief 1-sentence description (max 100 chars)",
-  "confidence": 0.95,
-  "priority": "low|medium|high",
-  "time_sensitivity": "immediate|this_week|review_weekly|reference",
-  "reasoning": "brief explanation of categorization"
-}
-
-User input: {content}
-URL (if detected): {url}
-```
-
-### Authentication Flow
-
-- JWT-based authentication using python-jose
-- Password hashing with passlib[bcrypt]
-- Access tokens expire in 30 minutes (configurable)
-- Refresh tokens expire in 7 days (configurable)
-- Protected routes use `Depends(get_current_user)` dependency
-
-### API Endpoints
-
-**Implemented:**
-```
-GET    /                           - API info (returns app name, version, status)
-GET    /health                     - Health check (returns status, environment)
-```
-
-**To Be Implemented:**
-```
-POST   /api/auth/register          - User registration
-POST   /api/auth/login             - User login (returns access + refresh tokens)
-POST   /api/auth/refresh           - Refresh access token
-GET    /api/users/me               - Get current user profile
-
-POST   /api/items                  - Create item (triggers AI categorization)
-GET    /api/items                  - List items (paginated, filtered by category)
-GET    /api/items/{id}             - Get single item
-PUT    /api/items/{id}             - Update item (content, category, etc.)
-DELETE /api/items/{id}             - Delete item
-POST   /api/items/{id}/recategorize - Manually trigger re-categorization
-```
-
-## Key Design Patterns
-
-### Input Validation
-- Max 500 characters for item content (enforced in schema)
-- Auto-extract URLs from content using regex
-- Show character counter in frontend (500/500)
-- Prevent submission if over limit
-
-### UI/UX Patterns
-
-**Dashboard Layout:**
-- Masonry grid (Pinterest-style) using CSS Grid or library
-- Cards auto-size based on content length
-- Sticky search bar at top
-- Horizontal scrolling filter chips (12 categories)
-- "All" shows all categories
-
-**Card Design:**
-- Icon + category name (top left)
-- Content (2-3 lines, truncated with "...")
-- Confidence badge (top right) - colored by score
-- Tags as chips (bottom)
-- Hover: scale up, show shadow, reveal actions (edit/delete)
-- Click: expand to full view modal
-
-**Framer Motion Animations:**
-```typescript
-// Card entrance (stagger)
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 }
-}
-
-// Hover effect
-const hoverVariants = {
-  scale: 1.02,
-  boxShadow: "0 10px 30px rgba(0,0,0,0.1)"
-}
-
-// Category filter transition
-const filterVariants = {
-  exit: { opacity: 0, x: -20 },
-  enter: { opacity: 1, x: 0 }
-}
-```
-
-**Lucide Icons Usage:**
-```typescript
-import { 
-  BookOpen,      // 📚 read
-  Video,         // 🎥 watch
-  Lightbulb,     // 💡 ideas
-  CheckSquare,   // ✅ tasks
-  Users,         // 👤 people
-  FileText,      // 📝 notes
-  Target,        // 🎯 goals
-  ShoppingCart,  // 🛒 buy
-  MapPin,        // 📍 places
-  BookMarked,    // 💭 journal
-  GraduationCap, // 🎓 learn
-  Bookmark       // 🔖 save
-} from 'lucide-react'
-```
-
-### Error Handling
-- Use FastAPI HTTPException for API errors
-- Return consistent error format: `{"detail": "error message"}`
-- Frontend shows toast notifications for errors
-- Log errors for debugging but don't expose internals
-
-## Development Workflow
-
-### ✅ Completed (Week 1)
-- Project structure and environment setup
-- Database models (User, Item) with SQLAlchemy
-- Pydantic schemas for validation
-- Core security utilities (JWT, password hashing)
-- Configuration management
-- Database migrations with Alembic
-- Frontend scaffolding with Next.js 16, React 19, TypeScript
-- Dependencies installed (React Query, Axios, Tailwind, Framer Motion, Lucide)
-
-### 🚧 Current Phase: Week 2 (API Implementation)
-- Update Item model for 12 categories + new fields
-- Implement authentication endpoints
-- Create CRUD operations for items
-- Write comprehensive tests
-- Set up proper error handling
-
-### 📋 Upcoming: Week 3-4 (AI Integration)
-- Integrate Anthropic Claude API
-- Implement 12-category categorization service
-- Handle AI rate limits and errors
-- Add background task processing
-
-### 📋 Upcoming: Week 5-6 (Frontend Development)
-- Build authentication flow
-- Create masonry grid dashboard
-- Implement capture input with 500-char limit
-- Add Framer Motion animations everywhere
-- Integrate Lucide icons
-- Add category filters
-- Build item detail modal
-
-## Important Notes
-
-### Character Limit (500 chars)
-- CRITICAL: Enforce 500-char limit to control token costs
-- Frontend: Show counter, prevent submission over limit
-- Backend: Validate with Pydantic (max_length=500)
-- Example: "This is a test input..." (500/500)
-
-### Database Migrations
-- Always use Alembic for schema changes
-- Run `alembic revision --autogenerate` after modifying models
-- Review migration before applying
-- Test migrations are reversible
-
-### Security Considerations
-- Never commit .env files or expose API keys
-- Always hash passwords before storing
-- Validate all user input with Pydantic
-- Filter items by user_id to prevent unauthorized access
-- 500-char limit prevents abuse
-
-### Testing Strategy
-- Write tests for all API endpoints
-- Mock Anthropic API calls to avoid costs
-- Test 500-char limit enforcement
-- Test all 12 categories
-- Aim for >80% code coverage
-
-### AI Cost Optimization
-- 500-char input limit = ~125 tokens max per request
-- System prompt ~300 tokens
-- Total per categorization: ~450 tokens
-- Cost: ~$0.0015 per item (with Claude Sonnet 4.5)
-- Cache responses for identical content (Phase 2)
-
-## Common Issues
-
-### Database Connection Errors
-- Verify `DATABASE_URL` in .env is correct
-- Check Supabase project running and IP whitelisted
-
-### CORS Errors from Frontend
-- Verify `CORS_ORIGINS=["http://localhost:3000"]` (JSON array!)
-- Restart backend after changing CORS settings
-
-### Character Limit Not Enforced
-- Check Pydantic schema has `max_length=500`
-- Check frontend validation matches backend
-
-### Framer Motion Not Working
-- Ensure `framer-motion` installed: `npm install framer-motion`
-- Import motion components: `import { motion } from 'framer-motion'`
-
-## Project Goals
-
-1. **Learn AI Engineering** - Master LLM integration, prompt engineering, 12-category system
-2. **Build Portfolio** - Create production-ready SaaS with beautiful UI
-3. **Generate Revenue** - Launch and scale to $5K-$10K MRR
-4. **Master Modern Stack** - FastAPI + Next.js + Framer Motion + AI
-
-**Key Features:**
-- ✅ 500-char input limit (cost control)
-- ✅ 12 smart categories (comprehensive)
-- ✅ Beautiful Masonry grid UI
-- ✅ Framer Motion animations (modern)
-- ✅ Lucide icons (clean, modern)
-- ✅ User can edit category (AI not perfect)
-- ✅ Confidence score shown (trust building)
-
-This is a learning-focused project with emphasis on shipping quickly, beautiful UI, and practical AI integration.
+- **500-char limit** on item content is enforced at both schema (Pydantic `max_length=500`) and frontend (`maxLength` + counter). Never bypass this — it controls AI token costs.
+- **12 categories** are fixed: `read, watch, ideas, tasks, people, notes, goals, buy, places, journal, learn, save`. Invalid AI responses fall back to `"save"`.
+- **Rate limits**: chat endpoint is 20/hour per user; list endpoints 100/hour. Configured via `@user_limiter.limit()` decorator.
+- **AI API split**: categorizer uses AI/ML API (OpenAI-compatible, `AIML_API_KEY`); agent uses Anthropic directly (`ANTHROPIC_API_KEY`). Both keys should be present in `.env`.
+- Items are always filtered by `user_id` — never expose cross-user data.
