@@ -17,7 +17,7 @@ from app.core.database import Base
 # Import all models so Alembic can detect them
 from app.models.user import User
 from app.models.item import Item  # includes pgvector.sqlalchemy.Vector
-from app.models.chat import ChatSession, ChatMessage, UserMemory
+from app.models.chat import ChatSession, ChatMessage, UserMemory, PendingConfirmation
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

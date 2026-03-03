@@ -11,6 +11,7 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   Search,
   Sparkles,
   ListChecks,
@@ -40,11 +41,66 @@ const toolIcons: Record<string, typeof Search> = {
 };
 
 // =============================================================================
+// TOOL CONFIRMATION PROMPT
+// =============================================================================
+
+function ToolConfirmationPrompt({
+  toolCall,
+  onConfirm,
+  onDeny,
+}: {
+  toolCall: ToolCallStatus;
+  onConfirm: () => void;
+  onDeny: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-lg border border-amber-200 bg-amber-50 p-3"
+    >
+      <div className="mb-2 flex items-start gap-2">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+        <p className="text-xs leading-relaxed text-amber-800">
+          {toolCall.confirmationDescription || toolCall.message}
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={onConfirm}
+          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-600"
+        >
+          Delete
+        </button>
+        <button
+          onClick={onDeny}
+          className="rounded-lg bg-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300"
+        >
+          Cancel
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// =============================================================================
 // TOOL CALL INDICATOR
 // =============================================================================
 
-function ToolCallIndicator({ toolCall }: { toolCall: ToolCallStatus }) {
+function ToolCallIndicator({
+  toolCall,
+  onConfirm,
+  onDeny,
+}: {
+  toolCall: ToolCallStatus;
+  onConfirm?: () => void;
+  onDeny?: () => void;
+}) {
   const Icon = toolIcons[toolCall.tool] || Sparkles;
+
+  if (toolCall.status === 'awaiting_confirmation' && onConfirm && onDeny) {
+    return <ToolConfirmationPrompt toolCall={toolCall} onConfirm={onConfirm} onDeny={onDeny} />;
+  }
 
   return (
     <motion.div
@@ -139,7 +195,17 @@ function MarkdownContent({ content }: { content: string }) {
 // CHAT BUBBLE
 // =============================================================================
 
-function ChatBubble({ message, isBriefing }: { message: ChatMessage; isBriefing?: boolean }) {
+function ChatBubble({
+  message,
+  isBriefing,
+  onConfirm,
+  onDeny,
+}: {
+  message: ChatMessage;
+  isBriefing?: boolean;
+  onConfirm?: () => void;
+  onDeny?: () => void;
+}) {
   const isUser = message.role === 'user';
 
   return (
@@ -167,7 +233,12 @@ function ChatBubble({ message, isBriefing }: { message: ChatMessage; isBriefing?
         {message.toolCalls && message.toolCalls.length > 0 && (
           <div className="mb-2 space-y-1.5">
             {message.toolCalls.map((tc, i) => (
-              <ToolCallIndicator key={`${tc.tool}-${i}`} toolCall={tc} />
+              <ToolCallIndicator
+                key={`${tc.tool}-${i}`}
+                toolCall={tc}
+                onConfirm={tc.status === 'awaiting_confirmation' ? onConfirm : undefined}
+                onDeny={tc.status === 'awaiting_confirmation' ? onDeny : undefined}
+              />
             ))}
           </div>
         )}
@@ -260,20 +331,21 @@ function LoadingHistory() {
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled: boolean;
+  pendingConfirmation: boolean;
 }
 
-function ChatInput({ onSend, disabled }: ChatInputProps) {
+function ChatInput({ onSend, disabled, pendingConfirmation }: ChatInputProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSend = useCallback(() => {
-    if (!value.trim() || disabled) return;
+    if (!value.trim() || disabled || pendingConfirmation) return;
     onSend(value.trim());
     setValue('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [value, disabled, onSend]);
+  }, [value, disabled, pendingConfirmation, onSend]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -289,6 +361,8 @@ function ChatInput({ onSend, disabled }: ChatInputProps) {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [value]);
 
+  const isDisabled = disabled || pendingConfirmation;
+
   return (
     <div className="flex items-end gap-2 border-t border-gray-100 bg-white px-4 py-3">
       <textarea
@@ -296,14 +370,14 @@ function ChatInput({ onSend, disabled }: ChatInputProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Ask anything..."
-        disabled={disabled}
+        placeholder={pendingConfirmation ? 'Confirm or cancel the action above...' : 'Ask anything...'}
+        disabled={isDisabled}
         rows={1}
         className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none transition-colors focus:border-[#EA7B7B]/40 focus:bg-white disabled:opacity-50"
       />
       <button
         onClick={handleSend}
-        disabled={disabled || !value.trim()}
+        disabled={isDisabled || !value.trim()}
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EA7B7B] text-white transition-all hover:bg-[#d66b6b] disabled:opacity-40 disabled:hover:bg-[#EA7B7B]"
       >
         {disabled ? (
@@ -322,7 +396,15 @@ function ChatInput({ onSend, disabled }: ChatInputProps) {
 
 export function ChatPanel() {
   const [isOpen, setIsOpen] = useState(false);
-  const { messages, isStreaming, isLoadingHistory, sendMessage, clearChat } = useChat();
+  const {
+    messages,
+    isStreaming,
+    isLoadingHistory,
+    pendingConfirmation,
+    sendMessage,
+    confirmAction,
+    clearChat,
+  } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new messages
@@ -355,6 +437,14 @@ export function ChatPanel() {
     },
     [sendMessage]
   );
+
+  const handleConfirm = useCallback(() => {
+    confirmAction(true);
+  }, [confirmAction]);
+
+  const handleDeny = useCallback(() => {
+    confirmAction(false);
+  }, [confirmAction]);
 
   return (
     <>
@@ -434,6 +524,16 @@ export function ChatPanel() {
                         key={msg.id}
                         message={msg}
                         isBriefing={briefingResponseIds.has(msg.id)}
+                        onConfirm={
+                          pendingConfirmation?.assistantMsgId === msg.id
+                            ? handleConfirm
+                            : undefined
+                        }
+                        onDeny={
+                          pendingConfirmation?.assistantMsgId === msg.id
+                            ? handleDeny
+                            : undefined
+                        }
                       />
                     ))}
                     <div ref={messagesEndRef} />
@@ -442,7 +542,11 @@ export function ChatPanel() {
               </div>
 
               {/* Input */}
-              <ChatInput onSend={sendMessage} disabled={isStreaming} />
+              <ChatInput
+                onSend={sendMessage}
+                disabled={isStreaming}
+                pendingConfirmation={!!pendingConfirmation}
+              />
             </motion.div>
           </>
         )}

@@ -562,19 +562,20 @@ def handle_generate_daily_briefing(db: Session, user_id: UUID, params: dict) -> 
 
 def register_all_tools():
     """Register all tools with the global registry."""
+    # (name, schema, handler, requires_confirmation)
     tools = [
-        ("search_items", SEARCH_ITEMS_SCHEMA, handle_search_items),
-        ("create_item", CREATE_ITEM_SCHEMA, handle_create_item),
-        ("update_item", UPDATE_ITEM_SCHEMA, handle_update_item),
-        ("delete_item", DELETE_ITEM_SCHEMA, handle_delete_item),
-        ("mark_complete", MARK_COMPLETE_SCHEMA, handle_mark_complete),
-        ("get_counts", GET_COUNTS_SCHEMA, handle_get_counts),
-        ("get_upcoming_notifications", GET_UPCOMING_NOTIFICATIONS_SCHEMA, handle_get_upcoming_notifications),
-        ("get_digest_preview", GET_DIGEST_PREVIEW_SCHEMA, handle_get_digest_preview),
-        ("generate_daily_briefing", GENERATE_DAILY_BRIEFING_SCHEMA, handle_generate_daily_briefing),
+        ("search_items", SEARCH_ITEMS_SCHEMA, handle_search_items, False),
+        ("create_item", CREATE_ITEM_SCHEMA, handle_create_item, False),
+        ("update_item", UPDATE_ITEM_SCHEMA, handle_update_item, False),
+        ("delete_item", DELETE_ITEM_SCHEMA, handle_delete_item, True),
+        ("mark_complete", MARK_COMPLETE_SCHEMA, handle_mark_complete, False),
+        ("get_counts", GET_COUNTS_SCHEMA, handle_get_counts, False),
+        ("get_upcoming_notifications", GET_UPCOMING_NOTIFICATIONS_SCHEMA, handle_get_upcoming_notifications, False),
+        ("get_digest_preview", GET_DIGEST_PREVIEW_SCHEMA, handle_get_digest_preview, False),
+        ("generate_daily_briefing", GENERATE_DAILY_BRIEFING_SCHEMA, handle_generate_daily_briefing, False),
     ]
-    for name, schema, handler in tools:
-        registry.register(name, schema, handler)
+    for name, schema, handler, needs_confirm in tools:
+        registry.register(name, schema, handler, requires_confirmation=needs_confirm)
 
 
 # Auto-register on import

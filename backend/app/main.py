@@ -13,7 +13,7 @@ from app.core.rate_limit import limiter, get_remote_address, log_rate_limit_exce
 # Import models (required for SQLAlchemy relationships to work)
 from app.models.user import User
 from app.models.item import Item
-from app.models.chat import ChatSession, ChatMessage, UserMemory
+from app.models.chat import ChatSession, ChatMessage, UserMemory, PendingConfirmation
 from app.models.telegram_link import TelegramLink
 
 # Import routers

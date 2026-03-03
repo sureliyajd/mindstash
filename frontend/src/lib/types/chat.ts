@@ -4,6 +4,7 @@ export type ChatSSEEventType =
   | 'text_delta'
   | 'tool_start'
   | 'tool_result'
+  | 'confirmation_required'
   | 'error'
   | 'done';
 
@@ -27,6 +28,13 @@ export interface ToolResultData {
   mutated: boolean;
 }
 
+export interface ConfirmationRequiredData {
+  confirmation_id: string;
+  tool: string;
+  tool_input: Record<string, unknown>;
+  description: string;
+}
+
 export interface ErrorData {
   message: string;
 }
@@ -35,7 +43,9 @@ export interface ErrorData {
 export interface ToolCallStatus {
   tool: string;
   message: string;
-  status: 'running' | 'done' | 'error';
+  status: 'running' | 'done' | 'error' | 'awaiting_confirmation';
+  confirmationId?: string;
+  confirmationDescription?: string;
 }
 
 // Chat message as represented in the UI

@@ -22,12 +22,18 @@ class ToolRegistry:
         schema: dict,
         handler: Callable,
         agent_types: Optional[list[str]] = None,
+        requires_confirmation: bool = False,
     ):
         self._tools[name] = {
             "schema": schema,
             "handler": handler,
             "agent_types": agent_types or ["assistant"],
+            "requires_confirmation": requires_confirmation,
         }
+
+    def needs_confirmation(self, name: str) -> bool:
+        tool = self._tools.get(name)
+        return tool["requires_confirmation"] if tool else False
 
     def get_schemas(self, agent_type: str = "assistant") -> list[dict]:
         return [

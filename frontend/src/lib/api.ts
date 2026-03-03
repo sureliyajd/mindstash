@@ -384,6 +384,36 @@ export const chat = {
     });
     return response.data;
   },
+
+  confirmAction: async (confirmationId: string, confirmed: boolean): Promise<Response> => {
+    const token = getToken();
+    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${baseURL}/api/chat/confirm`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ confirmation_id: confirmationId, confirmed }),
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearToken();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
+      throw new Error(`Confirmation request failed: ${response.status}`);
+    }
+    return response;
+  },
+
+  getPendingConfirmation: async (
+    sessionId: string
+  ): Promise<{ has_pending: boolean; confirmation_id?: string; tool?: string; tool_input?: Record<string, unknown>; description?: string }> => {
+    const response = await api.get(`/api/chat/sessions/${sessionId}/pending-confirmation`);
+    return response.data;
+  },
 };
 
 // Chat session type (re-exported for convenience)

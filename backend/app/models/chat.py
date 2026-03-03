@@ -2,7 +2,7 @@
 Chat and memory database models for MindStash AI agent
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -125,3 +125,44 @@ class UserMemory(Base):
 
     def __repr__(self):
         return f"<UserMemory {self.id} - {self.memory_type}>"
+
+
+class PendingConfirmation(Base):
+    """Pending tool confirmation for human-in-the-loop safety"""
+
+    __tablename__ = "pending_confirmations"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+    )
+    session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tool_name = Column(String, nullable=False)
+    tool_input = Column(JSONB, nullable=False)
+    tool_use_id = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    agent_context = Column(JSONB, nullable=True)
+    status = Column(String, default="pending", nullable=False)
+    resolved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = Column(
+        DateTime,
+        default=lambda: datetime.utcnow() + timedelta(minutes=10),
+        nullable=True,
+    )
+
+    def __repr__(self):
+        return f"<PendingConfirmation {self.id} - {self.tool_name} ({self.status})>"

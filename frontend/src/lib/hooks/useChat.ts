@@ -11,6 +11,7 @@ import type {
   TextDeltaData,
   ToolStartData,
   ToolResultData,
+  ConfirmationRequiredData,
   ErrorData,
 } from '../types/chat';
 
@@ -20,10 +21,18 @@ const BRIEFING_KEY = 'mindstash_last_briefing';
 /** The magic trigger message for daily briefing. Hidden from user in UI. */
 export const BRIEFING_TRIGGER = '[BRIEFING]';
 
+export interface PendingConfirmationState {
+  confirmationId: string;
+  tool: string;
+  description: string;
+  assistantMsgId: string;
+}
+
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmationState | null>(null);
   const sessionIdRef = useRef<string | undefined>(undefined);
   const hasRestoredRef = useRef(false);
   const queryClient = useQueryClient();
@@ -54,6 +63,37 @@ export function useChat() {
         });
       }
     }
+
+    // Check for pending confirmation on this session
+    try {
+      const pending = await chat.getPendingConfirmation(sessionId);
+      if (pending.has_pending && pending.confirmation_id) {
+        // Create a synthetic assistant message with the awaiting_confirmation tool call
+        const confirmMsgId = `confirm-${Date.now()}`;
+        restored.push({
+          id: confirmMsgId,
+          role: 'assistant',
+          content: '',
+          timestamp: new Date(),
+          toolCalls: [{
+            tool: pending.tool || 'unknown',
+            message: pending.description || 'Action requires confirmation',
+            status: 'awaiting_confirmation',
+            confirmationId: pending.confirmation_id,
+            confirmationDescription: pending.description,
+          }],
+        });
+        setPendingConfirmation({
+          confirmationId: pending.confirmation_id,
+          tool: pending.tool || 'unknown',
+          description: pending.description || 'Action requires confirmation',
+          assistantMsgId: confirmMsgId,
+        });
+      }
+    } catch {
+      // Non-critical — just skip restore of pending confirmation
+    }
+
     return restored;
   }, []);
 
@@ -106,26 +146,35 @@ export function useChat() {
   }, [restoreSession]);
 
   const parseSSEStream = useCallback(
-    async (response: Response) => {
+    async (response: Response, existingAssistantMsgId?: string) => {
       const reader = response.body?.getReader();
       if (!reader) return;
 
       const decoder = new TextDecoder();
       let buffer = '';
 
-      // Create a placeholder assistant message
-      const assistantMsgId = `assistant-${Date.now()}`;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: assistantMsgId,
-          role: 'assistant',
-          content: '',
-          timestamp: new Date(),
-          toolCalls: [],
-          isStreaming: true,
-        },
-      ]);
+      // Use existing assistant message ID if resuming from confirmation, else create new
+      const assistantMsgId = existingAssistantMsgId || `assistant-${Date.now()}`;
+      if (!existingAssistantMsgId) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantMsgId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+            toolCalls: [],
+            isStreaming: true,
+          },
+        ]);
+      } else {
+        // Mark existing message as streaming again
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId ? { ...m, isStreaming: true } : m
+          )
+        );
+      }
 
       let hasMutated = false;
 
@@ -192,13 +241,37 @@ export function useChat() {
                       prev.map((m) => {
                         if (m.id !== assistantMsgId) return m;
                         const updatedCalls = (m.toolCalls || []).map((tc) =>
-                          tc.tool === d.tool && tc.status === 'running'
+                          tc.tool === d.tool && (tc.status === 'running' || tc.status === 'awaiting_confirmation')
                             ? { ...tc, status: d.success ? ('done' as const) : ('error' as const) }
                             : tc
                         );
                         return { ...m, toolCalls: updatedCalls };
                       })
                     );
+                    break;
+                  }
+                  case 'confirmation_required': {
+                    const d = data as ConfirmationRequiredData;
+                    const tc: ToolCallStatus = {
+                      tool: d.tool,
+                      message: d.description,
+                      status: 'awaiting_confirmation',
+                      confirmationId: d.confirmation_id,
+                      confirmationDescription: d.description,
+                    };
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMsgId
+                          ? { ...m, toolCalls: [...(m.toolCalls || []), tc] }
+                          : m
+                      )
+                    );
+                    setPendingConfirmation({
+                      confirmationId: d.confirmation_id,
+                      tool: d.tool,
+                      description: d.description,
+                      assistantMsgId,
+                    });
                     break;
                   }
                   case 'error': {
@@ -248,6 +321,8 @@ export function useChat() {
         queryClient.invalidateQueries({ queryKey: ['items'] });
         queryClient.invalidateQueries({ queryKey: ['item-counts'] });
       }
+
+      return assistantMsgId;
     },
     [queryClient]
   );
@@ -289,6 +364,56 @@ export function useChat() {
     [isStreaming, parseSSEStream]
   );
 
+  const confirmAction = useCallback(
+    async (confirmed: boolean) => {
+      if (!pendingConfirmation) return;
+
+      const { confirmationId, assistantMsgId, tool } = pendingConfirmation;
+
+      // Update the tool call status immediately
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== assistantMsgId) return m;
+          const updatedCalls = (m.toolCalls || []).map((tc) =>
+            tc.confirmationId === confirmationId
+              ? {
+                  ...tc,
+                  status: confirmed ? ('running' as const) : ('error' as const),
+                  message: confirmed
+                    ? `${FRIENDLY_TOOL_MESSAGES[tool] || `Running ${tool}...`}`
+                    : 'Cancelled by user',
+                }
+              : tc
+          );
+          return { ...m, toolCalls: updatedCalls };
+        })
+      );
+
+      setPendingConfirmation(null);
+      setIsStreaming(true);
+
+      try {
+        const response = await chat.confirmAction(confirmationId, confirmed);
+        // Parse the SSE response into the SAME assistant message
+        await parseSSEStream(response, assistantMsgId);
+      } catch (err) {
+        const errorMsg: ChatMessage = {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content:
+            err instanceof Error
+              ? err.message
+              : 'Something went wrong. Please try again.',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+      } finally {
+        setIsStreaming(false);
+      }
+    },
+    [pendingConfirmation, parseSSEStream]
+  );
+
   /**
    * Send a daily briefing request. Hidden from user bubbles.
    * Only triggers if not already briefed today (localStorage check).
@@ -317,6 +442,7 @@ export function useChat() {
 
   const clearChat = useCallback(() => {
     setMessages([]);
+    setPendingConfirmation(null);
     sessionIdRef.current = undefined;
     if (typeof window !== 'undefined') {
       localStorage.removeItem(SESSION_KEY);
@@ -327,9 +453,18 @@ export function useChat() {
     messages,
     isStreaming,
     isLoadingHistory,
+    pendingConfirmation,
     sendMessage,
+    confirmAction,
     sendBriefingRequest,
     clearChat,
     sessionId: sessionIdRef.current,
   };
 }
+
+// Friendly messages for tool running state after confirmation
+const FRIENDLY_TOOL_MESSAGES: Record<string, string> = {
+  delete_item: 'Deleting item...',
+  update_item: 'Updating item...',
+  mark_complete: 'Updating completion status...',
+};

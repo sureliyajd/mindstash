@@ -38,3 +38,16 @@ class ChatSessionResponse(BaseModel):
 class ChatSessionListResponse(BaseModel):
     sessions: List[ChatSessionResponse]
     total: int
+
+
+class ConfirmationRequest(BaseModel):
+    confirmation_id: str
+    confirmed: bool
+
+
+class PendingConfirmationResponse(BaseModel):
+    has_pending: bool
+    confirmation_id: Optional[str] = None
+    tool: Optional[str] = None
+    tool_input: Optional[dict] = None
+    description: Optional[str] = None

@@ -22,8 +22,11 @@ from app.schemas.chat import (
     ChatSessionResponse,
     ChatSessionListResponse,
     ChatMessageResponse,
+    ConfirmationRequest,
+    PendingConfirmationResponse,
 )
-from app.services.ai.agent import run_agent
+from app.models.chat import PendingConfirmation
+from app.services.ai.agent import run_agent, run_confirmation
 
 router = APIRouter(tags=["chat"])
 
@@ -163,3 +166,78 @@ def get_session_messages(
         )
         for m in messages
     ]
+
+
+@router.post("/confirm")
+def confirm_action(
+    request: Request,
+    body: ConfirmationRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Confirm or deny a pending HITL action. Returns SSE-streamed response.
+    """
+    request.state.user = current_user
+
+    return StreamingResponse(
+        run_confirmation(
+            confirmation_id=body.confirmation_id,
+            confirmed=body.confirmed,
+            db=db,
+            user_id=current_user.id,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/pending-confirmation",
+    response_model=PendingConfirmationResponse,
+)
+@user_limiter.limit("100/hour")
+def get_pending_confirmation(
+    request: Request,
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Check if a session has a pending confirmation (for session restore).
+    Auto-expires confirmations past their expires_at.
+    """
+    request.state.user = current_user
+    from datetime import datetime
+
+    pending = (
+        db.query(PendingConfirmation)
+        .filter(
+            PendingConfirmation.session_id == session_id,
+            PendingConfirmation.user_id == current_user.id,
+            PendingConfirmation.status == "pending",
+        )
+        .first()
+    )
+
+    if not pending:
+        return PendingConfirmationResponse(has_pending=False)
+
+    # Check expiry
+    if pending.expires_at and pending.expires_at < datetime.utcnow():
+        pending.status = "expired"
+        pending.resolved_at = datetime.utcnow()
+        db.commit()
+        return PendingConfirmationResponse(has_pending=False)
+
+    return PendingConfirmationResponse(
+        has_pending=True,
+        confirmation_id=str(pending.id),
+        tool=pending.tool_name,
+        tool_input=pending.tool_input,
+        description=pending.description,
+    )
