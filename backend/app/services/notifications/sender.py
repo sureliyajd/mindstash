@@ -8,12 +8,21 @@ This module handles:
 - Processing recurring notifications
 """
 
+import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
+import resend
+
+from app.core.config import settings
 from app.models.item import Item
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
+
+# Initialize Resend
+resend.api_key = settings.RESEND_API_KEY
 
 
 def get_items_to_notify(db: Session) -> List[Item]:
@@ -46,12 +55,7 @@ def get_items_to_notify(db: Session) -> List[Item]:
 
 def send_notification(item: Item, user: User, db: Session) -> bool:
     """
-    Send notification for an item.
-
-    Currently logs the notification. In production, this would:
-    - Send email via SendGrid/Resend
-    - Send push notification via web push
-    - Send SMS via Twilio (future)
+    Send notification for an item via email.
 
     After sending, updates:
     - last_notified_at to now
@@ -67,11 +71,77 @@ def send_notification(item: Item, user: User, db: Session) -> bool:
         True if notification was sent successfully
     """
     try:
-        # TODO: Integrate with actual email service (SendGrid, Resend, etc.)
-        # For now, just log the notification
-        print(f"📧 NOTIFY {user.email}: {item.content[:50]}...")
-        print(f"   Category: {item.category}")
-        print(f"   Frequency: {item.notification_frequency}")
+        # Send email via Resend
+        if settings.RESEND_API_KEY:
+            subject = f"⏰ Reminder: {item.content[:50]}"
+
+            html_body = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                               color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }}
+                    .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }}
+                    .item-box {{ background: white; padding: 20px; border-radius: 8px;
+                                border-left: 4px solid #667eea; margin: 20px 0; }}
+                    .meta {{ color: #6b7280; font-size: 14px; margin-top: 10px; }}
+                    .button {{ display: inline-block; padding: 12px 24px; background: #667eea;
+                              color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }}
+                    .footer {{ text-align: center; color: #9ca3af; font-size: 12px; margin-top: 30px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 28px;">🧠 MindStash Reminder</h1>
+                    </div>
+                    <div class="content">
+                        <p style="font-size: 16px;">Hi there,</p>
+                        <p>You saved this thought and wanted to be reminded:</p>
+
+                        <div class="item-box">
+                            <p style="margin: 0; font-size: 16px; font-weight: 500;">{item.content}</p>
+                            {f'<p style="margin-top: 10px; color: #6b7280;">🔗 <a href="{item.url}" style="color: #667eea;">{item.url}</a></p>' if item.url else ''}
+                        </div>
+
+                        <div class="meta">
+                            <p style="margin: 5px 0;">
+                                📁 Category: <strong>{item.category.title()}</strong> •
+                                ⚡ Priority: <strong>{item.priority.title() if item.priority else 'Normal'}</strong>
+                            </p>
+                        </div>
+
+                        <a href="{settings.APP_URL}/dashboard" class="button">
+                            Open MindStash →
+                        </a>
+
+                        <div class="footer">
+                            <p>Manage your notification preferences in your <a href="{settings.APP_URL}/dashboard" style="color: #667eea;">dashboard</a></p>
+                            <p style="color: #d1d5db; margin-top: 10px;">MindStash • Never lose a thought again</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            params = {
+                "from": settings.FROM_EMAIL,
+                "to": [user.email],
+                "subject": subject,
+                "html": html_body,
+            }
+
+            response = resend.Emails.send(params)
+            logger.info(f"📧 Notification email sent: user={user.email} item_id={item.id} email_id={response.get('id')}")
+        else:
+            logger.warning("RESEND_API_KEY not configured, skipping email send")
+            print(f"📧 NOTIFY {user.email}: {item.content[:50]}...")
+            print(f"   Category: {item.category}")
+            print(f"   Frequency: {item.notification_frequency}")
 
         # Update notification tracking
         item.last_notified_at = datetime.utcnow()
@@ -103,7 +173,7 @@ def send_notification(item: Item, user: User, db: Session) -> bool:
         return True
 
     except Exception as e:
-        print(f"❌ Failed to send notification for item {item.id}: {e}")
+        logger.error(f"❌ Failed to send notification for item {item.id}: {e}")
         return False
 
 

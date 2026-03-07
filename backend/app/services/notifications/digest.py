@@ -7,13 +7,22 @@ This module handles:
 - Sending weekly digest emails to users
 """
 
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
 
+import resend
+
+from app.core.config import settings
 from app.models.item import Item
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
+
+# Initialize Resend
+resend.api_key = settings.RESEND_API_KEY
 
 
 def get_pending_items_for_digest(user_id: UUID, db: Session) -> Dict[str, Any]:
@@ -235,7 +244,7 @@ def generate_digest_email(user: User, digest_data: Dict[str, Any]) -> str:
 
         <!-- CTA Button -->
         <div style="text-align: center; margin: 32px 0;">
-            <a href="https://mindstash.app/dashboard"
+            <a href="{settings.APP_URL}/dashboard"
                style="display: inline-block; background: #EA7B7B; color: white;
                       padding: 14px 32px; text-decoration: none; border-radius: 12px;
                       font-weight: 600; font-size: 16px;">
@@ -281,19 +290,38 @@ def send_weekly_digest_to_user(user: User, db: Session) -> bool:
     )
 
     if not has_content:
-        print(f"   ⏭️ Skipping {user.email} - no content for digest")
+        logger.debug(f"⏭️ Skipping {user.email} - no content for digest")
         return False
 
     email_html = generate_digest_email(user, digest_data)
 
-    # TODO: Send via email service (SendGrid, Resend, etc.)
-    print(f"   📧 DIGEST sent to {user.email}")
-    print(f"      Urgent: {len(digest_data['urgent_items'])}")
-    print(f"      Tasks: {len(digest_data['pending_tasks'])}")
-    print(f"      Upcoming: {len(digest_data['upcoming_notifications'])}")
-    print(f"      Saved this week: {digest_data['items_saved_this_week']}")
+    # Send via Resend
+    if settings.RESEND_API_KEY:
+        try:
+            params = {
+                "from": settings.FROM_EMAIL,
+                "to": [user.email],
+                "subject": "🗓️ Your Weekly MindStash Digest",
+                "html": email_html,
+            }
 
-    return True
+            response = resend.Emails.send(params)
+            logger.info(f"📧 Digest sent to {user.email} - email_id={response.get('id')}")
+            logger.debug(f"   Urgent: {len(digest_data['urgent_items'])}, "
+                        f"Tasks: {len(digest_data['pending_tasks'])}, "
+                        f"Upcoming: {len(digest_data['upcoming_notifications'])}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to send digest to {user.email}: {e}")
+            return False
+    else:
+        logger.warning("RESEND_API_KEY not configured, skipping digest email")
+        print(f"   📧 DIGEST would be sent to {user.email}")
+        print(f"      Urgent: {len(digest_data['urgent_items'])}")
+        print(f"      Tasks: {len(digest_data['pending_tasks'])}")
+        print(f"      Upcoming: {len(digest_data['upcoming_notifications'])}")
+        return False
 
 
 def send_weekly_digests(db: Session) -> Dict[str, Any]:
@@ -314,10 +342,10 @@ def send_weekly_digests(db: Session) -> Dict[str, Any]:
             "skipped": int
         }
     """
-    print(f"\n📬 Sending weekly digests at {datetime.utcnow().isoformat()}")
+    logger.info(f"📬 Sending weekly digests at {datetime.utcnow().isoformat()}")
 
     users = db.query(User).all()
-    print(f"   Found {len(users)} users")
+    logger.info(f"Found {len(users)} users")
 
     sent_count = 0
     skipped_count = 0
@@ -331,10 +359,10 @@ def send_weekly_digests(db: Session) -> Dict[str, Any]:
     result = {
         "total_users": len(users),
         "digests_sent": sent_count,
-        "skipped": skipped_count
+        "skipped": int(skipped_count)
     }
 
-    print(f"   ✓ Sent {sent_count} digests, skipped {skipped_count}")
+    logger.info(f"✓ Sent {sent_count} digests, skipped {skipped_count}")
 
     return result
 

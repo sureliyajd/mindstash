@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str | None = None
     TELEGRAM_WEBHOOK_SECRET: str | None = None  # Auto-generated if not set
 
+    # Email Configuration (Resend)
+    RESEND_API_KEY: str | None = None
+    FROM_EMAIL: str = "noreply@mindstash.heyjaydeep.website"
+    APP_URL: str = "http://localhost:3000"
+
     # Optional
     SENTRY_DSN: str | None = None
     POSTHOG_API_KEY: str | None = None
