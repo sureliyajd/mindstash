@@ -2,7 +2,28 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Brain, Sparkles, Clock, ArrowRight, Zap, Shield, Globe, Mail } from 'lucide-react';
+import Navigation from '@/components/Navigation';
+import {
+  Brain,
+  Sparkles,
+  Clock,
+  ArrowRight,
+  Zap,
+  Shield,
+  Globe,
+  Mail,
+  MessageSquare,
+  Calendar,
+  BookOpen,
+  ShoppingCart,
+  Users,
+  Target,
+  Lightbulb,
+  CheckCircle2,
+  TrendingUp,
+  Search,
+  Bot
+} from 'lucide-react';
 
 // =============================================================================
 // ANIMATION VARIANTS - SPOTIFY STYLE
@@ -32,112 +53,115 @@ const scaleIn = {
 };
 
 // =============================================================================
-// FEATURE DATA
+// DATA - REAL-WORLD USE CASES
 // =============================================================================
 
-const features = [
+const useCases = [
   {
-    title: 'Drop anything',
-    description: 'Thoughts, links, reminders, ideas. Just type and forget about organizing.',
-    icon: Sparkles,
-    color: 'bg-[#79C9C5]', // Teal
+    title: 'The Midnight Idea',
+    before: '"I had a brilliant business idea at 2 AM. By morning, it was gone."',
+    after: 'Capture it in 10 seconds. MindStash categorizes it as an Idea. Your AI agent surfaces it during your weekly review.',
+    icon: Lightbulb,
+    color: 'bg-[#FACE68]',
+    textColor: 'text-[#C9A030]',
   },
   {
-    title: 'AI understands',
-    description: 'Smart categorization into 12 categories. No folders, no tags, no effort.',
-    icon: Brain,
-    color: 'bg-[#FACE68]', // Yellow
+    title: 'The Forgotten Task',
+    before: "\"I meant to buy mom's birthday gift. I remembered... the day after.\"",
+    after: "Drop \"mom's birthday gift\" → auto-categorized as Task → smart notification 3 days before.",
+    icon: Calendar,
+    color: 'bg-[#EA7B7B]',
+    textColor: 'text-[#C44545]',
   },
   {
-    title: 'Perfect recall',
-    description: 'Find anything instantly. Content surfaces when you need it most.',
-    icon: Clock,
-    color: 'bg-[#93DA97]', // Green
+    title: 'The Lost Article',
+    before: "\"I read an amazing article about AI. Can't remember where I saved it.\"",
+    after: 'Paste the link → categorized as Read Later → AI chat finds it in seconds: "Show me that AI article from last week"',
+    icon: BookOpen,
+    color: 'bg-[#79C9C5]',
+    textColor: 'text-[#5AACA8]',
   },
 ];
 
-const benefits = [
+const problems = [
   {
+    problem: 'Thoughts vanish minutes after they appear',
+    solution: '500-char quick capture. Zero friction. Always accessible.',
     icon: Zap,
-    title: 'Lightning fast',
-    description: 'Capture in seconds, not minutes',
   },
   {
-    icon: Shield,
-    title: 'Private & secure',
-    description: 'Your thoughts, your data, always',
+    problem: 'Organizing takes longer than capturing',
+    solution: 'AI categorizes into 12 smart categories automatically.',
+    icon: Brain,
   },
   {
-    icon: Globe,
-    title: 'Access anywhere',
-    description: 'Web, mobile, everywhere you are',
+    problem: 'Finding what you saved is impossible',
+    solution: 'AI chat agent searches, filters, and surfaces exactly what you need.',
+    icon: Search,
+  },
+  {
+    problem: 'Important things get buried and forgotten',
+    solution: 'Smart notifications and daily AI briefings keep you on track.',
+    icon: Clock,
+  },
+];
+
+const categories = [
+  { name: 'Ideas', icon: Lightbulb, color: 'bg-[#FACE68]' },
+  { name: 'Tasks', icon: CheckCircle2, color: 'bg-[#EA7B7B]' },
+  { name: 'Read', icon: BookOpen, color: 'bg-[#79C9C5]' },
+  { name: 'Watch', icon: Globe, color: 'bg-[#FF8364]' },
+  { name: 'People', icon: Users, color: 'bg-[#93DA97]' },
+  { name: 'Goals', icon: Target, color: 'bg-[#FACE68]' },
+  { name: 'Buy', icon: ShoppingCart, color: 'bg-[#EA7B7B]' },
+  { name: 'Notes', icon: MessageSquare, color: 'bg-[#79C9C5]' },
+];
+
+const aiCapabilities = [
+  {
+    title: 'Intelligent Search',
+    description: 'Natural language queries like "show me all articles about productivity from last month"',
+    icon: Search,
+  },
+  {
+    title: 'Smart Surfacing',
+    description: 'AI knows when to remind you about that book recommendation or pending task',
+    icon: TrendingUp,
+  },
+  {
+    title: 'Context Understanding',
+    description: 'Understands urgency, time-sensitivity, and priority without you specifying',
+    icon: Brain,
+  },
+  {
+    title: 'Daily Briefings',
+    description: 'Personalized morning digest of what matters today, delivered to your inbox',
+    icon: Mail,
   },
 ];
 
 // =============================================================================
-// LANDING PAGE - SPOTIFY INSPIRED
+// LANDING PAGE - PROBLEM-SOLVING FOCUSED
 // =============================================================================
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-white">
-      {/* ===================================================================== */}
-      {/* NAVIGATION */}
-      {/* ===================================================================== */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-100">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            {/* Logo */}
-            <Link href="/" className="flex items-center">
-              <img
-                src="/logo.png"
-                alt="MindStash"
-                className="h-10 sm:h-12 w-auto"
-              />
-            </Link>
-
-            {/* Nav links */}
-            <div className="flex items-center gap-3">
-              <Link
-                href="/login"
-                className="px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:text-gray-900"
-              >
-                Log in
-              </Link>
-              <Link
-                href="/register"
-                className="rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-gray-800 hover:scale-105"
-              >
-                Sign up free
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* ===================================================================== */}
-      {/* HERO SECTION */}
+      {/* HERO SECTION - PROBLEM STATEMENT */}
       {/* ===================================================================== */}
       <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-32">
         {/* Background decoration */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          {/* Soft pastel blobs */}
           <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-[#EA7B7B]/10 opacity-60 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-[#79C9C5]/10 opacity-50 blur-3xl" />
-
-          {/* Floating brain gif */}
-          <motion.div
-            className="absolute top-1/4 right-10 opacity-10 hidden lg:block"
-            animate={{ y: [0, -20, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <img src="/images/brain.gif" alt="" className="h-32 w-32" />
-          </motion.div>
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
           <motion.div
-            className="mx-auto max-w-4xl text-center"
+            className="mx-auto max-w-5xl text-center"
             initial="hidden"
             animate="visible"
             variants={stagger}
@@ -145,8 +169,8 @@ export default function Home() {
             {/* Badge */}
             <motion.div variants={fadeUp} className="mb-8">
               <span className="inline-flex items-center gap-2 rounded-full bg-[#EA7B7B]/10 px-4 py-2 text-sm font-semibold text-[#C44545] ring-1 ring-[#EA7B7B]/20">
-                <Sparkles className="h-4 w-4" />
-                AI-Powered Memory
+                <Bot className="h-4 w-4" />
+                AI-Powered Memory Assistant
               </span>
             </motion.div>
 
@@ -155,19 +179,19 @@ export default function Home() {
               className="heading-hero text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-gray-900"
               variants={fadeUp}
             >
-              Never lose a
+              Stop losing your
               <br />
-              <span className="text-gradient-purple">thought again</span>
+              <span className="text-gradient-purple">best thoughts</span>
             </motion.h1>
 
             {/* Subheading */}
             <motion.p
-              className="mt-8 text-lg sm:text-xl md:text-2xl text-gray-500 max-w-2xl mx-auto leading-relaxed"
+              className="mt-8 text-lg sm:text-xl md:text-2xl text-gray-500 max-w-3xl mx-auto leading-relaxed"
               variants={fadeUp}
             >
-              Drop anything. We organize everything.
+              That brilliant idea at 2 AM. The article you meant to read. The task you forgot.
               <br className="hidden sm:block" />
-              Your AI-powered second brain.
+              <span className="font-semibold text-gray-700">MindStash remembers, so you don't have to.</span>
             </motion.p>
 
             {/* CTA buttons */}
@@ -180,7 +204,7 @@ export default function Home() {
                 className="group flex items-center gap-2 rounded-full bg-[#EA7B7B] px-8 py-4 text-lg font-semibold shadow-lg shadow-[#EA7B7B]/25 transition-all hover:bg-[#D66B6B] hover:shadow-[#EA7B7B]/40 hover:scale-105"
                 style={{ color: 'white' }}
               >
-                Start for free
+                Start capturing for free
                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
@@ -191,19 +215,30 @@ export default function Home() {
               </Link>
             </motion.div>
 
-            {/* Social proof */}
-            <motion.p
-              className="mt-10 text-sm text-gray-400"
+            {/* Stats */}
+            <motion.div
+              className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto"
               variants={fadeIn}
             >
-              Join thousands who never forget
-            </motion.p>
+              <div>
+                <div className="text-3xl font-bold text-gray-900">10s</div>
+                <div className="text-sm text-gray-500 mt-1">to capture</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-gray-900">12</div>
+                <div className="text-sm text-gray-500 mt-1">smart categories</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-gray-900">0</div>
+                <div className="text-sm text-gray-500 mt-1">manual organizing</div>
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
       {/* ===================================================================== */}
-      {/* HOW IT WORKS SECTION */}
+      {/* REAL-WORLD SCENARIOS */}
       {/* ===================================================================== */}
       <section className="relative py-24 lg:py-32 bg-gray-50">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -215,13 +250,16 @@ export default function Home() {
             viewport={{ once: true, margin: '-100px' }}
             variants={fadeUp}
           >
-            <span className="text-label-small text-[#EA7B7B] mb-4 block">How it works</span>
-            <h2 className="heading-section text-4xl sm:text-5xl text-gray-900">
-              Simpler than you think
+            <span className="text-label-small text-[#EA7B7B] mb-4 block">Real Problems, Real Solutions</span>
+            <h2 className="heading-section text-4xl sm:text-5xl text-gray-900 mb-6">
+              We've all been there
             </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              These moments happen every day. MindStash makes sure they never happen again.
+            </p>
           </motion.div>
 
-          {/* Feature cards */}
+          {/* Use case cards */}
           <motion.div
             className="grid gap-8 md:grid-cols-3"
             initial="hidden"
@@ -229,32 +267,40 @@ export default function Home() {
             viewport={{ once: true, margin: '-100px' }}
             variants={stagger}
           >
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
+            {useCases.map((useCase, index) => {
+              const Icon = useCase.icon;
               return (
                 <motion.div
-                  key={feature.title}
+                  key={useCase.title}
                   variants={scaleIn}
                   className="group relative"
                 >
-                  <div className="relative h-full rounded-3xl bg-white p-8 shadow-sm ring-1 ring-gray-100 transition-all duration-300 hover:shadow-lg hover:ring-[#EA7B7B]/30 hover:-translate-y-1">
-                    {/* Step number */}
-                    <div className="absolute -top-4 left-8 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shadow-lg" style={{ color: 'white', backgroundColor: index === 0 ? '#79C9C5' : index === 1 ? '#FACE68' : '#93DA97' }}>
-                      {index + 1}
-                    </div>
-
+                  <div className="relative h-full rounded-3xl bg-white p-8 shadow-sm ring-1 ring-gray-100 transition-all duration-300 hover:shadow-xl hover:ring-[#EA7B7B]/30 hover:-translate-y-1">
                     {/* Icon */}
-                    <div className={`mb-6 mt-4 flex h-14 w-14 items-center justify-center rounded-2xl ${feature.color}`}>
+                    <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl ${useCase.color}`}>
                       <Icon className="h-7 w-7" style={{ color: 'white' }} />
                     </div>
 
-                    {/* Content */}
-                    <h3 className="heading-card text-xl text-gray-900 mb-3">
-                      {feature.title}
+                    {/* Title */}
+                    <h3 className="heading-card text-xl text-gray-900 mb-4">
+                      {useCase.title}
                     </h3>
-                    <p className="text-gray-500 leading-relaxed">
-                      {feature.description}
-                    </p>
+
+                    {/* Before scenario */}
+                    <div className="mb-6 p-4 rounded-xl bg-gray-50 border-l-4 border-gray-300">
+                      <div className="text-xs font-semibold text-gray-400 uppercase mb-2">Before</div>
+                      <p className="text-sm text-gray-600 italic leading-relaxed">
+                        {useCase.before}
+                      </p>
+                    </div>
+
+                    {/* After scenario */}
+                    <div className="p-4 rounded-xl bg-[#93DA97]/10 border-l-4 border-[#93DA97]">
+                      <div className="text-xs font-semibold text-[#5EB563] uppercase mb-2">With MindStash</div>
+                      <p className="text-sm text-gray-900 font-medium leading-relaxed">
+                        {useCase.after}
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -264,68 +310,12 @@ export default function Home() {
       </section>
 
       {/* ===================================================================== */}
-      {/* BENEFITS SECTION */}
+      {/* PROBLEMS WE SOLVE */}
       {/* ===================================================================== */}
       <section className="py-24 lg:py-32">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="grid gap-16 lg:grid-cols-2 lg:gap-24 items-center">
-            {/* Left side - Image/Animation */}
-            <motion.div
-              className="relative"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={scaleIn}
-            >
-              <div className="relative aspect-square rounded-3xl bg-[#EA7B7B]/10 p-8 lg:p-12">
-                {/* Decorative elements */}
-                <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-[#EA7B7B]/20" />
-
-                {/* Wave animation */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <img
-                    src="/images/wave-animation.gif"
-                    alt=""
-                    className="h-64 w-64 object-contain opacity-60"
-                  />
-                </div>
-
-                {/* Floating cards preview */}
-                <motion.div
-                  className="absolute top-8 right-8 rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100"
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-[#FACE68]/20 flex items-center justify-center">
-                      <Brain className="h-5 w-5 text-[#C9A030]" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">Ideas</div>
-                      <div className="text-xs text-gray-400">12 items</div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="absolute bottom-12 left-8 rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100"
-                  animate={{ y: [0, 8, 0] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-[#FF8364]/20 flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-[#D65E3F]" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">Tasks</div>
-                      <div className="text-xs text-gray-400">8 items</div>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </motion.div>
-
-            {/* Right side - Content */}
+            {/* Left side - Content */}
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -333,44 +323,323 @@ export default function Home() {
               variants={stagger}
             >
               <motion.span variants={fadeUp} className="text-label-small text-[#EA7B7B] mb-4 block">
-                Why MindStash
+                The Problem
               </motion.span>
               <motion.h2 variants={fadeUp} className="heading-section text-4xl sm:text-5xl text-gray-900 mb-8">
-                Your thoughts deserve better
+                Your brain is amazing.
+                <br />
+                But it's not a hard drive.
               </motion.h2>
               <motion.p variants={fadeUp} className="text-lg text-gray-500 mb-12 leading-relaxed">
-                Stop losing brilliant ideas to forgetfulness. MindStash captures everything and uses AI to organize it perfectly.
+                You have incredible ideas, important tasks, valuable content to consume.
+                But between work, life, and endless distractions, most of it gets lost in the noise.
               </motion.p>
 
-              {/* Benefits list */}
+              {/* Problems list */}
               <motion.div className="space-y-6" variants={stagger}>
-                {benefits.map((benefit, index) => {
-                  const Icon = benefit.icon;
-                  const colors = [
-                    { bg: 'bg-[#79C9C5]/20', text: 'text-[#5AACA8]' },
-                    { bg: 'bg-[#FACE68]/20', text: 'text-[#C9A030]' },
-                    { bg: 'bg-[#93DA97]/20', text: 'text-[#5EB563]' },
-                  ];
-                  const color = colors[index % colors.length];
+                {problems.map((item, index) => {
+                  const Icon = item.icon;
                   return (
                     <motion.div
-                      key={benefit.title}
+                      key={item.problem}
                       variants={fadeUp}
                       className="flex items-start gap-4"
                     >
-                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${color.bg}`}>
-                        <Icon className={`h-6 w-6 ${color.text}`} />
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#EA7B7B]/10">
+                        <Icon className="h-6 w-6 text-[#C44545]" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-1">{benefit.title}</h3>
-                        <p className="text-gray-500">{benefit.description}</p>
+                        <h3 className="font-semibold text-gray-900 mb-1">{item.problem}</h3>
+                        <p className="text-gray-500 flex items-start gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-[#93DA97] shrink-0 mt-0.5" />
+                          <span>{item.solution}</span>
+                        </p>
                       </div>
                     </motion.div>
                   );
                 })}
               </motion.div>
             </motion.div>
+
+            {/* Right side - Visual */}
+            <motion.div
+              className="relative"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={scaleIn}
+            >
+              <div className="relative aspect-square rounded-3xl bg-gradient-to-br from-[#EA7B7B]/10 via-[#FACE68]/10 to-[#79C9C5]/10 p-8 lg:p-12">
+                {/* Decorative border */}
+                <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-gray-200" />
+
+                {/* Category grid showcase */}
+                <div className="relative h-full grid grid-cols-2 gap-4">
+                  {categories.map((category, index) => {
+                    const Icon = category.icon;
+                    return (
+                      <motion.div
+                        key={category.name}
+                        className="rounded-2xl bg-white p-6 shadow-lg ring-1 ring-gray-100 flex flex-col items-center justify-center text-center"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ scale: 1.05, y: -4 }}
+                      >
+                        <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-xl ${category.color}`}>
+                          <Icon className="h-6 w-6" style={{ color: 'white' }} />
+                        </div>
+                        <div className="text-sm font-semibold text-gray-900">{category.name}</div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                {/* Floating label */}
+                <motion.div
+                  className="absolute -top-4 -right-4 rounded-2xl bg-[#EA7B7B] px-4 py-2 shadow-xl"
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <div className="text-sm font-semibold" style={{ color: 'white' }}>
+                    Auto-organized
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
           </div>
+        </div>
+      </section>
+
+      {/* ===================================================================== */}
+      {/* AI CAPABILITIES */}
+      {/* ===================================================================== */}
+      <section className="relative py-24 lg:py-32 bg-gray-50">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          {/* Section header */}
+          <motion.div
+            className="text-center mb-20"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+            variants={fadeUp}
+          >
+            <span className="text-label-small text-[#EA7B7B] mb-4 block">Powered by AI</span>
+            <h2 className="heading-section text-4xl sm:text-5xl text-gray-900 mb-6">
+              Your intelligent assistant
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              Not just storage. An AI agent that understands, organizes, and helps you find exactly what you need.
+            </p>
+          </motion.div>
+
+          {/* Capabilities grid */}
+          <motion.div
+            className="grid gap-8 md:grid-cols-2 lg:grid-cols-4"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+            variants={stagger}
+          >
+            {aiCapabilities.map((capability) => {
+              const Icon = capability.icon;
+              return (
+                <motion.div
+                  key={capability.title}
+                  variants={scaleIn}
+                  className="group relative"
+                >
+                  <div className="relative h-full rounded-3xl bg-white p-8 shadow-sm ring-1 ring-gray-100 transition-all duration-300 hover:shadow-lg hover:ring-[#EA7B7B]/30 hover:-translate-y-1">
+                    <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EA7B7B]/10">
+                      <Icon className="h-7 w-7 text-[#C44545]" />
+                    </div>
+                    <h3 className="heading-card text-lg text-gray-900 mb-3">
+                      {capability.title}
+                    </h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">
+                      {capability.description}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+
+          {/* Chat example */}
+          <motion.div
+            className="mt-16 max-w-3xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={scaleIn}
+          >
+            <div className="rounded-3xl bg-white p-8 shadow-xl ring-1 ring-gray-100">
+              <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EA7B7B]">
+                  <MessageSquare className="h-5 w-5" style={{ color: 'white' }} />
+                </div>
+                <div className="font-semibold text-gray-900">Chat with your knowledge</div>
+              </div>
+
+              {/* Example messages */}
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <div className="rounded-2xl bg-[#EA7B7B]/10 px-4 py-3 max-w-[80%]">
+                    <p className="text-sm text-gray-900">Show me all articles about AI from last month</p>
+                  </div>
+                </div>
+                <div className="flex justify-start">
+                  <div className="rounded-2xl bg-gray-100 px-4 py-3 max-w-[80%]">
+                    <p className="text-sm text-gray-900">I found 7 articles about AI from February. Here are the top 3: "GPT-4 Guide", "Machine Learning Basics", and "AI in Healthcare"...</p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <div className="rounded-2xl bg-[#EA7B7B]/10 px-4 py-3 max-w-[80%]">
+                    <p className="text-sm text-gray-900">What tasks do I have pending for this week?</p>
+                  </div>
+                </div>
+                <div className="flex justify-start">
+                  <div className="rounded-2xl bg-gray-100 px-4 py-3 max-w-[80%]">
+                    <p className="text-sm text-gray-900">You have 5 pending tasks: 1. Buy mom's birthday gift (Due: Mar 10), 2. Review project proposal...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Tech specs link */}
+          <motion.div
+            className="mt-12 text-center"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+          >
+            <Link
+              href="/tech"
+              className="inline-flex items-center gap-2 text-[#EA7B7B] font-semibold hover:gap-3 transition-all"
+            >
+              Explore the technical architecture
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ===================================================================== */}
+      {/* HOW IT WORKS - SIMPLIFIED */}
+      {/* ===================================================================== */}
+      <section className="py-24 lg:py-32">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          {/* Section header */}
+          <motion.div
+            className="text-center mb-20"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+            variants={fadeUp}
+          >
+            <span className="text-label-small text-[#EA7B7B] mb-4 block">How it works</span>
+            <h2 className="heading-section text-4xl sm:text-5xl text-gray-900">
+              Three steps. That's it.
+            </h2>
+          </motion.div>
+
+          {/* Steps */}
+          <motion.div
+            className="grid gap-12 md:grid-cols-3"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+            variants={stagger}
+          >
+            <motion.div variants={fadeUp} className="text-center">
+              <div className="mb-6 flex justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#79C9C5] text-2xl font-bold" style={{ color: 'white' }}>
+                  1
+                </div>
+              </div>
+              <h3 className="heading-card text-xl text-gray-900 mb-3">Capture</h3>
+              <p className="text-gray-500">
+                Type anything in 500 characters or less. Thoughts, links, tasks, reminders.
+              </p>
+            </motion.div>
+
+            <motion.div variants={fadeUp} className="text-center">
+              <div className="mb-6 flex justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FACE68] text-2xl font-bold" style={{ color: 'white' }}>
+                  2
+                </div>
+              </div>
+              <h3 className="heading-card text-xl text-gray-900 mb-3">AI Organizes</h3>
+              <p className="text-gray-500">
+                Our AI instantly categorizes, tags, and understands context. No effort required.
+              </p>
+            </motion.div>
+
+            <motion.div variants={fadeUp} className="text-center">
+              <div className="mb-6 flex justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#93DA97] text-2xl font-bold" style={{ color: 'white' }}>
+                  3
+                </div>
+              </div>
+              <h3 className="heading-card text-xl text-gray-900 mb-3">Recall & Act</h3>
+              <p className="text-gray-500">
+                Search, chat, or get notified. Your thoughts surface exactly when you need them.
+              </p>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ===================================================================== */}
+      {/* SOCIAL PROOF / BENEFITS */}
+      {/* ===================================================================== */}
+      <section className="py-24 lg:py-32 bg-gray-50">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <motion.div
+            className="text-center mb-16"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+          >
+            <h2 className="heading-section text-4xl sm:text-5xl text-gray-900 mb-6">
+              Everything you need. Nothing you don't.
+            </h2>
+          </motion.div>
+
+          <motion.div
+            className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+          >
+            {[
+              { icon: Zap, text: 'Lightning-fast capture (10 seconds)' },
+              { icon: Shield, text: 'Private & secure (your data stays yours)' },
+              { icon: Globe, text: 'Access anywhere (web, mobile, soon)' },
+              { icon: Brain, text: '12 smart categories (no manual sorting)' },
+              { icon: MessageSquare, text: 'AI chat agent (natural language search)' },
+              { icon: Mail, text: 'Daily AI briefings (know what matters)' },
+            ].map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <motion.div
+                  key={item.text}
+                  variants={scaleIn}
+                  className="flex items-center gap-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#EA7B7B]/10">
+                    <Icon className="h-6 w-6 text-[#C44545]" />
+                  </div>
+                  <p className="font-medium text-gray-900">{item.text}</p>
+                </motion.div>
+              );
+            })}
+          </motion.div>
         </div>
       </section>
 
@@ -401,14 +670,14 @@ export default function Home() {
             className="heading-section text-4xl sm:text-5xl lg:text-6xl mb-6"
             style={{ color: 'white' }}
           >
-            Ready to remember everything?
+            Start remembering everything
           </motion.h2>
           <motion.p
             variants={fadeUp}
             className="text-lg sm:text-xl mb-10 max-w-2xl mx-auto"
             style={{ color: 'rgba(255, 255, 255, 0.9)' }}
           >
-            Start capturing your thoughts today. It&apos;s free to get started.
+            Join thousands who never lose a thought. Free to start, no credit card required.
           </motion.p>
           <motion.div variants={fadeUp}>
             <Link
@@ -419,6 +688,13 @@ export default function Home() {
               <ArrowRight className="h-5 w-5" />
             </Link>
           </motion.div>
+          <motion.p
+            variants={fadeIn}
+            className="mt-8 text-sm"
+            style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+          >
+            No credit card • 5-minute setup • Cancel anytime
+          </motion.p>
         </motion.div>
       </section>
 
