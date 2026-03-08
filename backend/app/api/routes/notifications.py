@@ -2,13 +2,14 @@
 Notification routes for MindStash - Process notifications and send digests
 
 Endpoints:
+- POST /send-briefings - Send daily AI briefings to all users (cron job)
 - POST /process - Process and send pending notifications (cron job)
 - POST /send-digests - Send weekly digests to all users (cron job)
 - GET /upcoming - Get upcoming notifications for current user
 - GET /digest-preview - Preview weekly digest for current user
 
 Rate Limits:
-- Process/Digests: Protected by API key (no rate limit for cron)
+- Process/Briefings/Digests: Protected by API key (no rate limit for cron)
 - User endpoints: 100/hour
 """
 
@@ -30,6 +31,7 @@ from app.services.notifications.digest import (
     send_weekly_digests,
     get_digest_preview
 )
+from app.services.notifications.daily_briefing import send_daily_briefings
 
 router = APIRouter(tags=["notifications"])
 
@@ -83,6 +85,36 @@ def process_pending_notifications(
     return {
         "status": "success",
         "message": f"Processed {result['total_processed']} notifications",
+        "data": result
+    }
+
+
+@router.post("/send-briefings")
+def send_daily_briefings_endpoint(
+    request: Request,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_cron_api_key)
+):
+    """
+    Send daily AI briefings to all users.
+
+    This endpoint should be called by a cron job every day at 8 AM.
+    Generates personalized briefings via AI agent for each user.
+    Requires X-API-Key header in production.
+
+    Returns:
+        Dict with results:
+        {
+            "total_users": int,
+            "briefings_sent": int,
+            "failed": int
+        }
+    """
+    result = send_daily_briefings(db)
+
+    return {
+        "status": "success",
+        "message": f"Sent {result['briefings_sent']} daily briefings",
         "data": result
     }
 
