@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
+import LandingAnimations from '@/components/LandingAnimations';
 import {
   Play,
   Image as ImageIcon,
@@ -98,6 +99,7 @@ export default function ShowcasePage() {
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-[#79C9C5]/10 opacity-60 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-[#FACE68]/10 opacity-50 blur-3xl" />
+          <LandingAnimations variant="hero" />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
@@ -386,6 +388,10 @@ export default function ShowcasePage() {
             backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
             backgroundSize: '40px 40px'
           }} />
+        </div>
+
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <LandingAnimations variant="cta" />
         </div>
 
         <motion.div

@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
+import LandingAnimations from '@/components/LandingAnimations';
 import {
   ArrowLeft,
   Brain,
@@ -264,6 +265,7 @@ export default function TechPage() {
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-[#79C9C5]/10 opacity-60 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-[#FACE68]/10 opacity-50 blur-3xl" />
+          <LandingAnimations variant="minimal" />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
@@ -331,7 +333,10 @@ export default function TechPage() {
       {/* AGENTIC CAPABILITIES */}
       {/* ===================================================================== */}
       <section className="relative py-24 lg:py-32 bg-gray-50">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <LandingAnimations variant="features" />
+        </div>
+        <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
           {/* Section header */}
           <motion.div
             className="text-center mb-20"
@@ -538,6 +543,10 @@ for event in agent_service.chat(
             backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
             backgroundSize: '40px 40px'
           }} />
+        </div>
+
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <LandingAnimations variant="cta" />
         </div>
 
         <motion.div
