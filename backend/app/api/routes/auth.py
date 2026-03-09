@@ -12,7 +12,10 @@ Rate Limits (IP-based to prevent brute force):
 - Refresh: 100/hour
 - Get current user: 500/hour
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -24,10 +27,11 @@ from app.core.security import (
     create_refresh_token,
     decode_token
 )
-from app.core.rate_limit import limiter
+from app.core.rate_limit import limiter, user_limiter
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse
+from app.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse, UserProfileUpdate, PasswordChange
 from app.api.dependencies import get_current_user
+from app.services.notifications.sender import send_welcome_email
 
 router = APIRouter(tags=["authentication"])
 
@@ -66,12 +70,19 @@ def register(request: Request, user_data: UserCreate, db: Session = Depends(get_
     # Create new user
     new_user = User(
         email=user_data.email,
+        name=user_data.name,
         hashed_password=hashed_password
     )
 
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # Send welcome email (non-blocking — registration succeeds even if email fails)
+    try:
+        send_welcome_email(new_user)
+    except Exception as e:
+        logger.warning(f"Welcome email failed for {new_user.email}: {e}")
 
     return new_user
 
@@ -224,3 +235,36 @@ def get_current_user_info(request: Request, current_user: User = Depends(get_cur
         HTTPException 429: If rate limit exceeded
     """
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+@user_limiter.limit("30/hour")
+def update_profile(
+    request: Request,
+    data: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update the current user's display name."""
+    current_user.name = data.name
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/change-password", status_code=204)
+@user_limiter.limit("10/hour")
+def change_password(
+    request: Request,
+    data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change the current user's password."""
+    if not verify_password(data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+    current_user.hashed_password = get_password_hash(data.new_password)
+    db.commit()

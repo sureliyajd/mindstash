@@ -8,6 +8,7 @@ const TOKEN_KEY = 'mindstash_token';
 export interface User {
   id: string;
   email: string;
+  name: string | null;
   created_at: string;
 }
 
@@ -186,8 +187,8 @@ export interface RateLimitError extends Error {
 
 // Auth API
 export const auth = {
-  register: async (email: string, password: string): Promise<User> => {
-    const response = await api.post<User>('/api/auth/register', { email, password });
+  register: async (email: string, password: string, name?: string): Promise<User> => {
+    const response = await api.post<User>('/api/auth/register', { email, password, name });
     return response.data;
   },
 
@@ -202,6 +203,15 @@ export const auth = {
   getCurrentUser: async (): Promise<User> => {
     const response = await api.get<User>('/api/auth/me');
     return response.data;
+  },
+
+  updateProfile: async (name: string | null): Promise<User> => {
+    const response = await api.patch<User>('/api/auth/me', { name });
+    return response.data;
+  },
+
+  changePassword: async (current_password: string, new_password: string): Promise<void> => {
+    await api.post('/api/auth/change-password', { current_password, new_password });
   },
 
   logout: (): void => {

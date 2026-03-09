@@ -22,6 +22,7 @@ class User(Base):
         index=True
     )
     email = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String(100), nullable=True)
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(

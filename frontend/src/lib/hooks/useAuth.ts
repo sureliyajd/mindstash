@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { auth, getToken, clearToken, User, TokenResponse } from '../api';
+import type { AxiosError } from 'axios';
 
 const USER_QUERY_KEY = ['user'];
 
@@ -40,16 +41,37 @@ export function useAuth() {
   });
 
   // Register mutation
-  const registerMutation = useMutation<User, Error, { email: string; password: string }>({
-    mutationFn: ({ email, password }) => auth.register(email, password),
+  const registerMutation = useMutation<User, Error, { email: string; password: string; name?: string }>({
+    mutationFn: ({ email, password, name }) => auth.register(email, password, name),
+  });
+
+  // Update profile mutation
+  const updateProfileMutation = useMutation<User, AxiosError, { name: string | null }>({
+    mutationFn: ({ name }) => auth.updateProfile(name),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(USER_QUERY_KEY, updated);
+    },
+  });
+
+  // Change password mutation
+  const changePasswordMutation = useMutation<void, AxiosError, { current_password: string; new_password: string }>({
+    mutationFn: ({ current_password, new_password }) => auth.changePassword(current_password, new_password),
   });
 
   const login = async (email: string, password: string): Promise<TokenResponse> => {
     return loginMutation.mutateAsync({ email, password });
   };
 
-  const register = async (email: string, password: string): Promise<User> => {
-    return registerMutation.mutateAsync({ email, password });
+  const register = async (email: string, password: string, name?: string): Promise<User> => {
+    return registerMutation.mutateAsync({ email, password, name });
+  };
+
+  const updateProfile = async (name: string | null): Promise<User> => {
+    return updateProfileMutation.mutateAsync({ name });
+  };
+
+  const changePassword = async (current_password: string, new_password: string): Promise<void> => {
+    return changePasswordMutation.mutateAsync({ current_password, new_password });
   };
 
   const logout = (): void => {
@@ -66,9 +88,13 @@ export function useAuth() {
     login,
     register,
     logout,
+    updateProfile,
+    changePassword,
     loginError: loginMutation.error,
     registerError: registerMutation.error,
     isLoginLoading: loginMutation.isPending,
     isRegisterLoading: registerMutation.isPending,
+    isProfileUpdating: updateProfileMutation.isPending,
+    isPasswordChanging: changePasswordMutation.isPending,
   };
 }
