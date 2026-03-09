@@ -75,6 +75,24 @@ class PasswordChange(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=72)
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Schema for requesting a password reset email"""
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema for resetting password with a token"""
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=72)
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_bytes(cls, v: str) -> str:
+        if len(v.encode('utf-8')) > 72:
+            raise ValueError('Password cannot exceed 72 bytes when UTF-8 encoded')
+        return v
+
+
 class TokenResponse(BaseModel):
     """Schema for authentication token response"""
     access_token: str

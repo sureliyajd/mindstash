@@ -114,6 +114,89 @@ def send_welcome_email(user: User) -> bool:
         return False
 
 
+def send_password_reset_email(user: User, reset_token: str) -> bool:
+    """
+    Send a password reset email with a secure link.
+
+    Args:
+        user: The User requesting a password reset
+        reset_token: The raw (unhashed) reset token to include in the link
+
+    Returns:
+        True if the email was sent successfully
+    """
+    if not settings.RESEND_API_KEY:
+        logger.warning("RESEND_API_KEY not set, skipping password reset email")
+        return False
+
+    reset_url = f"{settings.APP_URL}/reset-password?token={reset_token}"
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(135deg, #EA7B7B 0%, #FF8364 100%);
+                       color: white; padding: 40px 30px; border-radius: 16px 16px 0 0; text-align: center; }}
+            .content {{ background: #f9fafb; padding: 36px 30px; border-radius: 0 0 16px 16px; }}
+            .cta {{ display: inline-block; padding: 14px 32px; background: #EA7B7B;
+                    color: white; text-decoration: none; border-radius: 10px; font-weight: 600;
+                    font-size: 15px; margin-top: 24px; }}
+            .warning {{ background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;
+                        padding: 14px 18px; margin-top: 24px; color: #92400e; font-size: 14px; }}
+            .footer {{ text-align: center; color: #9ca3af; font-size: 12px; margin-top: 28px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1 style="margin: 0 0 8px; font-size: 32px; font-weight: 800;">🧠 MindStash</h1>
+                <p style="margin: 0; font-size: 16px; opacity: 0.9;">Password reset request</p>
+            </div>
+            <div class="content">
+                <p style="font-size: 16px; color: #374151;">Hi there,</p>
+                <p style="color: #6b7280;">
+                    We received a request to reset your MindStash password.
+                    Click the button below to choose a new password:
+                </p>
+
+                <div style="text-align: center;">
+                    <a href="{reset_url}" class="cta">Reset my password →</a>
+                </div>
+
+                <div class="warning">
+                    ⏱️ This link expires in <strong>1 hour</strong>. If you didn&apos;t request a
+                    password reset, you can safely ignore this email — your account is unchanged.
+                </div>
+
+                <div class="footer">
+                    <p>If the button doesn&apos;t work, copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; color: #6b7280;">{reset_url}</p>
+                    <p style="color: #d1d5db; margin-top: 16px;">MindStash • Never lose a thought again</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+    try:
+        params = {
+            "from": settings.FROM_EMAIL,
+            "to": [user.email],
+            "subject": "Reset your MindStash password",
+            "html": html_body,
+        }
+        response = resend.Emails.send(params)
+        logger.info(f"📧 Password reset email sent to {user.email}")
+        return bool(response)
+    except Exception as e:
+        logger.error(f"❌ Failed to send password reset email to {user.email}: {e}")
+        return False
+
+
 def get_items_to_notify(db: Session) -> List[Item]:
     """
     Get all items that need notification now.

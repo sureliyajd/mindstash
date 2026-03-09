@@ -214,6 +214,16 @@ export const auth = {
     await api.post('/api/auth/change-password', { current_password, new_password });
   },
 
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>('/api/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>('/api/auth/reset-password', { token, new_password: newPassword });
+    return response.data;
+  },
+
   logout: (): void => {
     clearToken();
   },

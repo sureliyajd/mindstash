@@ -1,6 +1,8 @@
 """
 Security utilities for authentication
 """
+import secrets
+import hashlib
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -88,6 +90,17 @@ def create_refresh_token(data: dict) -> str:
         algorithm=settings.ALGORITHM
     )
     return encoded_jwt
+
+
+def generate_reset_token() -> tuple[str, str]:
+    """Generate a secure password reset token pair (raw, hash)."""
+    raw = secrets.token_urlsafe(32)
+    return raw, hashlib.sha256(raw.encode()).hexdigest()
+
+
+def hash_reset_token(raw: str) -> str:
+    """Hash a raw reset token using SHA-256."""
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def decode_token(token: str) -> Optional[dict]:

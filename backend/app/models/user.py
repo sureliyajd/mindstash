@@ -32,6 +32,10 @@ class User(Base):
         nullable=False
     )
     
+    # Password reset
+    password_reset_token_hash = Column(String, nullable=True)
+    password_reset_expires_at = Column(DateTime, nullable=True)
+
     # Email preferences
     daily_briefing_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
     weekly_digest_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
