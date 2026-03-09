@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2, Settings } from 'lucide-react';
 import { CaptureInput } from '@/components/CaptureInput';
 import { ItemCard } from '@/components/ItemCard';
@@ -16,7 +17,6 @@ import { ItemEditModal } from '@/components/ItemEditModal';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ChatPanel } from '@/components/chat/ChatPanel';
-import { TelegramConnect } from '@/components/TelegramConnect';
 import { useItems, useItemCounts, useMarkSurfaced } from '@/lib/hooks/useItems';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Item, Category, ItemUpdate } from '@/lib/api';
@@ -167,6 +167,7 @@ function CardGrid({ items, currentModule, onViewDetails, onEdit, onDelete, onTog
 function DashboardContent() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
+  const router = useRouter();
 
   // ==========================================================================
   // FILTER STATE
@@ -261,8 +262,18 @@ function DashboardContent() {
   const [detailItem, setDetailItem] = useState<Item | null>(null);
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [deleteItem, setDeleteItem] = useState<Item | null>(null);
-  const [showTelegram, setShowTelegram] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+
+  // Chat hint banner: shown to first-time users until dismissed
+  const [showChatHint, setShowChatHint] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('mindstash_chat_hint_dismissed') !== 'true';
+  });
+
+  const dismissChatHint = () => {
+    localStorage.setItem('mindstash_chat_hint_dismissed', 'true');
+    setShowChatHint(false);
+  };
 
   // Track online status
   useEffect(() => {
@@ -446,11 +457,11 @@ function DashboardContent() {
           <div className="flex items-center gap-4">
             {user && (
               <span className="hidden text-sm text-gray-500 sm:block">
-                {user.email}
+                {user.name || user.email}
               </span>
             )}
             <button
-              onClick={() => setShowTelegram(true)}
+              onClick={() => router.push('/settings')}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
               title="Settings"
             >
@@ -469,6 +480,28 @@ function DashboardContent() {
 
       {/* Main content */}
       <main className="mx-auto max-w-6xl px-6 py-8">
+        {/* Chat discovery hint for first-time users */}
+        <AnimatePresence>
+          {showChatHint && isFirstTimeUser && allItems.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-[#EA7B7B]/30 bg-[#EA7B7B]/10 px-5 py-3"
+            >
+              <p className="text-sm text-[#9B3535]">
+                💬 Try the AI chat (bottom right) — ask it anything about your stash
+              </p>
+              <button
+                onClick={dismissChatHint}
+                className="shrink-0 text-xs font-medium text-[#C44545] hover:text-[#9B3535] transition-colors"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Controls section */}
         <div className="space-y-6 pb-8">
           {/* Capture Input */}
@@ -592,12 +625,6 @@ function DashboardContent() {
           itemContent={deleteItem.content}
         />
       )}
-
-      {/* Telegram Connect Modal */}
-      <TelegramConnect
-        isOpen={showTelegram}
-        onClose={() => setShowTelegram(false)}
-      />
 
       {/* Chat Panel */}
       <ChatPanel />

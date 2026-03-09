@@ -28,71 +28,158 @@ export default function LandingAnimations({ variant = 'hero' }: LandingAnimation
 
 function HeroAnimations() {
   const floatingIcons = [
-    { Icon: Brain, color: '#EA7B7B', size: 32, top: '15%', left: '8%', delay: 0, duration: 8 },
-    { Icon: Lightbulb, color: '#FACE68', size: 28, top: '25%', right: '12%', delay: 0.5, duration: 9 },
-    { Icon: Sparkles, color: '#79C9C5', size: 24, top: '55%', left: '10%', delay: 1, duration: 10 },
-    { Icon: Zap, color: '#93DA97', size: 26, top: '65%', right: '8%', delay: 1.5, duration: 8.5 },
-    { Icon: MessageSquare, color: '#FF8364', size: 30, top: '40%', right: '5%', delay: 2, duration: 11 },
-    { Icon: Search, color: '#79C9C5', size: 22, top: '75%', left: '15%', delay: 2.5, duration: 9.5 },
+    {
+      Icon: Brain,
+      label: 'Ideas',
+      tooltip: 'Capture that 2 AM idea before it vanishes forever',
+      color: '#EA7B7B',
+      bg: '#FFF0F0',
+      border: '#FECACA',
+      size: 26,
+      top: '18%', left: '14%',
+      delay: 0, duration: 8,
+    },
+    {
+      Icon: Lightbulb,
+      label: 'Insights',
+      tooltip: 'AI extracts key insights from everything you save',
+      color: '#C9A030',
+      bg: '#FFFBEA',
+      border: '#FDE68A',
+      size: 24,
+      top: '22%', right: '16%',
+      delay: 0.6, duration: 9,
+    },
+    {
+      Icon: Sparkles,
+      label: 'Goals',
+      tooltip: 'Track what matters most — surfaced at the right time',
+      color: '#5AACA8',
+      bg: '#EEFAFA',
+      border: '#A7F3D0',
+      size: 24,
+      top: '58%', left: '12%',
+      delay: 1.2, duration: 10,
+    },
+    {
+      Icon: Zap,
+      label: 'Tasks',
+      tooltip: 'Smart reminders so nothing slips through the cracks',
+      color: '#5EB563',
+      bg: '#F0FBF0',
+      border: '#BBF7D0',
+      size: 24,
+      top: '62%', right: '14%',
+      delay: 1.8, duration: 8.5,
+    },
+    {
+      Icon: MessageSquare,
+      label: 'Notes',
+      tooltip: 'Chat with your AI to find anything, instantly',
+      color: '#D65E3F',
+      bg: '#FFF3EE',
+      border: '#FDBA74',
+      size: 24,
+      top: '38%', right: '12%',
+      delay: 2.4, duration: 11,
+    },
+    {
+      Icon: Search,
+      label: 'Recall',
+      tooltip: 'Semantic search that understands meaning, not just words',
+      color: '#5AACA8',
+      bg: '#EEFAFA',
+      border: '#99F6E4',
+      size: 22,
+      top: '78%', left: '16%',
+      delay: 3, duration: 9.5,
+    },
   ];
 
   return (
     <>
-      {/* Floating icons */}
+      {/* Floating icon badges with hover tooltip */}
       {floatingIcons.map((item, index) => {
         const Icon = item.Icon;
-        const style: React.CSSProperties = { top: item.top };
+        const style: React.CSSProperties = { top: item.top, zIndex: 10 };
         if ('left' in item) style.left = item.left;
         if ('right' in item) style.right = item.right;
 
         return (
           <motion.div
             key={`icon-${index}`}
-            className="absolute opacity-[0.15]"
+            className="absolute pointer-events-auto group"
             style={style}
-            animate={{
-              y: [0, -25, 0],
-              rotate: [0, 8, -8, 0],
-              opacity: [0.15, 0.25, 0.15],
-            }}
-            transition={{
-              duration: item.duration,
-              repeat: Infinity,
-              ease: 'easeInOut',
-              delay: item.delay,
-            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ y: [0, -20, 0], opacity: [0.75, 1, 0.75] }}
+            transition={{ duration: item.duration, repeat: Infinity, ease: 'easeInOut', delay: item.delay }}
+            whileHover={{ scale: 1.12, y: -28, transition: { duration: 0.2 } }}
           >
-            <Icon size={item.size} style={{ color: item.color, strokeWidth: 1.5 }} />
+            {/* Badge */}
+            <div
+              className="flex items-center gap-2 rounded-2xl px-4 py-2.5 shadow-xl cursor-default select-none"
+              style={{
+                backgroundColor: item.bg,
+                border: `1.5px solid ${item.border}`,
+                boxShadow: `0 8px 24px ${item.color}22`,
+              }}
+            >
+              <Icon size={item.size} style={{ color: item.color, strokeWidth: 2 }} />
+              <span className="text-sm font-semibold" style={{ color: item.color }}>{item.label}</span>
+            </div>
+
+            {/* Tooltip — appears on hover */}
+            <div
+              className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap
+                         rounded-xl px-3 py-2 text-xs font-medium text-gray-700 bg-white
+                         shadow-xl border border-gray-100 pointer-events-none
+                         opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100
+                         transition-all duration-200 ease-out"
+              style={{ zIndex: 50 }}
+            >
+              {item.tooltip}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0"
+                style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid white' }}
+              />
+            </div>
           </motion.div>
         );
       })}
 
-      {/* Gentle floating particles */}
-      {[...Array(12)].map((_, i) => {
-        const colors = ['#EA7B7B', '#FACE68', '#79C9C5', '#93DA97', '#FF8364'];
-        const color = colors[i % colors.length];
+      {/* Rising bubbles — larger and more visible */}
+      {[...Array(14)].map((_, i) => {
+        const palette = [
+          { bg: '#FECACA', shadow: '#EA7B7B' },
+          { bg: '#FDE68A', shadow: '#FACE68' },
+          { bg: '#99F6E4', shadow: '#79C9C5' },
+          { bg: '#BBF7D0', shadow: '#93DA97' },
+          { bg: '#FDBA74', shadow: '#FF8364' },
+        ];
+        const p = palette[i % palette.length];
+        const size = 10 + (i % 5) * 6;
 
         return (
           <motion.div
-            key={`particle-${i}`}
+            key={`bubble-${i}`}
             className="absolute rounded-full"
             style={{
-              width: 3 + Math.random() * 3,
-              height: 3 + Math.random() * 3,
-              backgroundColor: color,
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
+              width: size,
+              height: size,
+              backgroundColor: p.bg,
+              boxShadow: `0 0 ${size}px ${p.shadow}55`,
+              bottom: '-5%',
+              left: `${8 + (i * 6.5) % 84}%`,
             }}
             animate={{
-              y: [0, -150, -300],
-              opacity: [0, 0.4, 0],
-              scale: [0.5, 1, 0.5],
+              y: [0, -(600 + i * 40)],
+              opacity: [0, 0.85, 0.7, 0],
+              scale: [0.6, 1, 1.1, 0.8],
             }}
             transition={{
-              duration: 12 + Math.random() * 6,
+              duration: 8 + i * 0.7,
               repeat: Infinity,
               ease: 'easeOut',
-              delay: Math.random() * 5,
+              delay: i * 0.5,
             }}
           />
         );

@@ -33,6 +33,7 @@ const stagger = {
 function RegisterForm() {
   const router = useRouter();
   const { register, login, isRegisterLoading, isLoginLoading, isAuthenticated } = useAuth();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -61,7 +62,7 @@ function RegisterForm() {
     }
 
     try {
-      await register(email, password);
+      await register(email, password, name || undefined);
       // Auto-login after registration
       await login(email, password);
       router.push('/dashboard');
@@ -150,6 +151,28 @@ function RegisterForm() {
               onSubmit={handleSubmit}
               className="space-y-6"
             >
+              {/* Name field */}
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-semibold text-gray-700 mb-2"
+                >
+                  Display name <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  autoFocus
+                  maxLength={100}
+                  disabled={isLoading}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-[#EA7B7B] focus:bg-white focus:ring-4 focus:ring-[#EA7B7B]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Your name"
+                />
+              </div>
+
               {/* Email field */}
               <div>
                 <label
@@ -165,7 +188,6 @@ function RegisterForm() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
-                  autoFocus
                   disabled={isLoading}
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-[#EA7B7B] focus:bg-white focus:ring-4 focus:ring-[#EA7B7B]/10 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="you@example.com"
@@ -254,9 +276,9 @@ function RegisterForm() {
               {/* Terms */}
               <p className="text-center text-xs text-gray-400">
                 By signing up, you agree to our{' '}
-                <span className="text-gray-500 hover:text-gray-700 cursor-pointer">Terms of Service</span>
+                <Link href="/terms" className="text-gray-500 hover:text-gray-700" target="_blank">Terms of Service</Link>
                 {' '}and{' '}
-                <span className="text-gray-500 hover:text-gray-700 cursor-pointer">Privacy Policy</span>
+                <Link href="/privacy" className="text-gray-500 hover:text-gray-700" target="_blank">Privacy Policy</Link>
               </p>
             </motion.form>
 

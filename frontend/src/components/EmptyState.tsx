@@ -94,7 +94,7 @@ export function EmptyState({ module = 'all', isFirstTime = false }: EmptyStatePr
       </motion.div>
 
       {/* First-time user welcome */}
-      {isFirstTime && (
+      {isFirstTime && module === 'all' && (
         <motion.div
           variants={itemVariants}
           className="mb-6 rounded-2xl bg-[#EA7B7B]/10 border border-[#EA7B7B]/20 px-6 py-4"
@@ -111,6 +111,29 @@ export function EmptyState({ module = 'all', isFirstTime = false }: EmptyStatePr
                 Your AI-powered second brain awaits.
               </p>
             </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Sample capture prompts for first-time users */}
+      {isFirstTime && module === 'all' && (
+        <motion.div variants={itemVariants} className="mb-6 w-full max-w-sm">
+          <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-gray-400">
+            Try these captures
+          </p>
+          <div className="flex flex-col gap-2">
+            {[
+              '💡 Had a product idea while showering — build a habit tracker for developers',
+              '📚 Save article: The psychology of deep work (URL)',
+              '✅ Follow up with Sarah about the project timeline next Monday',
+            ].map((example) => (
+              <div
+                key={example}
+                className="rounded-xl bg-gray-100 px-4 py-3 text-sm text-gray-500 leading-snug"
+              >
+                {example}
+              </div>
+            ))}
           </div>
         </motion.div>
       )}

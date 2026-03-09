@@ -8,9 +8,10 @@ import { useTelegram } from '@/lib/hooks/useTelegram';
 interface TelegramConnectProps {
   isOpen: boolean;
   onClose: () => void;
+  inline?: boolean;
 }
 
-export function TelegramConnect({ isOpen, onClose }: TelegramConnectProps) {
+export function TelegramConnect({ isOpen, onClose, inline = false }: TelegramConnectProps) {
   const {
     status,
     isLoading,
@@ -37,9 +38,67 @@ export function TelegramConnect({ isOpen, onClose }: TelegramConnectProps) {
     onClose();
   };
 
-  if (!isOpen) return null;
+  if (!inline && !isOpen) return null;
 
   const isLinked = status?.linked;
+
+  const content = (
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EA7B7B]/10">
+            <MessageCircle className="h-5 w-5 text-[#EA7B7B]" />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900">Telegram Integration</h2>
+        </div>
+        {!inline && (
+          <button
+            onClick={handleClose}
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="p-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        ) : isLinked ? (
+          /* State C: Linked */
+          <LinkedState
+            telegramUsername={status?.telegram_username}
+            linkedAt={status?.linked_at}
+            onUnlink={() => unlink()}
+            isUnlinking={isUnlinking}
+          />
+        ) : linkCode ? (
+          /* State B: Code generated */
+          <CodeState
+            code={linkCode.code}
+            botUsername={linkCode.bot_username}
+            expiresInMinutes={linkCode.expires_in_minutes}
+            copied={copied}
+            onCopy={handleCopy}
+          />
+        ) : (
+          /* State A: Not linked */
+          <ConnectState
+            onConnect={() => generateLink()}
+            isGenerating={isGenerating}
+          />
+        )}
+      </div>
+    </>
+  );
+
+  if (inline) {
+    return <div>{content}</div>;
+  }
 
   return (
     <AnimatePresence>
@@ -58,53 +117,7 @@ export function TelegramConnect({ isOpen, onClose }: TelegramConnectProps) {
           className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EA7B7B]/10">
-                <MessageCircle className="h-5 w-5 text-[#EA7B7B]" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900">Telegram Integration</h2>
-            </div>
-            <button
-              onClick={handleClose}
-              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="p-6">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-              </div>
-            ) : isLinked ? (
-              /* State C: Linked */
-              <LinkedState
-                telegramUsername={status?.telegram_username}
-                linkedAt={status?.linked_at}
-                onUnlink={() => unlink()}
-                isUnlinking={isUnlinking}
-              />
-            ) : linkCode ? (
-              /* State B: Code generated */
-              <CodeState
-                code={linkCode.code}
-                botUsername={linkCode.bot_username}
-                expiresInMinutes={linkCode.expires_in_minutes}
-                copied={copied}
-                onCopy={handleCopy}
-              />
-            ) : (
-              /* State A: Not linked */
-              <ConnectState
-                onConnect={() => generateLink()}
-                isGenerating={isGenerating}
-              />
-            )}
-          </div>
+          {content}
         </motion.div>
       </motion.div>
     </AnimatePresence>
