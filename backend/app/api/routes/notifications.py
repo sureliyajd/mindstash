@@ -23,6 +23,7 @@ from app.core.config import settings
 from app.core.rate_limit import user_limiter
 from app.api.dependencies import get_current_user
 from app.models.user import User
+from app.schemas.user import EmailPreferences, EmailPreferencesUpdate
 from app.services.notifications.sender import (
     process_notifications,
     get_upcoming_notifications
@@ -146,6 +147,35 @@ def send_weekly_digests_endpoint(
         "message": f"Sent {result['digests_sent']} digests",
         "data": result
     }
+
+
+@router.get("/preferences", response_model=EmailPreferences)
+@user_limiter.limit("100/hour")
+def get_email_preferences(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get email notification preferences for the current user."""
+    request.state.user = current_user
+    return current_user
+
+
+@router.patch("/preferences", response_model=EmailPreferences)
+@user_limiter.limit("100/hour")
+def update_email_preferences(
+    request: Request,
+    body: EmailPreferencesUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update email notification preferences for the current user."""
+    request.state.user = current_user
+    for field, value in body.model_dump(exclude_none=True).items():
+        setattr(current_user, field, value)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 
 @router.get("/upcoming")

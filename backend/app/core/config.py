@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     # Email Configuration (Resend)
     RESEND_API_KEY: str | None = None
-    FROM_EMAIL: str = "noreply@mindstash.heyjaydeep.website"
+    FROM_EMAIL: str = "MindStash <noreply@mindstash.heyjaydeep.website>"
     APP_URL: str = "http://localhost:3000"
 
     # Cron Job Authentication (for scheduled endpoints)

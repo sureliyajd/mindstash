@@ -8,6 +8,7 @@ This module handles:
 """
 
 import logging
+import markdown as md_lib
 from datetime import datetime
 from typing import Dict, Any
 from uuid import UUID
@@ -23,6 +24,11 @@ logger = logging.getLogger(__name__)
 
 # Initialize Resend
 resend.api_key = settings.RESEND_API_KEY
+
+
+def markdown_to_html(text: str) -> str:
+    """Convert markdown text to HTML for email rendering."""
+    return md_lib.markdown(text, extensions=['nl2br'])
 
 
 def generate_briefing_for_user(user_id: UUID, db: Session) -> str | None:
@@ -105,6 +111,9 @@ def send_daily_briefing_to_user(user: User, db: Session) -> bool:
         # Extract first name from email
         first_name = user.email.split("@")[0].title()
 
+        # Convert markdown to HTML for proper rendering
+        briefing_html = markdown_to_html(briefing_text)
+
         # Build email HTML
         html_body = f"""
         <!DOCTYPE html>
@@ -118,7 +127,11 @@ def send_daily_briefing_to_user(user: User, db: Session) -> bool:
                 .content {{ background: #f9fafb; padding: 40px; border-radius: 0 0 12px 12px; }}
                 .briefing {{ background: white; padding: 25px; border-radius: 8px;
                             border-left: 4px solid #667eea; margin: 20px 0;
-                            font-size: 15px; line-height: 1.8; white-space: pre-wrap; }}
+                            font-size: 15px; line-height: 1.8; }}
+                .briefing h1, .briefing h2, .briefing h3 {{ color: #374151; margin-top: 16px; margin-bottom: 8px; }}
+                .briefing ul, .briefing ol {{ padding-left: 20px; margin: 8px 0; }}
+                .briefing li {{ margin-bottom: 4px; }}
+                .briefing strong {{ color: #111827; }}
                 .button {{ display: inline-block; padding: 12px 28px; background: #667eea;
                           color: white; text-decoration: none; border-radius: 6px; margin-top: 25px;
                           font-weight: 500; }}
@@ -141,7 +154,7 @@ def send_daily_briefing_to_user(user: User, db: Session) -> bool:
                     </p>
 
                     <div class="briefing">
-                        {briefing_text}
+                        {briefing_html}
                     </div>
 
                     <div style="text-align: center;">
@@ -204,8 +217,8 @@ def send_daily_briefings(db: Session) -> Dict[str, Any]:
     """
     logger.info(f"☀️ Sending daily briefings at {datetime.utcnow().isoformat()}")
 
-    users = db.query(User).all()
-    logger.info(f"Found {len(users)} users")
+    users = db.query(User).filter(User.daily_briefing_enabled == True).all()
+    logger.info(f"Found {len(users)} users with daily briefing enabled")
 
     sent_count = 0
     failed_count = 0

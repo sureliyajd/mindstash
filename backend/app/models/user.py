@@ -3,7 +3,7 @@ User database model
 """
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -31,6 +31,11 @@ class User(Base):
         nullable=False
     )
     
+    # Email preferences
+    daily_briefing_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
+    weekly_digest_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
+    item_reminders_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
+
     # Relationships
     items = relationship("Item", back_populates="owner", cascade="all, delete-orphan")
     chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")

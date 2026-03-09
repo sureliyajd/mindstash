@@ -35,11 +35,28 @@ class UserLogin(BaseModel):
     password: str
 
 
+class EmailPreferences(BaseModel):
+    """Schema for email notification preferences"""
+    daily_briefing_enabled: bool
+    weekly_digest_enabled: bool
+    item_reminders_enabled: bool
+
+    class Config:
+        from_attributes = True
+
+
+class EmailPreferencesUpdate(BaseModel):
+    """Schema for updating email notification preferences"""
+    daily_briefing_enabled: bool | None = None
+    weekly_digest_enabled: bool | None = None
+    item_reminders_enabled: bool | None = None
+
+
 class UserResponse(UserBase):
     """Schema for user response (without password)"""
     id: UUID
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 

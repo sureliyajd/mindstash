@@ -25,6 +25,95 @@ logger = logging.getLogger(__name__)
 resend.api_key = settings.RESEND_API_KEY
 
 
+def send_welcome_email(user: User) -> bool:
+    """
+    Send a welcome email to a newly registered user.
+
+    Args:
+        user: The newly created User
+
+    Returns:
+        True if the email was sent successfully
+    """
+    if not settings.RESEND_API_KEY:
+        logger.warning("RESEND_API_KEY not set, skipping welcome email")
+        return False
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(135deg, #EA7B7B 0%, #FF8364 100%);
+                       color: white; padding: 40px 30px; border-radius: 16px 16px 0 0; text-align: center; }}
+            .content {{ background: #f9fafb; padding: 36px 30px; border-radius: 0 0 16px 16px; }}
+            .step {{ background: white; padding: 16px 20px; border-radius: 12px;
+                     border-left: 4px solid #EA7B7B; margin: 12px 0; }}
+            .step-number {{ color: #EA7B7B; font-weight: 700; font-size: 12px;
+                            text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }}
+            .cta {{ display: inline-block; padding: 14px 32px; background: #EA7B7B;
+                    color: white; text-decoration: none; border-radius: 10px; font-weight: 600;
+                    font-size: 15px; margin-top: 24px; }}
+            .footer {{ text-align: center; color: #9ca3af; font-size: 12px; margin-top: 28px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1 style="margin: 0 0 8px; font-size: 32px; font-weight: 800;">🧠 MindStash</h1>
+                <p style="margin: 0; font-size: 16px; opacity: 0.9;">Never lose a thought again</p>
+            </div>
+            <div class="content">
+                <p style="font-size: 16px; color: #374151;">Hey there,</p>
+                <p style="color: #6b7280;">
+                    Welcome to MindStash! Your AI-powered second brain is ready.
+                    Here&apos;s how to get started in 3 steps:
+                </p>
+
+                <div class="step">
+                    <div class="step-number">Step 1</div>
+                    <strong>Capture a thought</strong> — type anything: an idea, a task, an article link. AI categorizes it instantly.
+                </div>
+                <div class="step">
+                    <div class="step-number">Step 2</div>
+                    <strong>Chat with your stash</strong> — ask the AI assistant to find, summarize, or act on your saved thoughts.
+                </div>
+                <div class="step">
+                    <div class="step-number">Step 3</div>
+                    <strong>Connect Telegram</strong> — capture thoughts on the go without opening the app (Settings → Integrations).
+                </div>
+
+                <div style="text-align: center;">
+                    <a href="{settings.APP_URL}/dashboard" class="cta">Open MindStash →</a>
+                </div>
+
+                <div class="footer">
+                    <p>You&apos;re receiving this because you just signed up at MindStash.</p>
+                    <p style="color: #d1d5db; margin-top: 8px;">MindStash • Never lose a thought again</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+    try:
+        params = {
+            "from": settings.FROM_EMAIL,
+            "to": [user.email],
+            "subject": "Welcome to MindStash — never lose a thought again 🧠",
+            "html": html_body,
+        }
+        response = resend.Emails.send(params)
+        logger.info(f"📧 Welcome email sent to {user.email}")
+        return bool(response)
+    except Exception as e:
+        logger.error(f"❌ Failed to send welcome email to {user.email}: {e}")
+        return False
+
+
 def get_items_to_notify(db: Session) -> List[Item]:
     """
     Get all items that need notification now.
@@ -212,6 +301,9 @@ def process_notifications(db: Session) -> dict:
         if not user:
             print(f"   ⚠️ User not found for item {item.id}")
             failed += 1
+            continue
+
+        if not user.item_reminders_enabled:
             continue
 
         if send_notification(item, user, db):

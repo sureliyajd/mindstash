@@ -317,6 +317,12 @@ export interface UpcomingNotification {
   summary: string | null;
 }
 
+export interface EmailPreferences {
+  daily_briefing_enabled: boolean;
+  weekly_digest_enabled: boolean;
+  item_reminders_enabled: boolean;
+}
+
 export interface DigestPreview {
   user_email: string;
   urgent_count: number;
@@ -342,6 +348,16 @@ export const notifications = {
   getDigestPreview: async (): Promise<DigestPreview> => {
     const response = await api.get<{ status: string; data: DigestPreview }>('/api/notifications/digest-preview');
     return response.data.data;
+  },
+
+  getPreferences: async (): Promise<EmailPreferences> => {
+    const response = await api.get<EmailPreferences>('/api/notifications/preferences');
+    return response.data;
+  },
+
+  updatePreferences: async (prefs: Partial<EmailPreferences>): Promise<EmailPreferences> => {
+    const response = await api.patch<EmailPreferences>('/api/notifications/preferences', prefs);
+    return response.data;
   },
 };
 

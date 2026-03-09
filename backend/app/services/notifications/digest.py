@@ -344,8 +344,8 @@ def send_weekly_digests(db: Session) -> Dict[str, Any]:
     """
     logger.info(f"📬 Sending weekly digests at {datetime.utcnow().isoformat()}")
 
-    users = db.query(User).all()
-    logger.info(f"Found {len(users)} users")
+    users = db.query(User).filter(User.weekly_digest_enabled == True).all()
+    logger.info(f"Found {len(users)} users with weekly digest enabled")
 
     sent_count = 0
     skipped_count = 0
