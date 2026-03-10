@@ -108,7 +108,7 @@ function HeroAnimations() {
         return (
           <motion.div
             key={`icon-${index}`}
-            className="absolute pointer-events-auto group"
+            className="absolute pointer-events-auto group hidden sm:block"
             style={style}
             initial={{ opacity: 0, y: 20 }}
             animate={{ y: [0, -20, 0], opacity: [0.75, 1, 0.75] }}

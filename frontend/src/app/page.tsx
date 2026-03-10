@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import LandingAnimations from '@/components/LandingAnimations';
+import ScenarioExplorer from '@/components/ScenarioExplorer';
+import PerspectivesSlider from '@/components/PerspectivesSlider';
 import {
   Brain,
   Sparkles,
@@ -14,7 +16,6 @@ import {
   Globe,
   Mail,
   MessageSquare,
-  Calendar,
   BookOpen,
   ShoppingCart,
   Users,
@@ -57,32 +58,6 @@ const scaleIn = {
 // DATA - REAL-WORLD USE CASES
 // =============================================================================
 
-const useCases = [
-  {
-    title: 'The Midnight Idea',
-    before: '"I had a brilliant business idea at 2 AM. By morning, it was gone."',
-    after: 'Capture it in 10 seconds. MindStash categorizes it as an Idea. Your AI agent surfaces it during your weekly review.',
-    icon: Lightbulb,
-    color: 'bg-[#FACE68]',
-    textColor: 'text-[#C9A030]',
-  },
-  {
-    title: 'The Forgotten Task',
-    before: "\"I meant to buy mom's birthday gift. I remembered... the day after.\"",
-    after: "Drop \"mom's birthday gift\" → auto-categorized as Task → smart notification 3 days before.",
-    icon: Calendar,
-    color: 'bg-[#EA7B7B]',
-    textColor: 'text-[#C44545]',
-  },
-  {
-    title: 'The Lost Article',
-    before: "\"I read an amazing article about AI. Can't remember where I saved it.\"",
-    after: 'Paste the link → categorized as Read Later → AI chat finds it in seconds: "Show me that AI article from last week"',
-    icon: BookOpen,
-    color: 'bg-[#79C9C5]',
-    textColor: 'text-[#5AACA8]',
-  },
-];
 
 const problems = [
   {
@@ -242,74 +217,7 @@ export default function Home() {
       {/* ===================================================================== */}
       {/* REAL-WORLD SCENARIOS */}
       {/* ===================================================================== */}
-      <section className="relative py-24 lg:py-32 bg-gray-50">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          {/* Section header */}
-          <motion.div
-            className="text-center mb-20"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeUp}
-          >
-            <span className="text-label-small text-[#EA7B7B] mb-4 block">Real Problems, Real Solutions</span>
-            <h2 className="heading-section text-4xl sm:text-5xl text-gray-900 mb-6">
-              We've all been there
-            </h2>
-            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-              These moments happen every day. MindStash makes sure they never happen again.
-            </p>
-          </motion.div>
-
-          {/* Use case cards */}
-          <motion.div
-            className="grid gap-8 md:grid-cols-3"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={stagger}
-          >
-            {useCases.map((useCase, index) => {
-              const Icon = useCase.icon;
-              return (
-                <motion.div
-                  key={useCase.title}
-                  variants={scaleIn}
-                  className="group relative"
-                >
-                  <div className="relative h-full rounded-3xl bg-white p-8 shadow-sm ring-1 ring-gray-100 transition-all duration-300 hover:shadow-xl hover:ring-[#EA7B7B]/30 hover:-translate-y-1">
-                    {/* Icon */}
-                    <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl ${useCase.color}`}>
-                      <Icon className="h-7 w-7" style={{ color: 'white' }} />
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="heading-card text-xl text-gray-900 mb-4">
-                      {useCase.title}
-                    </h3>
-
-                    {/* Before scenario */}
-                    <div className="mb-6 p-4 rounded-xl bg-gray-50 border-l-4 border-gray-300">
-                      <div className="text-xs font-semibold text-gray-400 uppercase mb-2">Before</div>
-                      <p className="text-sm text-gray-600 italic leading-relaxed">
-                        {useCase.before}
-                      </p>
-                    </div>
-
-                    {/* After scenario */}
-                    <div className="p-4 rounded-xl bg-[#93DA97]/10 border-l-4 border-[#93DA97]">
-                      <div className="text-xs font-semibold text-[#5EB563] uppercase mb-2">With MindStash</div>
-                      <p className="text-sm text-gray-900 font-medium leading-relaxed">
-                        {useCase.after}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-      </section>
+      <ScenarioExplorer />
 
       {/* ===================================================================== */}
       {/* PROBLEMS WE SOLVE */}
@@ -533,11 +441,12 @@ export default function Home() {
       </section>
 
       {/* ===================================================================== */}
-      {/* HOW IT WORKS - SIMPLIFIED */}
+      {/* HOW IT WORKS - DARK EDITORIAL */}
       {/* ===================================================================== */}
-      <section className="py-24 lg:py-32">
+      <section className="py-24 lg:py-32" style={{ backgroundColor: '#0D0D0D' }}>
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          {/* Section header */}
+
+          {/* Header */}
           <motion.div
             className="text-center mb-20"
             initial="hidden"
@@ -545,56 +454,106 @@ export default function Home() {
             viewport={{ once: true, margin: '-100px' }}
             variants={fadeUp}
           >
-            <span className="text-label-small text-[#EA7B7B] mb-4 block">How it works</span>
-            <h2 className="heading-section text-4xl sm:text-5xl text-gray-900">
-              Three steps. That's it.
+            <span className="text-label-small mb-4 block" style={{ color: '#79C9C5' }}>How it works</span>
+            <h2 className="heading-section text-4xl sm:text-5xl" style={{ color: 'white' }}>
+              Three steps. That&apos;s it.
             </h2>
           </motion.div>
 
-          {/* Steps */}
-          <motion.div
-            className="grid gap-12 md:grid-cols-3"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={stagger}
-          >
-            <motion.div variants={fadeUp} className="text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#79C9C5] text-2xl font-bold" style={{ color: 'white' }}>
-                  1
-                </div>
-              </div>
-              <h3 className="heading-card text-xl text-gray-900 mb-3">Capture</h3>
-              <p className="text-gray-500">
-                Type anything in 500 characters or less. Thoughts, links, tasks, reminders.
-              </p>
-            </motion.div>
+          {/* Steps grid */}
+          <div className="relative">
+            {/* Connecting gradient line — desktop only */}
+            <div
+              aria-hidden="true"
+              className="hidden md:block absolute top-[3.25rem] left-[calc(16.66%+2.5rem)] right-[calc(16.66%+2.5rem)] h-px opacity-40"
+              style={{ background: 'linear-gradient(90deg, #79C9C5, #FACE68, #93DA97)' }}
+            />
 
-            <motion.div variants={fadeUp} className="text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FACE68] text-2xl font-bold" style={{ color: 'white' }}>
-                  2
-                </div>
-              </div>
-              <h3 className="heading-card text-xl text-gray-900 mb-3">AI Organizes</h3>
-              <p className="text-gray-500">
-                Our AI instantly categorizes, tags, and understands context. No effort required.
-              </p>
-            </motion.div>
+            <motion.div
+              className="grid gap-6 md:grid-cols-3"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-50px' }}
+              variants={stagger}
+            >
+              {[
+                {
+                  num: '01',
+                  title: 'Capture',
+                  desc: 'Type anything — a thought, link, task, or reminder. 500 characters keeps it instant and frictionless.',
+                  stat: '10s',
+                  statSub: 'average capture time',
+                  color: '#79C9C5',
+                  cardBg: '#0A1F1D',
+                },
+                {
+                  num: '02',
+                  title: 'AI Organizes',
+                  desc: 'Our AI reads context, assigns one of 12 categories, generates tags, detects urgency, and estimates priority — automatically.',
+                  stat: '12',
+                  statSub: 'smart categories',
+                  color: '#FACE68',
+                  cardBg: '#1A160A',
+                },
+                {
+                  num: '03',
+                  title: 'Recall & Act',
+                  desc: 'Search naturally, chat with your AI agent, or get smart notifications. Your thoughts surface exactly when you need them.',
+                  stat: '0',
+                  statSub: 'manual effort needed',
+                  color: '#93DA97',
+                  cardBg: '#0A1A0C',
+                },
+              ].map((step) => (
+                <motion.div key={step.num} variants={fadeUp}>
+                  <div
+                    className="relative rounded-3xl p-8 lg:p-10 overflow-hidden transition-transform duration-300 hover:-translate-y-1"
+                    style={{
+                      backgroundColor: step.cardBg,
+                      border: `1px solid ${step.color}22`,
+                    }}
+                  >
+                    {/* Watermark number */}
+                    <div
+                      aria-hidden="true"
+                      className="absolute -top-3 -right-1 text-[7rem] font-black leading-none select-none pointer-events-none"
+                      style={{ color: step.color, opacity: 0.07 }}
+                    >
+                      {step.num}
+                    </div>
 
-            <motion.div variants={fadeUp} className="text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#93DA97] text-2xl font-bold" style={{ color: 'white' }}>
-                  3
-                </div>
-              </div>
-              <h3 className="heading-card text-xl text-gray-900 mb-3">Recall & Act</h3>
-              <p className="text-gray-500">
-                Search, chat, or get notified. Your thoughts surface exactly when you need them.
-              </p>
+                    {/* Step badge */}
+                    <div
+                      className="relative z-10 inline-flex items-center justify-center h-11 w-11 rounded-2xl text-sm font-bold mb-6"
+                      style={{
+                        backgroundColor: `${step.color}18`,
+                        color: step.color,
+                        border: `1.5px solid ${step.color}35`,
+                      }}
+                    >
+                      {step.num}
+                    </div>
+
+                    <h3 className="relative z-10 text-xl font-bold mb-3" style={{ color: 'white' }}>{step.title}</h3>
+                    <p className="relative z-10 text-sm leading-relaxed mb-7" style={{ color: '#9CA3AF' }}>{step.desc}</p>
+
+                    {/* Stat card */}
+                    <div
+                      className="relative z-10 rounded-2xl p-4"
+                      style={{
+                        backgroundColor: `${step.color}12`,
+                        border: `1px solid ${step.color}20`,
+                      }}
+                    >
+                      <div className="text-2xl font-bold" style={{ color: step.color }}>{step.stat}</div>
+                      <div className="text-xs mt-0.5" style={{ color: '#6B7280' }}>{step.statSub}</div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
-          </motion.div>
+          </div>
+
         </div>
       </section>
 
@@ -647,6 +606,11 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+
+      {/* ===================================================================== */}
+      {/* PERSPECTIVES SLIDER */}
+      {/* ===================================================================== */}
+      <PerspectivesSlider />
 
       {/* ===================================================================== */}
       {/* CTA SECTION */}
