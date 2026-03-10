@@ -4,21 +4,21 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import LandingAnimations from '@/components/LandingAnimations';
+import Footer from '@/components/Footer';
+import TabContentExplorer, { type TabItem } from '@/components/TabContentExplorer';
 import {
   Brain,
   Sparkles,
   Heart,
   Target,
-  Users,
   Zap,
-  Globe,
-  Mail,
-  MessageSquare,
   Code2,
   Lightbulb,
-  TrendingUp,
   ArrowRight,
+  Mail,
+  Users,
   Send,
+  Globe,
 } from 'lucide-react';
 
 // =============================================================================
@@ -47,24 +47,45 @@ const scaleIn = {
 // DATA
 // =============================================================================
 
-const story = [
+const storyItems: TabItem[] = [
   {
-    title: 'The Problem We Saw',
-    description: 'Brilliant ideas vanish. Important tasks get forgotten. Valuable content disappears into browser tabs and note apps. We lose our best thoughts every single day.',
+    id: 0,
+    tab: 'The Problem We Saw',
+    tagline: 'Why we started building',
     icon: Lightbulb,
-    color: 'bg-[#FACE68]',
+    accentColor: '#C9A030',
+    bubbleColor: '#FACE68',
+    lightBg: '#FFFBEA',
+    cardBg: '#FEF3C7',
+    borderColor: '#FDE68A',
+    content: "Brilliant ideas vanish minutes after they appear. Important tasks get forgotten until it's too late. Valuable content disappears into a graveyard of browser tabs and note apps. We lose our best thoughts every single day — not because we don't care, but because our tools weren't built for the way minds actually work.",
+    tags: ['Ideas lost', 'Tasks forgotten', 'Content buried'],
   },
   {
-    title: 'Our Vision',
-    description: "What if you never had to organize anything? What if AI understood your thoughts and surfaced them exactly when needed? That's the future we're building.",
+    id: 1,
+    tab: 'Our Vision',
+    tagline: "The future we're building toward",
     icon: Target,
-    color: 'bg-[#EA7B7B]',
+    accentColor: '#C44545',
+    bubbleColor: '#EA7B7B',
+    lightBg: '#FEF2F2',
+    cardBg: '#FCE7E7',
+    borderColor: '#FECACA',
+    content: "What if you never had to organize anything? What if AI understood your thoughts and surfaced them exactly when you needed them? We're building a world where your second brain is always on — capturing, categorizing, and connecting your thoughts with zero effort on your part.",
+    tags: ['Zero effort', 'AI-powered', 'Always available'],
   },
   {
-    title: "How We're Different",
-    description: 'Not another note app. Not a simple chatbot. A full agentic AI system that learns, understands context, and actively helps you remember and act on what matters.',
+    id: 2,
+    tab: "How We're Different",
+    tagline: 'Not just another note app',
     icon: Brain,
-    color: 'bg-[#79C9C5]',
+    accentColor: '#5AACA8',
+    bubbleColor: '#79C9C5',
+    lightBg: '#EEFAFA',
+    cardBg: '#CCFBF1',
+    borderColor: '#99F6E4',
+    content: "Not another note app. Not a simple chatbot. MindStash is a full agentic AI system that learns your patterns, understands context and urgency, and actively helps you remember and act on what matters most. It doesn't just store — it thinks alongside you.",
+    tags: ['Agentic AI', 'Context-aware', 'Action-oriented'],
   },
 ];
 
@@ -189,55 +210,11 @@ export default function AboutPage() {
       {/* ===================================================================== */}
       {/* OUR STORY */}
       {/* ===================================================================== */}
-      <section className="relative py-24 lg:py-32 bg-gray-50">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          {/* Section header */}
-          <motion.div
-            className="text-center mb-20"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeUp}
-          >
-            <span className="text-label-small text-[#EA7B7B] mb-4 block">Our Story</span>
-            <h2 className="heading-section text-4xl sm:text-5xl text-gray-900">
-              Why we built this
-            </h2>
-          </motion.div>
-
-          {/* Story cards */}
-          <motion.div
-            className="grid gap-8 md:grid-cols-3"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={stagger}
-          >
-            {story.map((item) => {
-              const Icon = item.icon;
-              return (
-                <motion.div
-                  key={item.title}
-                  variants={scaleIn}
-                  className="group relative"
-                >
-                  <div className="relative h-full rounded-3xl bg-white p-8 shadow-sm ring-1 ring-gray-100 transition-all duration-300 hover:shadow-xl hover:ring-[#EA7B7B]/30 hover:-translate-y-1">
-                    <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl ${item.color}`}>
-                      <Icon className="h-7 w-7" style={{ color: 'white' }} />
-                    </div>
-                    <h3 className="heading-card text-xl text-gray-900 mb-3">
-                      {item.title}
-                    </h3>
-                    <p className="text-gray-500 leading-relaxed">
-                      {item.description}
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-      </section>
+      <TabContentExplorer
+        label="Our Story"
+        heading="Why we built this"
+        items={storyItems}
+      />
 
       {/* ===================================================================== */}
       {/* OUR PRINCIPLES */}
@@ -255,6 +232,27 @@ export default function AboutPage() {
             >
               <div className="relative aspect-square rounded-3xl bg-gradient-to-br from-[#EA7B7B]/10 via-[#FACE68]/10 to-[#79C9C5]/10 p-8 lg:p-12">
                 <div className="absolute inset-0 rounded-3xl ring-1 ring-inset ring-gray-200" />
+
+                {/* Center piece */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="relative flex items-center justify-center">
+                    <div className="h-20 w-20 rounded-full bg-white shadow-xl ring-1 ring-gray-100 flex items-center justify-center z-10">
+                      <Brain className="h-9 w-9 text-[#EA7B7B]" />
+                    </div>
+                    <motion.div
+                      className="absolute rounded-full border-2 border-[#EA7B7B]/25"
+                      style={{ width: 80, height: 80 }}
+                      animate={{ scale: [1, 1.7], opacity: [0.5, 0] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut' }}
+                    />
+                    <motion.div
+                      className="absolute rounded-full border-2 border-[#EA7B7B]/15"
+                      style={{ width: 80, height: 80 }}
+                      animate={{ scale: [1, 2.4], opacity: [0.4, 0] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut', delay: 0.7 }}
+                    />
+                  </div>
+                </div>
 
                 {/* Floating principle cards */}
                 {principles.map((principle, index) => {
@@ -503,50 +501,7 @@ export default function AboutPage() {
         </motion.div>
       </section>
 
-      {/* ===================================================================== */}
-      {/* FOOTER */}
-      {/* ===================================================================== */}
-      <footer className="border-t border-gray-100 py-12 bg-white">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="flex items-center">
-                <img
-                  src="/logo.png"
-                  alt="MindStash"
-                  className="h-8 sm:h-10 w-auto"
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-                <span className="text-sm font-medium text-gray-500">Support & Contact:</span>
-                <div className="flex items-center gap-4">
-                  <a
-                    href="https://heyjaydeep.website/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#EA7B7B] transition-colors"
-                  >
-                    <Globe className="h-4 w-4" />
-                    heyjaydeep.website
-                  </a>
-                  <a
-                    href="mailto:jaydeepsureliya.jd@gmail.com"
-                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#EA7B7B] transition-colors"
-                  >
-                    <Mail className="h-4 w-4" />
-                    jaydeepsureliya.jd@gmail.com
-                  </a>
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-center sm:justify-start border-t border-gray-100 pt-6">
-              <p className="text-sm text-gray-400">
-                {new Date().getFullYear()} MindStash. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

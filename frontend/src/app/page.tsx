@@ -6,6 +6,7 @@ import Navigation from '@/components/Navigation';
 import LandingAnimations from '@/components/LandingAnimations';
 import ScenarioExplorer from '@/components/ScenarioExplorer';
 import PerspectivesSlider from '@/components/PerspectivesSlider';
+import Footer from '@/components/Footer';
 import {
   Brain,
   Sparkles,
@@ -671,56 +672,7 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* ===================================================================== */}
-      {/* FOOTER */}
-      {/* ===================================================================== */}
-      <footer className="border-t border-gray-100 py-12 bg-white">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="flex flex-col gap-8">
-            {/* Top row - Logo and Support */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-              {/* Logo */}
-              <div className="flex items-center">
-                <img
-                  src="/logo.png"
-                  alt="MindStash"
-                  className="h-8 sm:h-10 w-auto"
-                />
-              </div>
-
-              {/* Support & Contact */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-                <span className="text-sm font-medium text-gray-500">Support & Contact:</span>
-                <div className="flex items-center gap-4">
-                  <a
-                    href="https://heyjaydeep.website/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#EA7B7B] transition-colors"
-                  >
-                    <Globe className="h-4 w-4" />
-                    heyjaydeep.website
-                  </a>
-                  <a
-                    href="mailto:jaydeepsureliya.jd@gmail.com"
-                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#EA7B7B] transition-colors"
-                  >
-                    <Mail className="h-4 w-4" />
-                    jaydeepsureliya.jd@gmail.com
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom row - Copyright */}
-            <div className="flex justify-center sm:justify-start border-t border-gray-100 pt-6">
-              <p className="text-sm text-gray-400">
-                {new Date().getFullYear()} MindStash. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
