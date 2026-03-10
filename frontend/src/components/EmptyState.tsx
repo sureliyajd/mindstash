@@ -93,31 +93,25 @@ export function EmptyState({ module = 'all', isFirstTime = false }: EmptyStatePr
         </div>
       </motion.div>
 
-      {/* First-time user welcome */}
-      {isFirstTime && module === 'all' && (
-        <motion.div
-          variants={itemVariants}
-          className="mb-6 rounded-2xl bg-[#EA7B7B]/10 border border-[#EA7B7B]/20 px-6 py-4"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EA7B7B]">
-              <Brain className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[#9B3535]">
-                Welcome to MindStash!
-              </p>
-              <p className="text-xs text-[#C44545]">
-                Your AI-powered second brain awaits.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
+      {/* Heading */}
+      <motion.h3
+        variants={itemVariants}
+        className="heading-section text-2xl text-gray-900 text-center sm:text-3xl"
+      >
+        {messages.heading}
+      </motion.h3>
+
+      {/* Subtext */}
+      <motion.p
+        variants={itemVariants}
+        className="mt-3 text-base text-gray-500 text-center max-w-xs"
+      >
+        {messages.subtext}
+      </motion.p>
 
       {/* Sample capture prompts for first-time users */}
       {isFirstTime && module === 'all' && (
-        <motion.div variants={itemVariants} className="mb-6 w-full max-w-sm">
+        <motion.div variants={itemVariants} className="mt-8 w-full max-w-sm">
           <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-gray-400">
             Try these captures
           </p>
@@ -137,22 +131,6 @@ export function EmptyState({ module = 'all', isFirstTime = false }: EmptyStatePr
           </div>
         </motion.div>
       )}
-
-      {/* Heading */}
-      <motion.h3
-        variants={itemVariants}
-        className="heading-section text-2xl text-gray-900 text-center sm:text-3xl"
-      >
-        {messages.heading}
-      </motion.h3>
-
-      {/* Subtext */}
-      <motion.p
-        variants={itemVariants}
-        className="mt-3 text-base text-gray-500 text-center max-w-xs"
-      >
-        {messages.subtext}
-      </motion.p>
 
       {/* Subtle animated indicator */}
       <motion.div

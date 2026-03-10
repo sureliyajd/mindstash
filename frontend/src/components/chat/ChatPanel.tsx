@@ -19,6 +19,7 @@ import {
   PenLine,
   BarChart3,
   BookOpen,
+  ArrowRight,
 } from 'lucide-react';
 import { useChat } from '@/lib/hooks/useChat';
 import { BRIEFING_TRIGGER } from '@/lib/hooks/useChat';
@@ -274,39 +275,150 @@ function ChatBubble({
 }
 
 // =============================================================================
-// WELCOME STATE
+// WELCOME STATE — Visual onboarding showcasing AI capabilities
 // =============================================================================
 
-function WelcomeState({ onSuggest }: { onSuggest: (text: string) => void }) {
-  const suggestions = [
-    'Give me my daily briefing',
-    'Show me my urgent tasks',
-    'What ideas did I save recently?',
-    'Save a note: check quarterly report',
-  ];
+const capabilities = [
+  {
+    icon: Search,
+    label: 'Search',
+    example: '"Find my AI articles from last week"',
+    color: '#79C9C5',
+  },
+  {
+    icon: PenLine,
+    label: 'Create',
+    example: '"Save a note: review Q2 goals"',
+    color: '#FACE68',
+  },
+  {
+    icon: BarChart3,
+    label: 'Insights',
+    example: '"How many tasks do I have?"',
+    color: '#93DA97',
+  },
+  {
+    icon: Bell,
+    label: 'Reminders',
+    example: '"What\'s coming up this week?"',
+    color: '#EA7B7B',
+  },
+];
 
+const quickActions = [
+  'Give me my daily briefing',
+  'Show me my urgent tasks',
+  'What ideas did I save recently?',
+  'Save a note: check quarterly report',
+];
+
+function WelcomeState({ onSuggest }: { onSuggest: (text: string) => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EA7B7B]/10">
-        <Sparkles className="h-7 w-7 text-[#EA7B7B]" />
+    <div className="flex flex-1 flex-col px-2">
+      {/* Animated header */}
+      <div className="mb-5 text-center pt-2">
+        <motion.div
+          className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#EA7B7B] to-[#D66B6B] shadow-lg shadow-[#EA7B7B]/20"
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', damping: 12, delay: 0.1 }}
+        >
+          <Sparkles className="h-7 w-7 text-white" />
+        </motion.div>
+        <motion.h3
+          className="text-base font-bold text-gray-900"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          Your AI Assistant
+        </motion.h3>
+        <motion.p
+          className="mt-1 text-xs text-gray-400"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          I can search, create, manage, and remind
+        </motion.p>
       </div>
-      <h3 className="mb-2 text-base font-semibold text-gray-900">
-        MindStash AI
-      </h3>
-      <p className="text-sm text-gray-500">
-        Ask me anything about your saved thoughts, tasks, or ideas.
-      </p>
-      <div className="mt-6 w-full space-y-2">
-        {suggestions.map((suggestion) => (
-          <button
+
+      {/* Capability cards — 2x2 grid */}
+      <motion.div
+        className="grid grid-cols-2 gap-2 mb-5"
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.08, delayChildren: 0.3 } } }}
+      >
+        {capabilities.map((cap) => {
+          const Icon = cap.icon;
+          return (
+            <motion.div
+              key={cap.label}
+              variants={{
+                hidden: { opacity: 0, y: 12, scale: 0.95 },
+                visible: { opacity: 1, y: 0, scale: 1 },
+              }}
+              className="group relative overflow-hidden rounded-xl bg-white p-3 ring-1 ring-gray-100 transition-all duration-200 hover:shadow-md hover:ring-gray-200"
+            >
+              {/* Subtle color accent top border */}
+              <div
+                className="absolute top-0 left-0 right-0 h-[2px]"
+                style={{ backgroundColor: cap.color }}
+              />
+              <div
+                className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg"
+                style={{ backgroundColor: `${cap.color}15` }}
+              >
+                <Icon className="h-4 w-4" style={{ color: cap.color }} />
+              </div>
+              <div className="text-xs font-semibold text-gray-800 mb-0.5">{cap.label}</div>
+              <div className="text-[10px] leading-snug text-gray-400">{cap.example}</div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+
+      {/* Divider with label */}
+      <motion.div
+        className="flex items-center gap-3 mb-3"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+      >
+        <div className="h-px flex-1 bg-gray-100" />
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-300">
+          Try asking
+        </span>
+        <div className="h-px flex-1 bg-gray-100" />
+      </motion.div>
+
+      {/* Quick action suggestions */}
+      <motion.div
+        className="space-y-1.5"
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.06, delayChildren: 0.65 } } }}
+      >
+        {quickActions.map((suggestion) => (
+          <motion.button
             key={suggestion}
+            variants={{
+              hidden: { opacity: 0, x: -12 },
+              visible: { opacity: 1, x: 0 },
+            }}
             onClick={() => onSuggest(suggestion)}
-            className="w-full rounded-xl border border-gray-100 px-3 py-2.5 text-left text-xs text-gray-500 transition-colors hover:border-[#EA7B7B]/30 hover:bg-[#EA7B7B]/5 hover:text-gray-700"
+            className="group flex w-full items-center gap-2.5 rounded-xl bg-white px-3 py-2.5 text-left ring-1 ring-gray-100 transition-all duration-200 hover:bg-[#EA7B7B]/5 hover:ring-[#EA7B7B]/25 hover:shadow-sm"
           >
-            &ldquo;{suggestion}&rdquo;
-          </button>
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gray-50 transition-colors group-hover:bg-[#EA7B7B]/10">
+              <ArrowRight className="h-3 w-3 text-gray-300 transition-colors group-hover:text-[#EA7B7B]" />
+            </div>
+            <span className="text-xs text-gray-500 transition-colors group-hover:text-gray-700">
+              {suggestion}
+            </span>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -407,6 +519,17 @@ export function ChatPanel() {
   } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Chat discovery floating card — show once until dismissed or chat opened
+  const [showDiscovery, setShowDiscovery] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('mindstash_chat_discovered') !== 'true';
+  });
+
+  const dismissDiscovery = useCallback(() => {
+    localStorage.setItem('mindstash_chat_discovered', 'true');
+    setShowDiscovery(false);
+  }, []);
+
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -446,21 +569,141 @@ export function ChatPanel() {
     confirmAction(false);
   }, [confirmAction]);
 
+  const handleOpenChat = useCallback(() => {
+    dismissDiscovery();
+    setIsOpen(true);
+  }, [dismissDiscovery]);
+
   return (
     <>
-      {/* Toggle button - hidden when panel is open */}
+      {/* Toggle button + Discovery card — hidden when panel is open */}
       {!isOpen && (
-        <motion.button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#EA7B7B] text-white shadow-lg transition-shadow hover:shadow-xl"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          aria-label="Open chat"
-        >
-          <MessageSquare className="h-6 w-6" />
-        </motion.button>
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+          {/* Floating AI discovery showcase */}
+          <AnimatePresence>
+            {showDiscovery && !isLoadingHistory && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 300, delay: 0.8 }}
+                className="w-[300px] sm:w-[340px]"
+              >
+                <div className="relative rounded-2xl bg-white shadow-2xl ring-1 ring-gray-200/60 overflow-hidden">
+                  {/* Dismiss */}
+                  <button
+                    onClick={dismissDiscovery}
+                    className="absolute top-2.5 right-2.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
+                    aria-label="Dismiss"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+
+                  {/* Gradient header strip */}
+                  <div className="h-1.5 bg-gradient-to-r from-[#EA7B7B] via-[#FACE68] to-[#79C9C5]" />
+
+                  <div className="p-4">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <motion.div
+                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#EA7B7B] to-[#D66B6B] shadow-md shadow-[#EA7B7B]/20"
+                        animate={{ scale: [1, 1.08, 1] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                      >
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </motion.div>
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-900">Meet your AI Assistant</h4>
+                        <p className="text-[11px] text-gray-400">Powered by Claude</p>
+                      </div>
+                    </div>
+
+                    {/* Simulated chat preview */}
+                    <div className="space-y-2 mb-3">
+                      <motion.div
+                        className="flex justify-end"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 1.2 }}
+                      >
+                        <div className="rounded-xl rounded-br-sm bg-[#EA7B7B]/10 px-3 py-2 max-w-[80%]">
+                          <p className="text-[11px] text-gray-700">What tasks are due this week?</p>
+                        </div>
+                      </motion.div>
+                      <motion.div
+                        className="flex justify-start"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 1.8 }}
+                      >
+                        <div className="rounded-xl rounded-bl-sm bg-gray-50 px-3 py-2 max-w-[85%] ring-1 ring-gray-100">
+                          <p className="text-[11px] text-gray-600">
+                            You have <span className="font-semibold text-gray-800">3 tasks</span> due: Buy mom&apos;s gift (Tue), Review proposal (Wed)...
+                          </p>
+                        </div>
+                      </motion.div>
+                    </div>
+
+                    {/* Capability chips */}
+                    <motion.div
+                      className="flex flex-wrap gap-1.5 mb-3"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 2.2 }}
+                    >
+                      {[
+                        { label: 'Search', color: '#79C9C5' },
+                        { label: 'Create', color: '#FACE68' },
+                        { label: 'Reminders', color: '#EA7B7B' },
+                        { label: 'Briefings', color: '#93DA97' },
+                      ].map((chip) => (
+                        <span
+                          key={chip.label}
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                          style={{ backgroundColor: `${chip.color}15`, color: chip.color }}
+                        >
+                          <span
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: chip.color }}
+                          />
+                          {chip.label}
+                        </span>
+                      ))}
+                    </motion.div>
+
+                    {/* CTA */}
+                    <motion.button
+                      onClick={handleOpenChat}
+                      className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#EA7B7B] px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-[#EA7B7B]/20 transition-all hover:bg-[#D66B6B] hover:shadow-lg active:scale-[0.98]"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 2.4 }}
+                    >
+                      Try it now
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </motion.button>
+                  </div>
+
+                  {/* Arrow pointer towards the chat button */}
+                  <div className="absolute -bottom-2 right-5 h-4 w-4 rotate-45 bg-white ring-1 ring-gray-200/60" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Chat FAB button */}
+          <motion.button
+            onClick={handleOpenChat}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-[#EA7B7B] text-white shadow-lg transition-shadow hover:shadow-xl"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Open chat"
+          >
+            <MessageSquare className="h-6 w-6" />
+          </motion.button>
+        </div>
       )}
 
       {/* Chat panel */}

@@ -100,6 +100,17 @@ function SettingsContent() {
     notifications.getPreferences().then(setPrefs).catch(() => {});
   }, []);
 
+  // Scroll to hash section on mount (e.g. #integrations from Telegram promo)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const timer = setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleLogout = () => {
     logout();
     showToast('Logged out successfully', 'success');
@@ -228,7 +239,7 @@ function SettingsContent() {
           </motion.section>
 
           {/* Integrations Section */}
-          <motion.section variants={fadeUp}>
+          <motion.section variants={fadeUp} id="integrations">
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">
               Integrations
             </h2>

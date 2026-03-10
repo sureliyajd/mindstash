@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2, Settings } from 'lucide-react';
+import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2, Settings, X, Sparkles, Zap, ArrowRight } from 'lucide-react';
 import { CaptureInput } from '@/components/CaptureInput';
 import { ItemCard } from '@/components/ItemCard';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -11,7 +11,7 @@ import { DashboardSkeleton } from '@/components/Skeletons';
 import { useToast } from '@/components/Providers';
 import { ModuleSelector, type ModuleType } from '@/components/ModuleSelector';
 import { SearchBar } from '@/components/SearchBar';
-import { FilterPanel, type UrgencyLevel } from '@/components/FilterPanel';
+import { FilterPanel, FilterButton, ActiveFilterPills, type UrgencyLevel } from '@/components/FilterPanel';
 import { ItemDetailModal } from '@/components/ItemDetailModal';
 import { ItemEditModal } from '@/components/ItemEditModal';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
@@ -99,6 +99,126 @@ function OfflineBanner() {
 }
 
 // =============================================================================
+// TELEGRAM SVG ICON (official brand mark)
+// =============================================================================
+
+function TelegramIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+    </svg>
+  );
+}
+
+// =============================================================================
+// TELEGRAM PROMO BANNER — 2-day dismiss cooldown via localStorage
+// =============================================================================
+
+const TG_PROMO_DISMISSED_KEY = 'mindstash_tg_promo_dismissed_at';
+
+function isTgPromoDismissed(): boolean {
+  if (typeof window === 'undefined') return true;
+  const raw = localStorage.getItem(TG_PROMO_DISMISSED_KEY);
+  if (!raw) return false;
+  const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+  return Date.now() - Number(raw) < twoDaysMs;
+}
+
+function TelegramPromoBanner({ onDismiss }: { onDismiss: () => void }) {
+  const router = useRouter();
+
+  const handleConnect = () => {
+    onDismiss();
+    router.push('/settings#integrations');
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+      animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+      transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+      className="overflow-hidden"
+    >
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0088cc]/[0.06] via-[#0088cc]/[0.10] to-[#00b4d8]/[0.06] ring-1 ring-[#0088cc]/15">
+        {/* Dismiss */}
+        <button
+          onClick={onDismiss}
+          className="absolute top-3 right-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-gray-400 shadow-sm transition-colors hover:bg-white hover:text-gray-600"
+          aria-label="Dismiss"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Decorative blurs */}
+        <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-[#0088cc]/[0.08] blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-[#00b4d8]/[0.08] blur-3xl" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center gap-5 p-5 sm:p-6">
+          {/* Left — Telegram icon + text */}
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            <motion.div
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0088cc] shadow-lg shadow-[#0088cc]/25"
+              animate={{ rotate: [0, -5, 5, -2, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 5, ease: 'easeInOut' }}
+            >
+              <TelegramIcon className="h-6 w-6 text-white" />
+            </motion.div>
+            <div className="min-w-0">
+              <h4 className="text-sm font-bold text-gray-900 mb-1">
+                Take MindStash with you on Telegram
+              </h4>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Capture thoughts, search your stash, and chat with your AI assistant — directly from Telegram on any device.
+              </p>
+            </div>
+          </div>
+
+          {/* Right — Flow visual + CTA */}
+          <div className="flex flex-col items-stretch gap-3 sm:items-end shrink-0">
+            {/* Mini flow */}
+            <div className="flex items-center gap-1.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0088cc]/[0.08]">
+                <TelegramIcon className="h-4 w-4 text-[#0088cc]" />
+              </span>
+              <motion.span
+                className="flex items-center"
+                animate={{ opacity: [0.3, 0.8, 0.3] }}
+                transition={{ duration: 1.8, repeat: Infinity }}
+              >
+                <ArrowRight className="h-3 w-3 text-gray-300" />
+              </motion.span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#EA7B7B]/[0.08]">
+                <Sparkles className="h-4 w-4 text-[#EA7B7B]" />
+              </span>
+              <motion.span
+                className="flex items-center"
+                animate={{ opacity: [0.3, 0.8, 0.3] }}
+                transition={{ duration: 1.8, repeat: Infinity, delay: 0.4 }}
+              >
+                <ArrowRight className="h-3 w-3 text-gray-300" />
+              </motion.span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#93DA97]/[0.08]">
+                <Zap className="h-4 w-4 text-[#5EB563]" />
+              </span>
+            </div>
+
+            <button
+              onClick={handleConnect}
+              className="group flex items-center justify-center gap-2 rounded-xl bg-[#0088cc] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#0088cc]/20 transition-all hover:bg-[#006fa1] hover:shadow-lg active:scale-[0.98]"
+            >
+              <TelegramIcon className="h-4 w-4" />
+              Connect Telegram
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// =============================================================================
 // CARD GRID COMPONENT
 // =============================================================================
 
@@ -178,6 +298,7 @@ function DashboardContent() {
   const [urgencyFilter, setUrgencyFilter] = useState<UrgencyLevel | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // ==========================================================================
   // PAGINATION STATE
@@ -211,9 +332,11 @@ function DashboardContent() {
   });
 
   // Reset to page 1 when any server-side filter changes
+  const tagsKey = selectedTags.join(',');
   useEffect(() => {
     setPage(1);
-  }, [selectedModule, searchTerm, urgencyFilter, selectedTags.join(',')]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedModule, searchTerm, urgencyFilter, tagsKey]);
 
   // Accumulate items across pages (replace on page 1, append on page > 1)
   useEffect(() => {
@@ -264,16 +387,15 @@ function DashboardContent() {
   const [deleteItem, setDeleteItem] = useState<Item | null>(null);
   const [isOnline, setIsOnline] = useState(true);
 
-  // Chat hint banner: shown to first-time users until dismissed
-  const [showChatHint, setShowChatHint] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('mindstash_chat_hint_dismissed') !== 'true';
-  });
+  // Telegram promo banner: 2-day cooldown after dismiss
+  const [showTgPromo, setShowTgPromo] = useState(() => !isTgPromoDismissed());
 
-  const dismissChatHint = () => {
-    localStorage.setItem('mindstash_chat_hint_dismissed', 'true');
-    setShowChatHint(false);
-  };
+  const dismissTgPromo = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TG_PROMO_DISMISSED_KEY, String(Date.now()));
+    }
+    setShowTgPromo(false);
+  }, []);
 
   // Track online status
   useEffect(() => {
@@ -432,7 +554,6 @@ function DashboardContent() {
   // DERIVED STATE
   // ==========================================================================
   const hasItems = filteredItems.length > 0;
-  const hasActiveFilters = urgencyFilter !== null || selectedTags.length > 0 || selectedCategory !== null;
   const isFirstTimeUser = !isLoading && allItems.length === 0 && selectedModule === 'all' && !searchTerm;
   const hasSearchWithNoResults = searchTerm && searchTerm.trim().length > 0 && filteredItems.length === 0;
   // Only count real (non-optimistic) items when determining if more pages exist
@@ -480,38 +601,37 @@ function DashboardContent() {
 
       {/* Main content */}
       <main className="mx-auto max-w-6xl px-6 py-8">
-        {/* Chat discovery hint for first-time users */}
-        <AnimatePresence>
-          {showChatHint && isFirstTimeUser && allItems.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-[#EA7B7B]/30 bg-[#EA7B7B]/10 px-5 py-3"
-            >
-              <p className="text-sm text-[#9B3535]">
-                💬 Try the AI chat (bottom right) — ask it anything about your stash
-              </p>
-              <button
-                onClick={dismissChatHint}
-                className="shrink-0 text-xs font-medium text-[#C44545] hover:text-[#9B3535] transition-colors"
-              >
-                Dismiss
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Controls section */}
-        <div className="space-y-6 pb-8">
+        <div className="space-y-5 pb-8">
           {/* Capture Input */}
           <CaptureInput onSubmit={handleCreate} isSubmitting={isCreating} />
 
-          {/* Search Bar */}
-          <SearchBar
-            value={searchValue}
-            onChange={setSearchValue}
-            onSearch={handleSearch}
+          {/* Search + Filter button row */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <SearchBar
+                value={searchValue}
+                onChange={setSearchValue}
+                onSearch={handleSearch}
+              />
+            </div>
+            <FilterButton
+              activeCount={
+                (urgencyFilter ? 1 : 0) + selectedTags.length + (selectedCategory ? 1 : 0)
+              }
+              onClick={() => setIsFilterOpen(true)}
+            />
+          </div>
+
+          {/* Active filter pills */}
+          <ActiveFilterPills
+            urgencyFilter={urgencyFilter}
+            selectedTags={selectedTags}
+            selectedCategory={selectedCategory}
+            onUrgencyChange={setUrgencyFilter}
+            onTagsChange={setSelectedTags}
+            onCategoryChange={setSelectedCategory}
+            onClearFilters={handleClearFilters}
           />
 
           {/* Module Selector */}
@@ -520,19 +640,14 @@ function DashboardContent() {
             onModuleChange={handleModuleChange}
             itemCounts={itemCounts}
           />
-
-          {/* Filter Panel */}
-          <FilterPanel
-            urgencyFilter={urgencyFilter}
-            selectedTags={selectedTags}
-            availableTags={availableTags}
-            selectedCategory={selectedCategory}
-            onUrgencyChange={setUrgencyFilter}
-            onTagsChange={setSelectedTags}
-            onCategoryChange={setSelectedCategory}
-            onClearFilters={handleClearFilters}
-          />
         </div>
+
+        {/* Telegram promo banner */}
+        <AnimatePresence>
+          {showTgPromo && (
+            <TelegramPromoBanner onDismiss={dismissTgPromo} />
+          )}
+        </AnimatePresence>
 
         {/* Content area */}
         <div className="relative">
@@ -625,6 +740,20 @@ function DashboardContent() {
           itemContent={deleteItem.content}
         />
       )}
+
+      {/* Filter Modal */}
+      <FilterPanel
+        urgencyFilter={urgencyFilter}
+        selectedTags={selectedTags}
+        availableTags={availableTags}
+        selectedCategory={selectedCategory}
+        onUrgencyChange={setUrgencyFilter}
+        onTagsChange={setSelectedTags}
+        onCategoryChange={setSelectedCategory}
+        onClearFilters={handleClearFilters}
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+      />
 
       {/* Chat Panel */}
       <ChatPanel />
