@@ -1,6 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useState, ReactNode, createContext, useContext, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
@@ -149,11 +150,13 @@ export function Providers({ children }: ProvidersProps) {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastContext.Provider value={{ showToast, hideToast }}>
-        {children}
-        <ToastContainer toasts={toasts} hideToast={hideToast} />
-      </ToastContext.Provider>
-    </QueryClientProvider>
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
+      <QueryClientProvider client={queryClient}>
+        <ToastContext.Provider value={{ showToast, hideToast }}>
+          {children}
+          <ToastContainer toasts={toasts} hideToast={hideToast} />
+        </ToastContext.Provider>
+      </QueryClientProvider>
+    </GoogleOAuthProvider>
   );
 }

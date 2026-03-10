@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft, Eye, EyeOff, Check } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { PublicOnlyRoute } from '@/components/ProtectedRoute';
 import { AxiosError } from 'axios';
+import { GoogleLogin } from '@react-oauth/google';
 
 // =============================================================================
 // ANIMATION VARIANTS
@@ -32,14 +33,14 @@ const stagger = {
 
 function RegisterForm() {
   const router = useRouter();
-  const { register, login, isRegisterLoading, isLoginLoading, isAuthenticated } = useAuth();
+  const { register, login, googleLogin, isRegisterLoading, isLoginLoading, isGoogleLoginLoading, isAuthenticated } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isLoading = isRegisterLoading || isLoginLoading;
+  const isLoading = isRegisterLoading || isLoginLoading || isGoogleLoginLoading;
 
   // Password validation
   const passwordLength = password.length >= 8;
@@ -280,6 +281,33 @@ function RegisterForm() {
                 {' '}and{' '}
                 <Link href="/privacy" className="text-gray-500 hover:text-gray-700" target="_blank">Privacy Policy</Link>
               </p>
+
+              {/* Divider */}
+              <div className="relative flex items-center">
+                <div className="flex-grow border-t border-gray-200" />
+                <span className="mx-4 flex-shrink text-xs font-medium text-gray-400 uppercase tracking-wider">or</span>
+                <div className="flex-grow border-t border-gray-200" />
+              </div>
+
+              {/* Google Sign-Up */}
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={async (cred) => {
+                    if (!cred.credential) return;
+                    try {
+                      await googleLogin(cred.credential);
+                      router.push('/dashboard');
+                    } catch {
+                      setError('Google sign-in failed. Please try again.');
+                    }
+                  }}
+                  onError={() => setError('Google sign-in failed. Please try again.')}
+                  width="368"
+                  shape="rectangular"
+                  theme="outline"
+                  text="signup_with"
+                />
+              </div>
             </motion.form>
 
             {/* Sign in link */}

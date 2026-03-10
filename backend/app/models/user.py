@@ -23,7 +23,8 @@ class User(Base):
     )
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String(100), nullable=True)
-    hashed_password = Column(String, nullable=False)
+    google_id = Column(String, unique=True, index=True, nullable=True)
+    hashed_password = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,
@@ -40,6 +41,10 @@ class User(Base):
     daily_briefing_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
     weekly_digest_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
     item_reminders_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
+
+    # Admin / account status
+    is_admin = Column(Boolean, default=False, nullable=False, server_default='false')
+    is_suspended = Column(Boolean, default=False, nullable=False, server_default='false')
 
     # Relationships
     items = relationship("Item", back_populates="owner", cascade="all, delete-orphan")

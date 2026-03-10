@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { PublicOnlyRoute } from '@/components/ProtectedRoute';
 import { AxiosError } from 'axios';
+import { GoogleLogin } from '@react-oauth/google';
 
 // =============================================================================
 // ANIMATION VARIANTS
@@ -33,7 +34,8 @@ const stagger = {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isLoginLoading, isAuthenticated } = useAuth();
+  const { login, googleLogin, isLoginLoading, isGoogleLoginLoading, isAuthenticated } = useAuth();
+  const isLoading = isLoginLoading || isGoogleLoginLoading;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -187,7 +189,7 @@ function LoginForm() {
                   required
                   autoComplete="email"
                   autoFocus
-                  disabled={isLoginLoading}
+                  disabled={isLoading}
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-[#EA7B7B] focus:bg-white focus:ring-4 focus:ring-[#EA7B7B]/10 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="you@example.com"
                 />
@@ -209,7 +211,7 @@ function LoginForm() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
-                    disabled={isLoginLoading}
+                    disabled={isLoading}
                     className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 pr-12 text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:border-[#EA7B7B] focus:bg-white focus:ring-4 focus:ring-[#EA7B7B]/10 disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="Enter your password"
                   />
@@ -252,9 +254,9 @@ function LoginForm() {
               {/* Submit button */}
               <motion.button
                 type="submit"
-                disabled={isLoginLoading}
-                whileHover={{ scale: isLoginLoading ? 1 : 1.01 }}
-                whileTap={{ scale: isLoginLoading ? 1 : 0.99 }}
+                disabled={isLoading}
+                whileHover={{ scale: isLoading ? 1 : 1.01 }}
+                whileTap={{ scale: isLoading ? 1 : 0.99 }}
                 className="w-full rounded-xl bg-[#EA7B7B] py-4 text-base font-semibold shadow-lg shadow-[#EA7B7B]/25 transition-all duration-200 hover:bg-[#D66B6B] hover:shadow-[#EA7B7B]/40 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{ color: 'white' }}
               >
@@ -264,6 +266,33 @@ function LoginForm() {
                   'Sign in'
                 )}
               </motion.button>
+
+              {/* Divider */}
+              <div className="relative flex items-center">
+                <div className="flex-grow border-t border-gray-200" />
+                <span className="mx-4 flex-shrink text-xs font-medium text-gray-400 uppercase tracking-wider">or</span>
+                <div className="flex-grow border-t border-gray-200" />
+              </div>
+
+              {/* Google Sign-In */}
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={async (cred) => {
+                    if (!cred.credential) return;
+                    try {
+                      await googleLogin(cred.credential);
+                      router.push(redirectTo);
+                    } catch {
+                      setError('Google sign-in failed. Please try again.');
+                    }
+                  }}
+                  onError={() => setError('Google sign-in failed. Please try again.')}
+                  width="368"
+                  shape="rectangular"
+                  theme="outline"
+                  text="signin_with"
+                />
+              </div>
             </motion.form>
 
             {/* Sign up link */}

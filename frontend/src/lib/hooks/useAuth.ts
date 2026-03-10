@@ -40,6 +40,14 @@ export function useAuth() {
     },
   });
 
+  // Google login mutation
+  const googleLoginMutation = useMutation<TokenResponse, Error, { idToken: string }>({
+    mutationFn: ({ idToken }) => auth.googleLogin(idToken),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: USER_QUERY_KEY });
+    },
+  });
+
   // Register mutation
   const registerMutation = useMutation<User, Error, { email: string; password: string; name?: string }>({
     mutationFn: ({ email, password, name }) => auth.register(email, password, name),
@@ -60,6 +68,10 @@ export function useAuth() {
 
   const login = async (email: string, password: string): Promise<TokenResponse> => {
     return loginMutation.mutateAsync({ email, password });
+  };
+
+  const googleLogin = async (idToken: string): Promise<TokenResponse> => {
+    return googleLoginMutation.mutateAsync({ idToken });
   };
 
   const register = async (email: string, password: string, name?: string): Promise<User> => {
@@ -86,6 +98,7 @@ export function useAuth() {
     isLoading,
     isAuthenticated: !!user && !isError,
     login,
+    googleLogin,
     register,
     logout,
     updateProfile,
@@ -93,6 +106,7 @@ export function useAuth() {
     loginError: loginMutation.error,
     registerError: registerMutation.error,
     isLoginLoading: loginMutation.isPending,
+    isGoogleLoginLoading: googleLoginMutation.isPending,
     isRegisterLoading: registerMutation.isPending,
     isProfileUpdating: updateProfileMutation.isPending,
     isPasswordChanging: changePasswordMutation.isPending,

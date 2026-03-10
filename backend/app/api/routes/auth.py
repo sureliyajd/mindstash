@@ -36,6 +36,7 @@ from app.schemas.user import (
     UserCreate, UserLogin, UserResponse, TokenResponse,
     UserProfileUpdate, PasswordChange,
     ForgotPasswordRequest, ResetPasswordRequest,
+    GoogleAuthRequest,
 )
 from app.api.dependencies import get_current_user
 from app.services.notifications.sender import send_welcome_email, send_password_reset_email
@@ -123,11 +124,23 @@ def login(request: Request, user_credentials: UserLogin, db: Session = Depends(g
             detail="User not found"
         )
 
-    # Verify password
+    # Verify password (Google-only accounts have no password)
+    if not user.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account uses Google Sign-In. Please log in with Google."
+        )
     if not verify_password(user_credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password"
+        )
+
+    # Check if account is suspended
+    if user.is_suspended:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been suspended."
         )
 
     # Create tokens
@@ -219,6 +232,90 @@ def refresh_token(request: Request, authorization: Optional[str] = Header(None),
     )
 
 
+@router.post("/google", response_model=TokenResponse)
+@limiter.limit("30/hour")
+def google_auth(request: Request, body: GoogleAuthRequest, db: Session = Depends(get_db)):
+    """
+    Authenticate with a Google ID token.
+
+    The frontend obtains a Google ID token via the Google Sign-In button and
+    sends it here. The backend verifies it with Google's public keys, then
+    finds or creates the user and returns MindStash JWT tokens.
+
+    Rate Limit: 30 requests per hour per IP
+    """
+    from google.oauth2 import id_token as google_id_token
+    from google.auth.transport import requests as google_requests
+    from app.core.config import settings
+
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Google Sign-In is not configured on this server."
+        )
+
+    try:
+        payload = google_id_token.verify_oauth2_token(
+            body.id_token,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
+        )
+    except ValueError as e:
+        logger.warning(f"Google ID token verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google token"
+        )
+
+    google_sub = payload["sub"]
+    email = payload.get("email", "")
+    name = payload.get("name")
+
+    # Find existing user by google_id or email
+    user = db.query(User).filter(User.google_id == google_sub).first()
+
+    if not user and email:
+        user = db.query(User).filter(User.email == email).first()
+
+    if user:
+        # Link google_id to existing account if not already linked
+        if not user.google_id:
+            user.google_id = google_sub
+            db.commit()
+    else:
+        # Create new Google user (no password)
+        user = User(
+            email=email,
+            name=name,
+            google_id=google_sub,
+            hashed_password=None,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        try:
+            send_welcome_email(user)
+        except Exception as e:
+            logger.warning(f"Welcome email failed for {user.email}: {e}")
+
+    if user.is_suspended:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been suspended."
+        )
+
+    token_data = {"sub": user.email}
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+    )
+
+
 @router.get("/me", response_model=UserResponse)
 @limiter.limit("500/hour")
 def get_current_user_info(request: Request, current_user: User = Depends(get_current_user)):
@@ -268,6 +365,11 @@ def change_password(
     db: Session = Depends(get_db)
 ):
     """Change the current user's password."""
+    if not current_user.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account uses Google Sign-In and does not have a password."
+        )
     if not verify_password(data.current_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

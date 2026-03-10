@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     # Cron Job Authentication (for scheduled endpoints)
     CRON_API_KEY: str | None = None  # Set in production for /notifications/process, etc.
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
     # Optional
     SENTRY_DSN: str | None = None
     POSTHOG_API_KEY: str | None = None
@@ -60,6 +64,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 
 @lru_cache()

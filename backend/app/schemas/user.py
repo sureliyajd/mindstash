@@ -3,7 +3,7 @@ Pydantic schemas for User
 """
 from datetime import datetime
 from uuid import UUID
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
@@ -59,9 +59,38 @@ class UserResponse(UserBase):
     id: UUID
     name: Optional[str] = None
     created_at: datetime
+    is_admin: bool = False
+    is_suspended: bool = False
 
     class Config:
         from_attributes = True
+
+
+class AdminUserResponse(BaseModel):
+    """Schema for user data visible to admin"""
+    id: UUID
+    email: str
+    name: Optional[str] = None
+    is_admin: bool
+    is_suspended: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AdminUserUpdate(BaseModel):
+    """Schema for admin updating a user"""
+    name: Optional[str] = Field(None, max_length=100)
+    email: Optional[EmailStr] = None
+
+
+class AdminUserListResponse(BaseModel):
+    """Paginated list of users for admin"""
+    users: List[AdminUserResponse]
+    total: int
+    page: int
+    page_size: int
 
 
 class UserProfileUpdate(BaseModel):
@@ -91,6 +120,11 @@ class ResetPasswordRequest(BaseModel):
         if len(v.encode('utf-8')) > 72:
             raise ValueError('Password cannot exceed 72 bytes when UTF-8 encoded')
         return v
+
+
+class GoogleAuthRequest(BaseModel):
+    """Schema for Google OAuth login"""
+    id_token: str
 
 
 class TokenResponse(BaseModel):
