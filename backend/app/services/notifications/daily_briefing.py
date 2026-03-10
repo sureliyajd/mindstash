@@ -114,61 +114,101 @@ def send_daily_briefing_to_user(user: User, db: Session) -> bool:
         # Convert markdown to HTML for proper rendering
         briefing_html = markdown_to_html(briefing_text)
 
-        # Build email HTML
+        # Build email HTML — mobile-first, MindStash brand colors
+        today_str = datetime.utcnow().strftime('%A, %B %d, %Y')
         html_body = f"""
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Your Daily Briefing</title>
+            <!--[if mso]>
+            <style>table,td {{font-family:Arial,sans-serif;}}</style>
+            <![endif]-->
             <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                           color: white; padding: 40px; border-radius: 12px 12px 0 0; text-align: center; }}
-                .content {{ background: #f9fafb; padding: 40px; border-radius: 0 0 12px 12px; }}
-                .briefing {{ background: white; padding: 25px; border-radius: 8px;
-                            border-left: 4px solid #667eea; margin: 20px 0;
-                            font-size: 15px; line-height: 1.8; }}
-                .briefing h1, .briefing h2, .briefing h3 {{ color: #374151; margin-top: 16px; margin-bottom: 8px; }}
-                .briefing ul, .briefing ol {{ padding-left: 20px; margin: 8px 0; }}
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        line-height: 1.6; background-color: #f3f4f6; -webkit-text-size-adjust: 100%; }}
+                .wrapper {{ width: 100%; padding: 24px 16px; background-color: #f3f4f6; }}
+                .container {{ max-width: 560px; margin: 0 auto; }}
+                .card {{ background: #ffffff; border-radius: 16px; overflow: hidden;
+                         box-shadow: 0 1px 3px rgba(0,0,0,0.06); }}
+                .header {{ background: linear-gradient(135deg, #EA7B7B 0%, #D66B6B 50%, #FF8364 100%);
+                           padding: 32px 24px; text-align: center; }}
+                .header h1 {{ color: #ffffff; font-size: 26px; font-weight: 800; margin: 0 0 6px; }}
+                .header .date {{ color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500; }}
+                .body {{ padding: 28px 24px; }}
+                .greeting {{ font-size: 15px; color: #374151; margin-bottom: 6px; }}
+                .subtitle {{ font-size: 14px; color: #9ca3af; margin-bottom: 20px; }}
+                .briefing {{ background: #fafafa; border-radius: 12px; padding: 20px;
+                             border-left: 3px solid #EA7B7B; font-size: 14px; line-height: 1.75;
+                             color: #374151; word-wrap: break-word; overflow-wrap: break-word; }}
+                .briefing h1 {{ font-size: 17px; color: #111827; margin: 14px 0 6px; }}
+                .briefing h2 {{ font-size: 15px; color: #111827; margin: 14px 0 6px; }}
+                .briefing h3 {{ font-size: 14px; color: #374151; margin: 12px 0 4px; }}
+                .briefing p {{ margin: 8px 0; }}
+                .briefing ul, .briefing ol {{ padding-left: 18px; margin: 6px 0; }}
                 .briefing li {{ margin-bottom: 4px; }}
                 .briefing strong {{ color: #111827; }}
-                .button {{ display: inline-block; padding: 12px 28px; background: #667eea;
-                          color: white; text-decoration: none; border-radius: 6px; margin-top: 25px;
-                          font-weight: 500; }}
-                .footer {{ text-align: center; color: #9ca3af; font-size: 12px; margin-top: 30px; }}
-                .date {{ color: #e0e7ff; font-size: 14px; margin-top: 8px; }}
+                .briefing a {{ color: #EA7B7B; }}
+                .cta-wrap {{ text-align: center; padding: 24px 0 4px; }}
+                .cta {{ display: inline-block; padding: 12px 28px; background: #EA7B7B;
+                        color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600;
+                        font-size: 14px; }}
+                .divider {{ height: 1px; background: #f3f4f6; margin: 20px 0; }}
+                .footer {{ padding: 20px 24px; text-align: center; }}
+                .footer p {{ font-size: 11px; color: #d1d5db; margin: 4px 0; }}
+                .footer a {{ color: #EA7B7B; text-decoration: underline; }}
+                .accent-bar {{ display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }}
+                .accent-dot {{ width: 6px; height: 6px; border-radius: 50%; display: inline-block; }}
+                @media only screen and (max-width: 480px) {{
+                    .wrapper {{ padding: 12px 8px; }}
+                    .header {{ padding: 28px 20px; }}
+                    .header h1 {{ font-size: 22px; }}
+                    .body {{ padding: 22px 18px; }}
+                    .briefing {{ padding: 16px; font-size: 13px; }}
+                    .footer {{ padding: 16px 18px; }}
+                }}
             </style>
         </head>
         <body>
-            <div class="container">
-                <div class="header">
-                    <h1 style="margin: 0; font-size: 32px;">☀️ Good Morning!</h1>
-                    <p class="date">{datetime.utcnow().strftime('%A, %B %d, %Y')}</p>
-                </div>
-                <div class="content">
-                    <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
-                        Hi {first_name},
-                    </p>
-                    <p style="font-size: 15px; color: #6b7280;">
-                        Here's your personalized daily briefing from MindStash:
-                    </p>
+            <div class="wrapper">
+                <div class="container">
+                    <div class="card">
+                        <div class="header">
+                            <h1>Good Morning!</h1>
+                            <div class="date">{today_str}</div>
+                        </div>
 
-                    <div class="briefing">
-                        {briefing_html}
-                    </div>
+                        <div class="body">
+                            <p class="greeting">Hi {first_name},</p>
+                            <p class="subtitle">Here's your personalized daily briefing:</p>
 
-                    <div style="text-align: center;">
-                        <a href="{settings.APP_URL}/dashboard" class="button">
-                            Open MindStash →
-                        </a>
-                    </div>
+                            <div class="briefing">
+                                {briefing_html}
+                            </div>
 
-                    <div class="footer">
-                        <p>You're receiving this daily briefing because you have an active MindStash account</p>
-                        <p style="color: #d1d5db; margin-top: 10px;">
-                            <a href="{settings.APP_URL}/settings" style="color: #667eea;">Manage email preferences</a>
-                        </p>
-                        <p style="color: #d1d5db; margin-top: 15px;">MindStash • Never lose a thought again</p>
+                            <div class="cta-wrap">
+                                <a href="{settings.APP_URL}/dashboard" class="cta">
+                                    Open MindStash &rarr;
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="footer">
+                            <div class="accent-bar">
+                                <span class="accent-dot" style="background:#EA7B7B;"></span>
+                                <span class="accent-dot" style="background:#FACE68;"></span>
+                                <span class="accent-dot" style="background:#79C9C5;"></span>
+                                <span class="accent-dot" style="background:#93DA97;"></span>
+                            </div>
+                            <p style="color:#9ca3af;">You're receiving this because you have daily briefings enabled.</p>
+                            <p><a href="{settings.APP_URL}/settings">Manage email preferences</a></p>
+                            <p style="margin-top:10px;">MindStash &middot; Never lose a thought again</p>
+                        </div>
                     </div>
                 </div>
             </div>

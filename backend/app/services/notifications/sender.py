@@ -249,50 +249,78 @@ def send_notification(item: Item, user: User, db: Session) -> bool:
 
             html_body = f"""
             <!DOCTYPE html>
-            <html>
+            <html lang="en">
             <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
-                    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; }}
-                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                               color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }}
-                    .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }}
-                    .item-box {{ background: white; padding: 20px; border-radius: 8px;
-                                border-left: 4px solid #667eea; margin: 20px 0; }}
-                    .meta {{ color: #6b7280; font-size: 14px; margin-top: 10px; }}
-                    .button {{ display: inline-block; padding: 12px 24px; background: #667eea;
-                              color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }}
-                    .footer {{ text-align: center; color: #9ca3af; font-size: 12px; margin-top: 30px; }}
+                    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            line-height: 1.6; background-color: #f3f4f6; -webkit-text-size-adjust: 100%; }}
+                    .wrapper {{ width: 100%; padding: 24px 16px; background-color: #f3f4f6; }}
+                    .container {{ max-width: 560px; margin: 0 auto; }}
+                    .card {{ background: #ffffff; border-radius: 16px; overflow: hidden;
+                             box-shadow: 0 1px 3px rgba(0,0,0,0.06); }}
+                    .header {{ background: linear-gradient(135deg, #79C9C5 0%, #5AACA8 100%);
+                               padding: 28px 24px; text-align: center; }}
+                    .header h1 {{ color: #ffffff; font-size: 22px; font-weight: 800; margin: 0; }}
+                    .body {{ padding: 28px 24px; }}
+                    .item-box {{ background: #fafafa; padding: 18px; border-radius: 12px;
+                                 border-left: 3px solid #EA7B7B; margin: 16px 0; word-wrap: break-word; }}
+                    .item-box p {{ font-size: 15px; font-weight: 500; color: #111827; }}
+                    .item-box a {{ color: #EA7B7B; font-size: 13px; }}
+                    .meta {{ display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }}
+                    .meta-tag {{ background: #f3f4f6; padding: 4px 10px; border-radius: 6px;
+                                 font-size: 12px; color: #6b7280; }}
+                    .cta-wrap {{ text-align: center; padding: 20px 0 4px; }}
+                    .cta {{ display: inline-block; padding: 12px 28px; background: #EA7B7B;
+                            color: #ffffff; text-decoration: none; border-radius: 10px;
+                            font-weight: 600; font-size: 14px; }}
+                    .divider {{ height: 1px; background: #f3f4f6; margin: 20px 0; }}
+                    .footer {{ padding: 20px 24px; text-align: center; }}
+                    .footer p {{ font-size: 11px; color: #d1d5db; margin: 4px 0; }}
+                    .footer a {{ color: #EA7B7B; text-decoration: underline; }}
+                    @media only screen and (max-width: 480px) {{
+                        .wrapper {{ padding: 12px 8px; }}
+                        .header {{ padding: 24px 20px; }}
+                        .header h1 {{ font-size: 20px; }}
+                        .body {{ padding: 22px 18px; }}
+                        .item-box {{ padding: 14px; }}
+                    }}
                 </style>
             </head>
             <body>
-                <div class="container">
-                    <div class="header">
-                        <h1 style="margin: 0; font-size: 28px;">🧠 MindStash Reminder</h1>
-                    </div>
-                    <div class="content">
-                        <p style="font-size: 16px;">Hi there,</p>
-                        <p>You saved this thought and wanted to be reminded:</p>
+                <div class="wrapper">
+                    <div class="container">
+                        <div class="card">
+                            <div class="header">
+                                <h1>MindStash Reminder</h1>
+                            </div>
+                            <div class="body">
+                                <p style="font-size: 15px; color: #374151; margin-bottom: 6px;">Hi there,</p>
+                                <p style="font-size: 14px; color: #9ca3af; margin-bottom: 16px;">You saved this and wanted to be reminded:</p>
 
-                        <div class="item-box">
-                            <p style="margin: 0; font-size: 16px; font-weight: 500;">{item.content}</p>
-                            {f'<p style="margin-top: 10px; color: #6b7280;">🔗 <a href="{item.url}" style="color: #667eea;">{item.url}</a></p>' if item.url else ''}
-                        </div>
+                                <div class="item-box">
+                                    <p style="margin: 0;">{item.content}</p>
+                                    {f'<p style="margin-top: 8px;"><a href="{item.url}">{item.url}</a></p>' if item.url else ''}
+                                </div>
 
-                        <div class="meta">
-                            <p style="margin: 5px 0;">
-                                📁 Category: <strong>{item.category.title()}</strong> •
-                                ⚡ Priority: <strong>{item.priority.title() if item.priority else 'Normal'}</strong>
-                            </p>
-                        </div>
+                                <div class="meta">
+                                    <span class="meta-tag">{item.category.title()}</span>
+                                    <span class="meta-tag">{item.priority.title() if item.priority else 'Normal'} priority</span>
+                                </div>
 
-                        <a href="{settings.APP_URL}/dashboard" class="button">
-                            Open MindStash →
-                        </a>
+                                <div class="cta-wrap">
+                                    <a href="{settings.APP_URL}/dashboard" class="cta">Open MindStash &rarr;</a>
+                                </div>
+                            </div>
 
-                        <div class="footer">
-                            <p>Manage your notification preferences in your <a href="{settings.APP_URL}/dashboard" style="color: #667eea;">dashboard</a></p>
-                            <p style="color: #d1d5db; margin-top: 10px;">MindStash • Never lose a thought again</p>
+                            <div class="divider"></div>
+
+                            <div class="footer">
+                                <p style="color:#9ca3af;"><a href="{settings.APP_URL}/settings">Manage email preferences</a></p>
+                                <p style="margin-top:8px;">MindStash &middot; Never lose a thought again</p>
+                            </div>
                         </div>
                     </div>
                 </div>

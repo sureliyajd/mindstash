@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2, Settings, X, Sparkles, Zap, ArrowRight } from 'lucide-react';
+import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2, Settings, X, Sparkles, Zap, ArrowRight, Shield, ChevronDown } from 'lucide-react';
 import { CaptureInput } from '@/components/CaptureInput';
 import { ItemCard } from '@/components/ItemCard';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -299,6 +299,7 @@ function DashboardContent() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
 
   // ==========================================================================
   // PAGINATION STATE
@@ -330,6 +331,19 @@ function DashboardContent() {
     selectedTags,
     page,
   });
+
+  // Close admin dropdown when clicking outside
+  useEffect(() => {
+    if (!adminDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-admin-dropdown]')) {
+        setAdminDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [adminDropdownOpen]);
 
   // Reset to page 1 when any server-side filter changes
   const tagsKey = selectedTags.join(',');
@@ -580,6 +594,36 @@ function DashboardContent() {
               <span className="hidden text-sm text-gray-500 sm:block">
                 {user.name || user.email}
               </span>
+            )}
+            {user?.is_admin && (
+              <div className="relative" data-admin-dropdown>
+                <button
+                  onClick={() => setAdminDropdownOpen((o) => !o)}
+                  className="flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden sm:inline">Admin</span>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+                <AnimatePresence>
+                  {adminDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                      transition={{ duration: 0.12 }}
+                      className="absolute right-0 mt-1.5 w-40 rounded-xl bg-white shadow-lg ring-1 ring-gray-100 py-1"
+                    >
+                      <button
+                        onClick={() => { setAdminDropdownOpen(false); router.push('/admin/users'); }}
+                        className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700"
+                      >
+                        Users
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
             <button
               onClick={() => router.push('/settings')}
