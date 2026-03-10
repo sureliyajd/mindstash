@@ -2,9 +2,12 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle, Send, Sparkles, Brain } from 'lucide-react';
+import { Loader2, CheckCircle, Send, Sparkles, Brain, Mic, X, Check } from 'lucide-react';
 
 const MAX_CHARS = 500;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SpeechRecognitionInstance = any;
 
 interface CaptureInputProps {
   onSubmit: (content: string, url?: string) => Promise<void>;
@@ -27,6 +30,15 @@ const processingMessages = [
   'Almost there...',
 ];
 
+// Waveform bar colors gradient from teal to yellow
+const barColors = (i: number, total: number) => {
+  const t = i / (total - 1);
+  const r = Math.round(121 + t * (250 - 121));
+  const g = Math.round(201 + t * (206 - 201));
+  const b = Math.round(197 + t * (104 - 197));
+  return `rgb(${r},${g},${b})`;
+};
+
 export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputProps) {
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -34,17 +46,24 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
   const [error, setError] = useState<string | null>(null);
   const [modifierKey, setModifierKey] = useState('Cmd');
   const [processingMessageIndex, setProcessingMessageIndex] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceSupported, setVoiceSupported] = useState(true);
+  const [charFlash, setCharFlash] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const submitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const processingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const hasContent = content.trim().length > 0;
   const charCount = content.length;
   const isOverLimit = charCount > MAX_CHARS;
 
-  // Set modifier key on mount (client-side only)
+  // Set modifier key and check voice support on mount
   useEffect(() => {
     setModifierKey(getModifierKey());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setVoiceSupported(!!(((window as any).SpeechRecognition) || ((window as any).webkitSpeechRecognition)));
   }, []);
 
   // Cycle through processing messages while submitting
@@ -72,9 +91,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      // Reset height to auto to get accurate scrollHeight
       textarea.style.height = 'auto';
-      // Set height based on content, with min 80px and max 300px for mobile friendliness
       const minHeight = 80;
       const maxHeight = 300;
       const newHeight = Math.max(minHeight, Math.min(textarea.scrollHeight, maxHeight));
@@ -86,12 +103,11 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
     adjustTextareaHeight();
   }, [content, adjustTextareaHeight]);
 
-  // Cleanup timeout on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (submitTimeoutRef.current) {
-        clearTimeout(submitTimeoutRef.current);
-      }
+      if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current);
+      if (recognitionRef.current) recognitionRef.current.abort();
     };
   }, []);
 
@@ -101,10 +117,84 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
     return urlMatch ? urlMatch[0] : undefined;
   };
 
+  const stopRecording = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null;
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setIsRecording(false);
+  }, []);
+
+  const startRecording = useCallback(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognitionCtor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) return;
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    let finalText = '';
+
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += transcript + ' ';
+        } else {
+          interim = transcript;
+        }
+      }
+      setVoiceTranscript((finalText + interim).trimStart());
+    };
+
+    recognition.onend = () => {
+      // Restart if still supposed to be recording (for continuous flow)
+      if (recognitionRef.current) {
+        try {
+          recognition.start();
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    recognition.onerror = () => {
+      stopRecording();
+    };
+
+    recognitionRef.current = recognition;
+    setVoiceTranscript('');
+    setIsRecording(true);
+    recognition.start();
+  }, [stopRecording]);
+
+  const handleVoiceDone = useCallback(() => {
+    const transcript = voiceTranscript.trim();
+    stopRecording();
+
+    if (transcript) {
+      const separator = content ? ' ' : '';
+      const combined = (content + separator + transcript).slice(0, MAX_CHARS);
+      if ((content + separator + transcript).length > MAX_CHARS) {
+        setCharFlash(true);
+        setTimeout(() => setCharFlash(false), 600);
+      }
+      setContent(combined);
+    }
+    setVoiceTranscript('');
+  }, [voiceTranscript, content, stopRecording]);
+
+  const handleVoiceCancel = useCallback(() => {
+    stopRecording();
+    setVoiceTranscript('');
+  }, [stopRecording]);
+
   const handleSubmit = useCallback(async () => {
     const trimmed = content.trim();
-
-    // Validation
     if (!trimmed) return;
     if (isOverLimit) {
       setError('Content exceeds 500 characters');
@@ -118,21 +208,17 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
       const url = extractUrl(trimmed);
       await onSubmit(trimmed, url);
 
-      // Clear input and show success
       setContent('');
       setShowSuccess(true);
 
-      // Reset textarea height to minimum
       if (textareaRef.current) {
         textareaRef.current.style.height = '80px';
       }
 
-      // Hide success after 2 seconds
       submitTimeoutRef.current = setTimeout(() => {
         setShowSuccess(false);
       }, 2000);
-    } catch (err) {
-      // Show error briefly
+    } catch {
       setError('Failed to save. Please try again.');
       submitTimeoutRef.current = setTimeout(() => {
         setError(null);
@@ -141,7 +227,6 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
   }, [content, isOverLimit, isSubmitting, onSubmit]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Submit on Cmd+Enter or Ctrl+Enter
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSubmit();
@@ -150,9 +235,9 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
 
   const handleBlur = () => {
     setIsFocused(false);
-    // Only update focus state - do not auto-submit
-    // User must explicitly click the save button to submit
   };
+
+  const WAVEFORM_BARS = 12;
 
   return (
     <motion.div
@@ -167,7 +252,9 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
             ? 'border-red-200 shadow-lg shadow-red-100/50'
             : isSubmitting
               ? 'border-[#EA7B7B]/30 shadow-lg shadow-[#EA7B7B]/10'
-              : 'border-gray-200'
+              : isRecording
+                ? 'border-[#79C9C5]/40 shadow-lg shadow-[#79C9C5]/10'
+                : 'border-gray-200'
         }`}
       >
         {/* Textarea */}
@@ -243,10 +330,114 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
           )}
         </AnimatePresence>
 
+        {/* Voice Streaming Panel */}
+        <AnimatePresence>
+          {isRecording && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="overflow-hidden border-t border-[#79C9C5]/30 bg-gradient-to-b from-teal-50/80 to-white"
+            >
+              <div className="px-5 py-4">
+                {/* Waveform */}
+                <div className="mb-3 flex h-10 items-end justify-center gap-1">
+                  {Array.from({ length: WAVEFORM_BARS }).map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="w-1.5 rounded-full"
+                      style={{ backgroundColor: barColors(i, WAVEFORM_BARS) }}
+                      animate={{
+                        scaleY: voiceTranscript
+                          ? [0.2, 0.4 + Math.random() * 0.6, 0.2]
+                          : [0.15, 0.3, 0.15],
+                      }}
+                      transition={{
+                        duration: voiceTranscript ? 0.6 + Math.random() * 0.4 : 1.2,
+                        repeat: Infinity,
+                        delay: i * 0.08,
+                        ease: 'easeInOut',
+                      }}
+                      initial={{ scaleY: 0.2, height: '100%', originY: 1 }}
+                    />
+                  ))}
+                </div>
+
+                {/* Status + Transcript */}
+                <div className="mb-3">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <motion.div
+                      className="h-2 w-2 rounded-full bg-red-500"
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    />
+                    <span className="text-xs font-medium text-gray-500">Listening...</span>
+                  </div>
+                  <div className="max-h-20 overflow-y-auto rounded-lg border-l-2 border-[#79C9C5] bg-white/60 px-3 py-2">
+                    {voiceTranscript ? (
+                      <p className="text-sm italic leading-relaxed text-[#3d9b97]">
+                        {voiceTranscript}
+                      </p>
+                    ) : (
+                      <p className="text-sm italic text-gray-400">Speak now...</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Cancel / Done buttons */}
+                <div className="flex items-center justify-between">
+                  <motion.button
+                    onClick={handleVoiceCancel}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancel
+                  </motion.button>
+
+                  <motion.button
+                    onClick={handleVoiceDone}
+                    disabled={!voiceTranscript.trim()}
+                    className={`flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-semibold transition-all ${
+                      voiceTranscript.trim()
+                        ? 'bg-[#79C9C5] text-white shadow-sm shadow-[#79C9C5]/30 hover:bg-[#5eb8b4]'
+                        : 'cursor-not-allowed bg-gray-100 text-gray-400'
+                    }`}
+                    whileHover={voiceTranscript.trim() ? { scale: 1.02 } : {}}
+                    whileTap={voiceTranscript.trim() ? { scale: 0.97 } : {}}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    Done
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Bottom bar */}
         <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
-          {/* Left side: Hint or error */}
+          {/* Left side: mic button + hint/error */}
           <div className="flex items-center gap-2">
+            {/* Mic button */}
+            {voiceSupported && !isSubmitting && (
+              <motion.button
+                onClick={isRecording ? handleVoiceDone : startRecording}
+                className={`rounded-lg p-1.5 transition-all ${
+                  isRecording
+                    ? 'bg-teal-50 text-[#79C9C5]'
+                    : 'text-gray-400 hover:bg-teal-50 hover:text-[#79C9C5]'
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title={isRecording ? 'Done recording' : 'Record voice'}
+              >
+                <Mic className="h-4 w-4" />
+              </motion.button>
+            )}
+
             {error ? (
               <span className="text-xs font-medium text-red-600">{error}</span>
             ) : showSuccess ? (
@@ -281,17 +472,21 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
           {/* Right side: counter + submit button */}
           <div className="flex items-center gap-3">
             {/* Character counter */}
-            <span
+            <motion.span
               className={`font-mono text-xs tabular-nums transition-colors ${
-                isOverLimit
+                charFlash
                   ? 'font-semibold text-red-600'
-                  : charCount > MAX_CHARS * 0.9
-                    ? 'font-semibold text-amber-600'
-                    : 'text-gray-400'
+                  : isOverLimit
+                    ? 'font-semibold text-red-600'
+                    : charCount > MAX_CHARS * 0.9
+                      ? 'font-semibold text-amber-600'
+                      : 'text-gray-400'
               }`}
+              animate={charFlash ? { scale: [1, 1.2, 1] } : {}}
+              transition={{ duration: 0.3 }}
             >
               {charCount}/{MAX_CHARS}
-            </span>
+            </motion.span>
 
             {/* Submit button */}
             <motion.button
