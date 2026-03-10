@@ -10,6 +10,29 @@ export interface User {
   email: string;
   name: string | null;
   created_at: string;
+  is_admin: boolean;
+  is_suspended: boolean;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string | null;
+  is_admin: boolean;
+  is_suspended: boolean;
+  created_at: string;
+}
+
+export interface AdminUserListResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminUserUpdate {
+  name?: string | null;
+  email?: string;
 }
 
 export interface TokenResponse {
@@ -221,6 +244,14 @@ export const auth = {
 
   resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>('/api/auth/reset-password', { token, new_password: newPassword });
+    return response.data;
+  },
+
+  googleLogin: async (idToken: string): Promise<TokenResponse> => {
+    const response = await api.post<TokenResponse>('/api/auth/google', { id_token: idToken });
+    if (response.data.access_token) {
+      setToken(response.data.access_token);
+    }
     return response.data;
   },
 
@@ -477,6 +508,60 @@ export const telegram = {
 
   unlink: async (): Promise<void> => {
     await api.delete('/api/integrations/telegram/unlink');
+  },
+};
+
+// Activity log types
+export interface ActivityLog {
+  id: string;
+  action: string;
+  source: string;
+  resource_type: string | null;
+  resource_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface ActivityLogListResponse {
+  logs: ActivityLog[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+// Admin API
+export const adminApi = {
+  getUsers: async (page = 1, pageSize = 20, search = ''): Promise<AdminUserListResponse> => {
+    const response = await api.get<AdminUserListResponse>('/api/admin/users', {
+      params: { page, page_size: pageSize, search },
+    });
+    return response.data;
+  },
+
+  editUser: async (id: string, data: AdminUserUpdate): Promise<AdminUser> => {
+    const response = await api.patch<AdminUser>(`/api/admin/users/${id}`, data);
+    return response.data;
+  },
+
+  suspendUser: async (id: string): Promise<AdminUser> => {
+    const response = await api.post<AdminUser>(`/api/admin/users/${id}/suspend`);
+    return response.data;
+  },
+
+  unsuspendUser: async (id: string): Promise<AdminUser> => {
+    const response = await api.post<AdminUser>(`/api/admin/users/${id}/unsuspend`);
+    return response.data;
+  },
+
+  deleteUser: async (id: string): Promise<void> => {
+    await api.delete(`/api/admin/users/${id}`);
+  },
+
+  getUserActivity: async (userId: string, page = 1, pageSize = 20): Promise<ActivityLogListResponse> => {
+    const response = await api.get<ActivityLogListResponse>(`/api/admin/users/${userId}/activity`, {
+      params: { page, page_size: pageSize },
+    });
+    return response.data;
   },
 };
 

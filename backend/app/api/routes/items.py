@@ -45,6 +45,7 @@ from app.schemas.item import (
 )
 from app.services.ai.categorizer import categorize_item
 from app.services.ai.embeddings import embedding_service
+from app.services.activity import log_activity
 
 logger = logging.getLogger(__name__)
 
@@ -216,6 +217,10 @@ def create_item(
     except Exception as e:
         logger.warning(f"Embedding generation failed for item {new_item.id}: {e}")
 
+    log_activity(db, current_user.id, "item_captured", source="web",
+                 resource_type="item", resource_id=new_item.id,
+                 details={"content_preview": item_data.content[:80], "category": new_item.category})
+
     return new_item
 
 
@@ -349,6 +354,10 @@ def mark_item_complete(
 
     db.commit()
     db.refresh(item)
+
+    action = "item_completed" if completed else "item_uncompleted"
+    log_activity(db, current_user.id, action, source="web",
+                 resource_type="item", resource_id=item.id, details={})
 
     return item
 
@@ -769,6 +778,10 @@ def update_item(
     db.commit()
     db.refresh(item)
 
+    log_activity(db, current_user.id, "item_updated", source="web",
+                 resource_type="item", resource_id=item.id,
+                 details={"fields_changed": list(update_data.keys())})
+
     return item
 
 
@@ -812,7 +825,13 @@ def delete_item(
             detail="Item not found"
         )
 
+    content_preview = item.content[:80]
+    item_id_str = str(item.id)
     db.delete(item)
     db.commit()
+
+    log_activity(db, current_user.id, "item_deleted", source="web",
+                 resource_type="item", resource_id=item_id_str,
+                 details={"content_preview": content_preview})
 
     return None

@@ -27,6 +27,7 @@ from app.schemas.chat import (
 )
 from app.models.chat import PendingConfirmation
 from app.services.ai.agent import run_agent, run_confirmation
+from app.services.activity import log_activity
 
 router = APIRouter(tags=["chat"])
 
@@ -53,6 +54,10 @@ def chat_message(
     - done: Stream complete
     """
     request.state.user = current_user
+
+    log_activity(db, current_user.id, "chat_message", source="web",
+                 resource_type="chat_session",
+                 details={"message_preview": chat_request.message[:80]})
 
     return StreamingResponse(
         run_agent(

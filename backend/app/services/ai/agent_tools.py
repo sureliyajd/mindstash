@@ -18,6 +18,7 @@ from app.services.ai.categorizer import categorize_item
 from app.services.ai.embeddings import embedding_service
 from app.services.notifications.sender import get_upcoming_notifications
 from app.services.notifications.digest import get_digest_preview
+from app.services.activity import log_activity
 
 logger = logging.getLogger(__name__)
 
@@ -386,6 +387,10 @@ def handle_create_item(db: Session, user_id: UUID, params: dict) -> dict:
     except Exception as e:
         logger.warning(f"Embedding generation failed for new item: {e}")
 
+    log_activity(db, user_id, "agent_create_item", source="agent",
+                 resource_type="item", resource_id=new_item.id,
+                 details={"content_preview": content[:80], "category": new_item.category})
+
     emoji = CATEGORY_EMOJI.get(new_item.category or "", "📌")
     return {
         "created": True,
@@ -433,6 +438,11 @@ def handle_update_item(db: Session, user_id: UUID, params: dict) -> dict:
         except Exception as e:
             logger.warning(f"Embedding regeneration failed for item {item.id}: {e}")
 
+    updated_fields = [f for f in ["content", "category", "tags", "priority", "urgency"] if f in params]
+    log_activity(db, user_id, "agent_update_item", source="agent",
+                 resource_type="item", resource_id=item.id,
+                 details={"item_id": item_id, "fields": updated_fields})
+
     return {"updated": True, "id": str(item.id), "mutated": True, **_item_to_dict(item)}
 
 
@@ -448,6 +458,10 @@ def handle_delete_item(db: Session, user_id: UUID, params: dict) -> dict:
     content_preview = item.content[:80]
     db.delete(item)
     db.commit()
+
+    log_activity(db, user_id, "agent_delete_item", source="agent",
+                 resource_type="item", resource_id=item_id,
+                 details={"item_id": item_id})
 
     return {"deleted": True, "id": item_id, "content_preview": content_preview, "mutated": True}
 
@@ -477,6 +491,10 @@ def handle_mark_complete(db: Session, user_id: UUID, params: dict) -> dict:
 
     db.commit()
     db.refresh(item)
+
+    log_activity(db, user_id, "agent_mark_complete", source="agent",
+                 resource_type="item", resource_id=item.id,
+                 details={"item_id": item_id, "completed": completed})
 
     return {
         "completed": completed,

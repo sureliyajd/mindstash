@@ -15,9 +15,10 @@ from app.models.user import User
 from app.models.item import Item
 from app.models.chat import ChatSession, ChatMessage, UserMemory, PendingConfirmation
 from app.models.telegram_link import TelegramLink
+from app.models.activity_log import ActivityLog
 
 # Import routers
-from app.api.routes import auth, items, notifications, chat, integrations
+from app.api.routes import auth, items, notifications, chat, integrations, admin
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -99,6 +100,7 @@ app.include_router(items.router, prefix="/api/items", tags=["Items"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(integrations.router, prefix="/api/integrations", tags=["Integrations"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 
 
 if __name__ == "__main__":
