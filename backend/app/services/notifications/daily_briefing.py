@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 import resend
 
 from app.core.config import settings
+from app.core.plans import plan_has_feature
 from app.models.user import User
 from app.services.ai.agent import run_agent
 
@@ -264,6 +265,11 @@ def send_daily_briefings(db: Session) -> Dict[str, Any]:
     failed_count = 0
 
     for user in users:
+        # Skip users whose plan doesn't include daily briefing
+        if not plan_has_feature(user.plan or "free", "daily_briefing"):
+            logger.debug(f"Skipping daily briefing for {user.email} — plan does not include it")
+            failed_count += 1
+            continue
         if send_daily_briefing_to_user(user, db):
             sent_count += 1
         else:

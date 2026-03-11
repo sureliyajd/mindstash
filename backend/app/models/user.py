@@ -3,7 +3,7 @@ User database model
 """
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Boolean
+from sqlalchemy import Column, String, DateTime, Boolean, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -45,6 +45,18 @@ class User(Base):
     # Admin / account status
     is_admin = Column(Boolean, default=False, nullable=False, server_default='false')
     is_suspended = Column(Boolean, default=False, nullable=False, server_default='false')
+
+    # Subscription / billing
+    plan = Column(String(20), nullable=False, server_default="free")
+    plan_expires_at = Column(DateTime(timezone=True), nullable=True)
+    lms_customer_id = Column(String(64), nullable=True, unique=True, index=True)
+    lms_subscription_id = Column(String(64), nullable=True, unique=True, index=True)
+    lms_variant_id = Column(String(64), nullable=True)
+    subscription_status = Column(String(20), nullable=True)
+    subscription_canceled_at = Column(DateTime(timezone=True), nullable=True)
+    items_this_month = Column(Integer, nullable=False, server_default="0")
+    chat_messages_this_month = Column(Integer, nullable=False, server_default="0")
+    usage_reset_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relationships
     items = relationship("Item", back_populates="owner", cascade="all, delete-orphan")

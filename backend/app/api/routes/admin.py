@@ -132,7 +132,7 @@ def delete_user(
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_admin),
 ):
-    """Permanently delete a user and all their data (cascade)."""
+    """Delete a user account and all their data."""
     target = _get_target_user(user_id, db, current_admin)
     email = target.email
     db.delete(target)

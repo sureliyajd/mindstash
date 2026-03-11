@@ -4,6 +4,22 @@ import type { TelegramLinkStatus, TelegramLinkCode } from './types/telegram';
 // Token storage key
 const TOKEN_KEY = 'mindstash_token';
 
+// Plan constants
+export const PLAN_FREE = "free";
+export const PLAN_STARTER = "starter";
+export const PLAN_PRO = "pro";
+
+export const PLAN_PRICING = {
+  starter: { monthly_cents: 700, annual_cents: 6700 },
+  pro: { monthly_cents: 1500, annual_cents: 14400 },
+};
+
+export const PLAN_LIMITS = {
+  free: { items_per_month: 30, chat_messages_per_month: 10, semantic_search: false, telegram: false, daily_briefing: false, weekly_digest: false },
+  starter: { items_per_month: 200, chat_messages_per_month: 100, semantic_search: false, telegram: true, daily_briefing: false, weekly_digest: true },
+  pro: { items_per_month: null, chat_messages_per_month: null, semantic_search: true, telegram: true, daily_briefing: true, weekly_digest: true },
+};
+
 // Types matching backend schemas
 export interface User {
   id: string;
@@ -202,6 +218,17 @@ api.interceptors.response.use(
   }
 );
 
+// 402 plan limit interceptor
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 402) {
+      // Will be handled by individual hooks, just pass through
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Custom error type for rate limiting
 export interface RateLimitError extends Error {
   isRateLimit: boolean;
@@ -254,6 +281,9 @@ export const auth = {
     }
     return response.data;
   },
+
+  deleteAccount: () =>
+    api.delete('/api/auth/me'),
 
   logout: (): void => {
     clearToken();
@@ -563,6 +593,19 @@ export const adminApi = {
     });
     return response.data;
   },
+};
+
+// Billing API
+export const billing = {
+  getStatus: () => api.get("/api/billing/status").then(r => r.data),
+  createCheckout: (variantId: string) => api.post("/api/billing/checkout", {
+    variant_id: variantId,
+    success_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/billing?success=true`,
+    cancel_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/billing?canceled=true`,
+  }).then(r => r.data),
+  openPortal: () => api.post("/api/billing/portal").then(r => r.data),
+  cancelSubscription: () => api.post("/api/billing/cancel").then(r => r.data),
+  syncSubscription: () => api.post("/api/billing/sync").then(r => r.data),
 };
 
 export default api;

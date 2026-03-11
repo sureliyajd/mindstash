@@ -86,6 +86,16 @@ export function useAuth() {
     return changePasswordMutation.mutateAsync({ current_password, new_password });
   };
 
+  // Delete account mutation
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => auth.deleteAccount(),
+    onSuccess: () => {
+      auth.logout();
+      queryClient.clear();
+      window.location.href = '/';
+    },
+  });
+
   const logout = (): void => {
     auth.logout();
     queryClient.setQueryData(USER_QUERY_KEY, null);
@@ -103,6 +113,8 @@ export function useAuth() {
     logout,
     updateProfile,
     changePassword,
+    deleteAccount: deleteAccountMutation.mutateAsync,
+    isAccountDeleting: deleteAccountMutation.isPending,
     loginError: loginMutation.error,
     registerError: registerMutation.error,
     isLoginLoading: loginMutation.isPending,

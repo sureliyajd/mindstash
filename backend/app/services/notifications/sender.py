@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 import resend
 
 from app.core.config import settings
+from app.core.plans import plan_has_feature
 from app.models.item import Item
 from app.models.user import User
 

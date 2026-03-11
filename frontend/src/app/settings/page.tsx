@@ -9,6 +9,7 @@ import { TelegramConnect } from '@/components/TelegramConnect';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useToast } from '@/components/Providers';
 import { notifications, type EmailPreferences } from '@/lib/api';
+import { useBillingStatus } from '@/lib/hooks/useBilling';
 
 const APP_VERSION = '1.0.0';
 
@@ -43,8 +44,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 function SettingsContent() {
-  const { user, logout, updateProfile, changePassword, isProfileUpdating, isPasswordChanging } = useAuth();
+  const { user, logout, updateProfile, changePassword, deleteAccount, isProfileUpdating, isPasswordChanging, isAccountDeleting } = useAuth();
   const { showToast } = useToast();
+  const { data: billingStatus } = useBillingStatus();
 
   // Profile state
   const [name, setName] = useState('');
@@ -110,6 +112,17 @@ function SettingsContent() {
     }, 400);
     return () => clearTimeout(timer);
   }, []);
+
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteAccount();
+    } catch {
+      showToast('Failed to delete account', 'error');
+      setDeleteConfirm(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -244,7 +257,28 @@ function SettingsContent() {
               Integrations
             </h2>
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-              <TelegramConnect inline isOpen={true} onClose={() => {}} />
+              {billingStatus && !billingStatus.features.telegram ? (
+                <div className="opacity-60 pointer-events-none">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Telegram Bot</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Capture thoughts on the go via Telegram</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-200">
+                      Requires Starter plan
+                    </span>
+                  </div>
+                  <a
+                    href="/billing"
+                    className="pointer-events-auto inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500"
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    Upgrade to Starter →
+                  </a>
+                </div>
+              ) : (
+                <TelegramConnect inline isOpen={true} onClose={() => {}} />
+              )}
             </div>
           </motion.section>
 
@@ -254,12 +288,30 @@ function SettingsContent() {
               Email Notifications
             </h2>
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100 space-y-5">
+              {/* Daily Briefing — requires Pro */}
+              <div className={`flex items-center justify-between ${billingStatus && !billingStatus.features.daily_briefing ? 'opacity-50' : ''}`}>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                    Daily Briefing
+                    {billingStatus && !billingStatus.features.daily_briefing && (
+                      <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-600 ring-1 ring-purple-200">
+                        Pro
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">AI-powered morning summary of your stash</p>
+                </div>
+                <Toggle
+                  checked={prefs.daily_briefing_enabled && (!billingStatus || billingStatus.features.daily_briefing)}
+                  onChange={(v) => {
+                    if (billingStatus && !billingStatus.features.daily_briefing) return;
+                    setPrefs((p) => ({ ...p, daily_briefing_enabled: v }));
+                  }}
+                />
+              </div>
+
+              {/* Weekly Digest & Item Reminders */}
               {[
-                {
-                  key: 'daily_briefing_enabled' as keyof EmailPreferences,
-                  label: 'Daily Briefing',
-                  description: 'AI-powered morning summary of your stash',
-                },
                 {
                   key: 'weekly_digest_enabled' as keyof EmailPreferences,
                   label: 'Weekly Digest',
@@ -332,6 +384,51 @@ function SettingsContent() {
                 <span className="text-gray-500">Made with</span>
                 <span className="text-gray-900">🧠 &amp; ❤️</span>
               </div>
+            </div>
+          </motion.section>
+
+          {/* Danger Zone */}
+          <motion.section variants={fadeUp}>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">
+              Danger Zone
+            </h2>
+            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-red-100">
+              {!deleteConfirm ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Delete account</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Remove your account and all your data permanently.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setDeleteConfirm(true)}
+                    className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                  >
+                    Delete account
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-red-600">Are you sure? This cannot be undone.</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={isAccountDeleting}
+                      className="flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+                    >
+                      {isAccountDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      Yes, delete my account
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(false)}
+                      className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.section>
 

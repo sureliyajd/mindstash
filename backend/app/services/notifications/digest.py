@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 import resend
 
 from app.core.config import settings
+from app.core.plans import plan_has_feature
 from app.models.item import Item
 from app.models.user import User
 
@@ -351,6 +352,11 @@ def send_weekly_digests(db: Session) -> Dict[str, Any]:
     skipped_count = 0
 
     for user in users:
+        # Skip users whose plan doesn't include weekly digest
+        if not plan_has_feature(user.plan or "free", "weekly_digest"):
+            logger.debug(f"Skipping weekly digest for {user.email} — plan does not include it")
+            skipped_count += 1
+            continue
         if send_weekly_digest_to_user(user, db):
             sent_count += 1
         else:

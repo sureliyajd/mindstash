@@ -379,6 +379,18 @@ def change_password(
     db.commit()
 
 
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+@user_limiter.limit("3/hour")
+def delete_account(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete the current user's account and all their data."""
+    db.delete(current_user)
+    db.commit()
+
+
 @router.post("/forgot-password")
 @limiter.limit("5/hour")
 def forgot_password(request: Request, data: ForgotPasswordRequest, db: Session = Depends(get_db)):
