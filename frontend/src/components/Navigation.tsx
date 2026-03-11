@@ -26,14 +26,13 @@ const exploreLinks = [
     icon: Play,
     color: '#FACE68',
   },
-  // Uncomment when ready:
-  // {
-  //   href: '/pricing',
-  //   label: 'Pricing',
-  //   description: 'Plans that fit your needs',
-  //   icon: DollarSign,
-  //   color: '#93DA97',
-  // },
+  {
+    href: '/pricing',
+    label: 'Pricing',
+    description: 'Plans that fit your needs',
+    icon: DollarSign,
+    color: '#93DA97',
+  },
   // {
   //   href: '/contact',
   //   label: 'Contact',
@@ -194,6 +193,7 @@ export default function Navigation() {
             <Link href="/about" className="block px-3 py-3 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>About</Link>
             <Link href="/tech" className="block px-3 py-3 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Tech Stack</Link>
             <Link href="/showcase" className="block px-3 py-3 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Showcase</Link>
+            <Link href="/pricing" className="block px-3 py-3 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Pricing</Link>
 
             <div className="pt-3 border-t border-gray-100">
               <Link href="/login" className="block px-3 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Log in</Link>

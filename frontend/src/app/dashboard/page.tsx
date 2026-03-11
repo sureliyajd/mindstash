@@ -3,10 +3,11 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2, Settings, X, Sparkles, Zap, ArrowRight, Shield, ChevronDown } from 'lucide-react';
+import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2, Settings, X, Sparkles, Zap, ArrowRight, Shield, ChevronDown, Star, Crown } from 'lucide-react';
 import { CaptureInput } from '@/components/CaptureInput';
 import { ItemCard } from '@/components/ItemCard';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useBillingStatus } from '@/lib/hooks/useBilling';
 import { DashboardSkeleton } from '@/components/Skeletons';
 import { useToast } from '@/components/Providers';
 import { ModuleSelector, type ModuleType } from '@/components/ModuleSelector';
@@ -276,6 +277,189 @@ function CardGrid({ items, currentModule, onViewDetails, onEdit, onDelete, onTog
           ))}
         </AnimatePresence>
       </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// MAIN DASHBOARD CONTENT
+// =============================================================================
+
+// =============================================================================
+// PLAN BADGE — header pill with hover tooltip showing usage + upgrade info
+// =============================================================================
+
+function UsageRow({ label, current, limit, color }: { label: string; current: number; limit: number | null; color: string }) {
+  const pct = limit ? Math.min((current / limit) * 100, 100) : 0;
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs">
+        <span className="text-gray-500">{label}</span>
+        <span className="font-medium tabular-nums" style={{ color }}>
+          {current} / {limit === null ? '∞' : limit}
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${color}20` }}>
+        {limit !== null ? (
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+        ) : (
+          <div className="h-full w-full rounded-full opacity-40" style={{ backgroundColor: color }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PlanBadge() {
+  const { data: status } = useBillingStatus();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  if (!status) return null;
+
+  const { plan, usage } = status;
+
+  // Determine usage urgency for border color
+  const itemPct  = usage.items_limit  ? (usage.items_this_month  / usage.items_limit)  * 100 : 0;
+  const chatPct  = usage.chat_messages_limit ? (usage.chat_messages_this_month / usage.chat_messages_limit) * 100 : 0;
+  const maxPct   = Math.max(itemPct, chatPct);
+
+  // Border: green < 60%, pastel yellow 60–80%, pastel orange ≥ 80%
+  const borderColor =
+    plan !== 'free' && plan !== 'starter' ? 'transparent'      // pro: no usage border
+    : maxPct >= 80  ? '#FDBA74'   // pastel orange
+    : maxPct >= 60  ? '#FDE68A'   // pastel yellow
+    : '#BBF7D0';                  // pastel green
+
+  const PLAN_META = {
+    free:    { icon: Zap,   label: 'Free plan', bg: '#F9FAFB', text: '#6B7280', iconColor: '#9CA3AF', accent: '#6B7280' },
+    starter: { icon: Star,  label: 'Starter',   bg: '#FFF5F5', text: '#C44545', iconColor: '#EA7B7B', accent: '#EA7B7B' },
+    pro:     { icon: Crown, label: 'Pro',        bg: '#FFFBEB', text: '#92680A', iconColor: '#D4A012', accent: '#D4A012' },
+  } as const;
+
+  const meta = PLAN_META[plan as keyof typeof PLAN_META] ?? PLAN_META.free;
+  const Icon = meta.icon;
+
+  // Features locked on current plan (for upsell rows in tooltip)
+  const lockedFeatures: { label: string; requiredPlan: string }[] = [];
+  if (!status.features.telegram)       lockedFeatures.push({ label: 'Telegram bot',      requiredPlan: 'Starter' });
+  if (!status.features.weekly_digest)  lockedFeatures.push({ label: 'Weekly digest',     requiredPlan: 'Starter' });
+  if (!status.features.semantic_search) lockedFeatures.push({ label: 'Semantic search',  requiredPlan: 'Pro' });
+  if (!status.features.daily_briefing) lockedFeatures.push({ label: 'Daily AI briefing', requiredPlan: 'Pro' });
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Badge pill */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:shadow-sm"
+        style={{
+          backgroundColor: meta.bg,
+          color: meta.text,
+          border: `1.5px solid ${borderColor}`,
+        }}
+        aria-expanded={open}
+      >
+        <Icon className="h-3 w-3" style={{ color: meta.iconColor }} />
+        {meta.label}
+        {plan === 'free' && <span className="opacity-50 text-[10px]">↑</span>}
+      </button>
+
+      {/* Tooltip popover */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-white shadow-xl ring-1 ring-gray-100 overflow-hidden z-50"
+          >
+            {/* Plan header */}
+            <div className="flex items-center gap-2.5 px-4 pt-4 pb-3 border-b border-gray-50">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ backgroundColor: `${meta.accent}15` }}>
+                <Icon className="h-4 w-4" style={{ color: meta.accent }} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900">{meta.label}</p>
+                {plan === 'free' && <p className="text-xs text-gray-400">Free forever</p>}
+                {plan !== 'free' && status.plan_expires_at && (
+                  <p className="text-xs text-gray-400">Renews {new Date(status.plan_expires_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Usage section */}
+            {(usage.items_limit !== null || usage.chat_messages_limit !== null) && (
+              <div className="px-4 py-3 space-y-3 border-b border-gray-50">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">This month</p>
+                <UsageRow
+                  label="Items captured"
+                  current={usage.items_this_month}
+                  limit={usage.items_limit}
+                  color={itemPct >= 80 ? '#FB923C' : itemPct >= 60 ? '#D97706' : '#10B981'}
+                />
+                <UsageRow
+                  label="AI chat messages"
+                  current={usage.chat_messages_this_month}
+                  limit={usage.chat_messages_limit}
+                  color={chatPct >= 80 ? '#FB923C' : chatPct >= 60 ? '#D97706' : '#10B981'}
+                />
+              </div>
+            )}
+
+            {/* Pro: unlimited confirmation */}
+            {plan === 'pro' && (
+              <div className="px-4 py-3 border-b border-gray-50">
+                <p className="text-xs text-gray-500">Unlimited items · Unlimited chat · All features unlocked</p>
+              </div>
+            )}
+
+            {/* Locked features upsell */}
+            {lockedFeatures.length > 0 && (
+              <div className="px-4 py-3 border-b border-gray-50 space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Unlock with upgrade</p>
+                {lockedFeatures.map((f) => (
+                  <div key={f.label} className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 flex items-center gap-1.5">
+                      <span className="h-3.5 w-3.5 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">🔒</span>
+                      {f.label}
+                    </span>
+                    <span className="rounded-full px-1.5 py-0.5 font-semibold text-[10px]" style={{ backgroundColor: '#EA7B7B15', color: '#C44545' }}>
+                      {f.requiredPlan}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Footer links */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <a href="/pricing" className="text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors">
+                See all plans
+              </a>
+              <a
+                href="/billing"
+                className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-all hover:scale-105"
+                style={{ backgroundColor: meta.accent }}
+                onClick={() => setOpen(false)}
+              >
+                {plan === 'free' || plan === 'starter' ? 'Upgrade' : 'Manage'} <ArrowRight className="h-3 w-3" />
+              </a>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -589,12 +773,13 @@ function DashboardContent() {
               className="h-10 sm:h-12 w-auto"
             />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {user && (
               <span className="hidden text-sm text-gray-500 sm:block">
                 {user.name || user.email}
               </span>
             )}
+            <PlanBadge />
             {user?.is_admin && (
               <div className="relative" data-admin-dropdown>
                 <button

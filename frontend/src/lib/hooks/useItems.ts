@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { items, Item, ItemListResponse, ItemUpdate, GetItemsParams, ItemCounts } from '../api';
+import type { AxiosError } from 'axios';
 
 const ITEMS_QUERY_KEY = ['items'];
 const ITEM_COUNTS_QUERY_KEY = ['item-counts'];
@@ -133,10 +134,21 @@ export function useItems(options: UseItemsOptions = {}) {
 
       return { previousData };
     },
-    onError: (_err, _variables, context) => {
+    onError: (err, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
+      }
+      // Handle plan limit errors (402)
+      const axiosErr = err as AxiosError<{ detail?: string | { detail?: string; upgrade_url?: string } }>;
+      if (axiosErr?.response?.status === 402) {
+        const detail = axiosErr.response.data?.detail;
+        const message = typeof detail === 'object' ? detail?.detail : detail;
+        if (typeof window !== 'undefined') {
+          const msg = message || 'Monthly item limit reached. Upgrade your plan to capture more.';
+          // Show a simple alert — components can override with toast if needed
+          alert(`${msg}\n\nVisit /billing to upgrade.`);
+        }
       }
     },
     onSuccess: (newItem) => {

@@ -16,9 +16,11 @@ from app.models.item import Item
 from app.models.chat import ChatSession, ChatMessage, UserMemory, PendingConfirmation
 from app.models.telegram_link import TelegramLink
 from app.models.activity_log import ActivityLog
+from app.models.payment_event import PaymentEvent
 
 # Import routers
 from app.api.routes import auth, items, notifications, chat, integrations, admin
+from app.api.routes import billing
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -101,6 +103,8 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["Not
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(integrations.router, prefix="/api/integrations", tags=["Integrations"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(billing.router, prefix="/api/billing", tags=["Billing"])
+app.include_router(billing.webhook_router, prefix="/api/webhooks", tags=["Webhooks"])
 
 
 if __name__ == "__main__":

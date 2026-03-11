@@ -28,6 +28,7 @@ from app.schemas.chat import (
 from app.models.chat import PendingConfirmation
 from app.services.ai.agent import run_agent, run_confirmation
 from app.services.activity import log_activity
+from app.services.plan import check_chat_limit, increment_chat_count
 
 router = APIRouter(tags=["chat"])
 
@@ -54,6 +55,12 @@ def chat_message(
     - done: Stream complete
     """
     request.state.user = current_user
+
+    # Check chat message plan limit before processing
+    check_chat_limit(current_user, db)
+
+    # Increment chat message count (fire-and-forget, before streaming)
+    increment_chat_count(current_user, db)
 
     log_activity(db, current_user.id, "chat_message", source="web",
                  resource_type="chat_session",

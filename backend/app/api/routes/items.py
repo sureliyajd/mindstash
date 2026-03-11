@@ -46,6 +46,7 @@ from app.schemas.item import (
 from app.services.ai.categorizer import categorize_item
 from app.services.ai.embeddings import embedding_service
 from app.services.activity import log_activity
+from app.services.plan import check_item_limit, increment_item_count, require_feature
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +146,10 @@ def create_item(
     """
     # Set user in request state for rate limiter
     request.state.user = current_user
+
+    # Check plan limits before creating item
+    check_item_limit(current_user, db)
+
     # Create initial item in database
     new_item = Item(
         user_id=current_user.id,
@@ -216,6 +221,9 @@ def create_item(
             db.refresh(new_item)
     except Exception as e:
         logger.warning(f"Embedding generation failed for item {new_item.id}: {e}")
+
+    # Increment monthly item count after successful creation
+    increment_item_count(current_user, db)
 
     log_activity(db, current_user.id, "item_captured", source="web",
                  resource_type="item", resource_id=new_item.id,
@@ -445,6 +453,10 @@ def list_items(
     """
     # Set user in request state for rate limiter
     request.state.user = current_user
+
+    # Gate semantic search feature by plan
+    # (If/when a semantic_search parameter is added, enforce it here)
+    # For now this is a no-op placeholder for future semantic search gating
 
     # Start query with user filter
     query = db.query(Item).filter(Item.user_id == current_user.id)

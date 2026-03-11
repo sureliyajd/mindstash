@@ -61,6 +61,9 @@ class UserResponse(UserBase):
     created_at: datetime
     is_admin: bool = False
     is_suspended: bool = False
+    plan: str = "free"
+    subscription_status: Optional[str] = None
+    plan_expires_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

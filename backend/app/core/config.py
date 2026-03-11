@@ -3,7 +3,7 @@ Application configuration and settings
 """
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
@@ -56,6 +56,15 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
+
+    # Lemon Squeezy / Billing
+    LMS_API_KEY: Optional[str] = None
+    LMS_STORE_ID: Optional[str] = None
+    LMS_WEBHOOK_SECRET: Optional[str] = None
+    LMS_VARIANT_STARTER_MONTHLY: Optional[str] = None
+    LMS_VARIANT_STARTER_ANNUAL: Optional[str] = None
+    LMS_VARIANT_PRO_MONTHLY: Optional[str] = None
+    LMS_VARIANT_PRO_ANNUAL: Optional[str] = None
 
     # Optional
     SENTRY_DSN: str | None = None
