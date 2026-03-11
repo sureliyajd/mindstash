@@ -151,7 +151,7 @@ def handle_webhook(payload: bytes, signature: str, db: Session) -> dict:
 
     # Idempotency check
     if event_id:
-        existing = db.query(PaymentEvent).filter(PaymentEvent.stripe_event_id == event_id).first()
+        existing = db.query(PaymentEvent).filter(PaymentEvent.event_id == event_id).first()
         if existing:
             return {"received": True, "duplicate": True}
 
@@ -170,9 +170,9 @@ def handle_webhook(payload: bytes, signature: str, db: Session) -> dict:
     obj_data = event.get("data", {})
     _log_event(
         db=db,
-        stripe_event_id=event_id or f"{event_name}_{datetime.now(timezone.utc).timestamp()}",
+        event_id=event_id or f"{event_name}_{datetime.now(timezone.utc).timestamp()}",
         event_type=event_name,
-        stripe_object_id=obj_data.get("id"),
+        object_id=obj_data.get("id"),
         raw_payload=event,
     )
     return {"received": True}
@@ -359,14 +359,14 @@ def sync_subscription_for_user(user, db: Session) -> dict:
     return {"synced": True, "plan": plan, "status": status}
 
 
-def _log_event(db: Session, stripe_event_id: str, event_type: str,
-               stripe_object_id=None, amount_cents=None, currency=None,
+def _log_event(db: Session, event_id: str, event_type: str,
+               object_id=None, amount_cents=None, currency=None,
                plan_keyword=None, status=None, raw_payload=None, user_id=None):
     try:
         evt = PaymentEvent(
-            stripe_event_id=stripe_event_id,
+            event_id=event_id,
             event_type=event_type,
-            stripe_object_id=stripe_object_id,
+            object_id=object_id,
             amount_cents=amount_cents,
             currency=currency,
             plan_keyword=plan_keyword,

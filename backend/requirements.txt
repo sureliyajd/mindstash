@@ -73,7 +73,6 @@ slowapi==0.1.9
 sniffio==1.3.1
 SQLAlchemy==2.0.25
 starlette==0.35.1
-stripe==14.4.1
 tokenizers==0.22.2
 tqdm==4.67.1
 typer-slim==0.21.1
