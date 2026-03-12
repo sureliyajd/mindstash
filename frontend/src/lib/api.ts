@@ -482,6 +482,10 @@ export const chat = {
     return response.data;
   },
 
+  deleteSession: async (sessionId: string): Promise<void> => {
+    await api.delete(`/api/chat/sessions/${sessionId}`);
+  },
+
   confirmAction: async (confirmationId: string, confirmed: boolean): Promise<Response> => {
     const token = getToken();
     const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';

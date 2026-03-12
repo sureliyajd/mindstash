@@ -33,6 +33,7 @@ export function useChat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmationState | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(undefined);
   const sessionIdRef = useRef<string | undefined>(undefined);
   const hasRestoredRef = useRef(false);
   const queryClient = useQueryClient();
@@ -40,6 +41,7 @@ export function useChat() {
   // Helper: load messages for a session ID and restore them
   const restoreSession = useCallback(async (sessionId: string) => {
     sessionIdRef.current = sessionId;
+    setCurrentSessionId(sessionId);
     if (typeof window !== 'undefined') {
       localStorage.setItem(SESSION_KEY, sessionId);
     }
@@ -201,10 +203,13 @@ export function useChat() {
                   case 'session_id': {
                     const d = data as SessionIdData;
                     sessionIdRef.current = d.session_id;
+                    setCurrentSessionId(d.session_id);
                     // Persist session ID for page refresh
                     if (typeof window !== 'undefined') {
                       localStorage.setItem(SESSION_KEY, d.session_id);
                     }
+                    // Invalidate sessions list (new session may have been created)
+                    queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
                     break;
                   }
                   case 'text_delta': {
@@ -442,14 +447,46 @@ export function useChat() {
     return () => clearTimeout(timer);
   }, [isLoadingHistory, sendBriefingRequest]);
 
-  const clearChat = useCallback(() => {
+  const startNewSession = useCallback(() => {
     setMessages([]);
     setPendingConfirmation(null);
     sessionIdRef.current = undefined;
+    setCurrentSessionId(undefined);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(SESSION_KEY);
     }
   }, []);
+
+  const switchSession = useCallback(
+    async (sessionId: string) => {
+      if (isStreaming) return;
+      setIsLoadingHistory(true);
+      setPendingConfirmation(null);
+      try {
+        const restored = await restoreSession(sessionId);
+        setMessages(restored);
+      } catch {
+        startNewSession();
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    },
+    [isStreaming, restoreSession, startNewSession]
+  );
+
+  const deleteSessionById = useCallback(
+    async (sessionId: string) => {
+      await chat.deleteSession(sessionId);
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+      if (sessionIdRef.current === sessionId) {
+        startNewSession();
+      }
+    },
+    [startNewSession, queryClient]
+  );
+
+  // Keep backwards-compat alias
+  const clearChat = startNewSession;
 
   return {
     messages,
@@ -460,7 +497,10 @@ export function useChat() {
     confirmAction,
     sendBriefingRequest,
     clearChat,
-    sessionId: sessionIdRef.current,
+    startNewSession,
+    switchSession,
+    deleteSessionById,
+    sessionId: currentSessionId,
   };
 }
 

@@ -180,6 +180,39 @@ def get_session_messages(
     ]
 
 
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+@user_limiter.limit("100/hour")
+def delete_session(
+    request: Request,
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Delete a chat session and all its messages (cascade).
+
+    Rate Limit: 100 requests per hour per user
+    """
+    request.state.user = current_user
+
+    session = (
+        db.query(ChatSession)
+        .filter(
+            ChatSession.id == session_id,
+            ChatSession.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found",
+        )
+
+    db.delete(session)
+    db.commit()
+
+
 @router.post("/confirm")
 def confirm_action(
     request: Request,
