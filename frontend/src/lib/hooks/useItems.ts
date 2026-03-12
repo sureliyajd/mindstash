@@ -6,6 +6,7 @@ import type { AxiosError } from 'axios';
 
 const ITEMS_QUERY_KEY = ['items'];
 const ITEM_COUNTS_QUERY_KEY = ['item-counts'];
+const BILLING_STATUS_QUERY_KEY = ['billing', 'status'];
 
 export interface UseItemsOptions {
   module?: string;
@@ -162,9 +163,10 @@ export function useItems(options: UseItemsOptions = {}) {
           ) || [newItem],
         })
       );
-      // Invalidate all item queries and counts to ensure consistency
+      // Invalidate all item queries, counts, and billing usage to ensure consistency
       queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ITEM_COUNTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY });
     },
   });
 
@@ -230,6 +232,7 @@ export function useItems(options: UseItemsOptions = {}) {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ITEM_COUNTS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY });
     },
   });
 

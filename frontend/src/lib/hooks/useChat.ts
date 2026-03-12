@@ -317,6 +317,8 @@ export function useChat() {
         )
       );
 
+      // Always invalidate billing (chat message count increased)
+      queryClient.invalidateQueries({ queryKey: ['billing', 'status'] });
       if (hasMutated) {
         queryClient.invalidateQueries({ queryKey: ['items'] });
         queryClient.invalidateQueries({ queryKey: ['item-counts'] });
