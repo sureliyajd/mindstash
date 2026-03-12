@@ -90,6 +90,7 @@ function AnalyticsDashboard() {
   const [eventTypeFilter, setEventTypeFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [hideOwnActivity, setHideOwnActivity] = useState(true);
   const PAGE_SIZE = 50;
 
   const { data: eventsData, isLoading: eventsLoading } = useQuery({
@@ -97,6 +98,13 @@ function AnalyticsDashboard() {
     queryFn: () =>
       adminApi.getAnalyticsEvents(page, PAGE_SIZE, eventTypeFilter, dateFrom, dateTo),
     placeholderData: keepPreviousData,
+  });
+
+  const filteredEvents = eventsData?.events.filter((ev: AnalyticsEvent) => {
+    if (!hideOwnActivity) return true;
+    const location = [ev.city, ev.country].filter(Boolean).join(', ');
+    if (!location || location.includes('India')) return false;
+    return true;
   });
 
   const totalPages = eventsData ? Math.ceil(eventsData.total / PAGE_SIZE) : 0;
@@ -226,14 +234,25 @@ function AnalyticsDashboard() {
               onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
               className="rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
             />
+            <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs text-gray-500">
+              <input
+                type="checkbox"
+                checked={hideOwnActivity}
+                onChange={(e) => setHideOwnActivity(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              Hide own activity
+            </label>
           </div>
 
           {eventsLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600" />
             </div>
-          ) : !eventsData?.events.length ? (
-            <div className="py-16 text-center text-sm text-gray-400">No events found</div>
+          ) : !filteredEvents?.length ? (
+            <div className="py-16 text-center text-sm text-gray-400">
+              {hideOwnActivity && eventsData?.events.length ? 'No external events found — uncheck "Hide own activity" to see all' : 'No events found'}
+            </div>
           ) : (
             <table className="w-full">
               <thead>
@@ -247,7 +266,7 @@ function AnalyticsDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {eventsData.events.map((ev: AnalyticsEvent) => (
+                {filteredEvents.map((ev: AnalyticsEvent) => (
                   <tr key={ev.id} className="hover:bg-gray-50/60">
                     <td className="px-6 py-3 text-xs text-gray-400 whitespace-nowrap">
                       {new Date(ev.created_at).toLocaleString()}
