@@ -144,8 +144,10 @@ def delete_user(
     current_admin: User = Depends(require_admin),
 ):
     """Delete a user account and all their data."""
+    from app.services.lemonsqueezy_service import cancel_subscription_for_deletion
     target = _get_target_user(user_id, db, current_admin)
     email = target.email
+    cancel_subscription_for_deletion(target)
     db.delete(target)
     db.commit()
     logger.info(f"Admin {current_admin.email} deleted user {email}")

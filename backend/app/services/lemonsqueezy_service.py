@@ -130,6 +130,32 @@ def cancel_subscription_at_period_end(user, db: Session) -> dict:
     }
 
 
+def cancel_subscription_for_deletion(user) -> None:
+    """
+    Best-effort cancel a user's Lemon Squeezy subscription when their
+    account is being deleted. Silently ignores errors so deletion always
+    proceeds.
+    """
+    if not user.lms_subscription_id or not settings.LMS_API_KEY:
+        return
+    try:
+        payload = {
+            "data": {
+                "type": "subscriptions",
+                "id": str(user.lms_subscription_id),
+                "attributes": {"cancelled": True},
+            }
+        }
+        with httpx.Client() as client:
+            client.patch(
+                f"{LMS_API_BASE}/subscriptions/{user.lms_subscription_id}",
+                json=payload,
+                headers=_headers(),
+            )
+    except Exception:
+        pass  # Account deletion must not fail due to billing API issues
+
+
 def handle_webhook(payload: bytes, signature: str, db: Session) -> dict:
     """Verify Lemon Squeezy webhook signature and process the event."""
     if not settings.LMS_WEBHOOK_SECRET:

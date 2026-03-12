@@ -445,6 +445,8 @@ def delete_account(
     current_user: User = Depends(get_current_user),
 ):
     """Delete the current user's account and all their data."""
+    from app.services.lemonsqueezy_service import cancel_subscription_for_deletion
+    cancel_subscription_for_deletion(current_user)
     db.delete(current_user)
     db.commit()
 
