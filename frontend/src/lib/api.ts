@@ -559,6 +559,58 @@ export interface ActivityLogListResponse {
   page_size: number;
 }
 
+// Analytics types
+export interface TrackEventRequest {
+  event_type: string;
+  page?: string;
+  referrer?: string;
+}
+
+export interface AnalyticsEvent {
+  id: string;
+  event_type: string;
+  page: string | null;
+  ip_address: string | null;
+  country: string | null;
+  city: string | null;
+  region: string | null;
+  country_code: string | null;
+  user_agent: string | null;
+  referrer: string | null;
+  user_id: string | null;
+  created_at: string;
+}
+
+export interface TopPage {
+  page: string;
+  count: number;
+  pct: number;
+}
+
+export interface AnalyticsSummaryResponse {
+  total_events: number;
+  today_events: number;
+  unique_ips: number;
+  unique_countries: number;
+  top_pages: TopPage[];
+  event_type_breakdown: Record<string, number>;
+}
+
+export interface AnalyticsEventListResponse {
+  events: AnalyticsEvent[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+// Analytics API (public endpoint — no auth required)
+export const analyticsApi = {
+  track: async (data: TrackEventRequest): Promise<{ ok: boolean }> => {
+    const response = await api.post<{ ok: boolean }>('/api/analytics/track', data);
+    return response.data;
+  },
+};
+
 // Admin API
 export const adminApi = {
   getUsers: async (page = 1, pageSize = 20, search = ''): Promise<AdminUserListResponse> => {
@@ -590,6 +642,30 @@ export const adminApi = {
   getUserActivity: async (userId: string, page = 1, pageSize = 20): Promise<ActivityLogListResponse> => {
     const response = await api.get<ActivityLogListResponse>(`/api/admin/users/${userId}/activity`, {
       params: { page, page_size: pageSize },
+    });
+    return response.data;
+  },
+
+  getAnalyticsSummary: async (): Promise<AnalyticsSummaryResponse> => {
+    const response = await api.get<AnalyticsSummaryResponse>('/api/admin/analytics/summary');
+    return response.data;
+  },
+
+  getAnalyticsEvents: async (
+    page = 1,
+    pageSize = 50,
+    eventType = '',
+    dateFrom = '',
+    dateTo = '',
+  ): Promise<AnalyticsEventListResponse> => {
+    const response = await api.get<AnalyticsEventListResponse>('/api/admin/analytics/events', {
+      params: {
+        page,
+        page_size: pageSize,
+        ...(eventType ? { event_type: eventType } : {}),
+        ...(dateFrom ? { date_from: dateFrom } : {}),
+        ...(dateTo ? { date_to: dateTo } : {}),
+      },
     });
     return response.data;
   },

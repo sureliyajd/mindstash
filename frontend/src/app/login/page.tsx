@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { usePageView } from '@/lib/hooks/useAnalytics';
 import { PublicOnlyRoute } from '@/components/ProtectedRoute';
 import { AxiosError } from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
@@ -32,6 +33,7 @@ const stagger = {
 // =============================================================================
 
 function LoginForm() {
+  usePageView('/login');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, googleLogin, isLoginLoading, isGoogleLoginLoading, isAuthenticated } = useAuth();

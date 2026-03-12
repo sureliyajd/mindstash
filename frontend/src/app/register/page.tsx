@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, Eye, EyeOff, Check } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { usePageView } from '@/lib/hooks/useAnalytics';
 import { PublicOnlyRoute } from '@/components/ProtectedRoute';
 import { AxiosError } from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
@@ -32,6 +33,7 @@ const stagger = {
 // =============================================================================
 
 function RegisterForm() {
+  usePageView('/register');
   const router = useRouter();
   const { register, login, googleLogin, isRegisterLoading, isLoginLoading, isGoogleLoginLoading, isAuthenticated } = useAuth();
   const [name, setName] = useState('');

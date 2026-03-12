@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { usePageView } from '@/lib/hooks/useAnalytics';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import LandingAnimations from '@/components/LandingAnimations';
@@ -122,6 +123,7 @@ const aiCapabilities = [
 // =============================================================================
 
 export default function Home() {
+  usePageView('/');
   return (
     <div className="min-h-screen bg-white">
       <Navigation />

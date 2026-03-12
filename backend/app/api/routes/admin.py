@@ -5,15 +5,26 @@ All endpoints require admin privileges.
 Guards: admin cannot act on themselves or other admins.
 """
 import logging
+from datetime import datetime, timezone
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy import func, distinct
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.rate_limit import user_limiter
 from app.models.user import User
 from app.models.activity_log import ActivityLog
+from app.models.analytics import AnalyticsEvent
 from app.schemas.user import AdminUserResponse, AdminUserUpdate, AdminUserListResponse
 from app.schemas.activity import ActivityLogListResponse
+from app.schemas.analytics import (
+    AnalyticsSummaryResponse,
+    AnalyticsEventListResponse,
+    AnalyticsEventResponse,
+    TopPage,
+)
 from app.api.dependencies import require_admin
 
 logger = logging.getLogger(__name__)
@@ -167,3 +178,122 @@ def get_user_activity(
     )
 
     return ActivityLogListResponse(logs=logs, total=total, page=page, page_size=page_size)
+
+
+# ---------------------------------------------------------------------------
+# Analytics endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/analytics/summary", response_model=AnalyticsSummaryResponse)
+@user_limiter.limit("100/hour")
+def get_analytics_summary(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_admin),
+):
+    """Return aggregated analytics metrics (admin only)."""
+    request.state.user = current_admin
+
+    total_events = db.query(func.count(AnalyticsEvent.id)).scalar() or 0
+
+    today_start = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    today_events = (
+        db.query(func.count(AnalyticsEvent.id))
+        .filter(AnalyticsEvent.created_at >= today_start)
+        .scalar()
+        or 0
+    )
+
+    unique_ips = (
+        db.query(func.count(distinct(AnalyticsEvent.ip_address))).scalar() or 0
+    )
+    unique_countries = (
+        db.query(func.count(distinct(AnalyticsEvent.country_code)))
+        .filter(AnalyticsEvent.country_code.isnot(None))
+        .scalar()
+        or 0
+    )
+
+    # Top pages — only page_view events with a non-null page
+    page_rows = (
+        db.query(AnalyticsEvent.page, func.count(AnalyticsEvent.id).label("cnt"))
+        .filter(
+            AnalyticsEvent.event_type == "page_view",
+            AnalyticsEvent.page.isnot(None),
+        )
+        .group_by(AnalyticsEvent.page)
+        .order_by(func.count(AnalyticsEvent.id).desc())
+        .limit(10)
+        .all()
+    )
+    page_view_total = sum(r.cnt for r in page_rows) or 1
+    top_pages = [
+        TopPage(page=r.page, count=r.cnt, pct=round(r.cnt / page_view_total * 100, 1))
+        for r in page_rows
+    ]
+
+    # Event type breakdown
+    type_rows = (
+        db.query(AnalyticsEvent.event_type, func.count(AnalyticsEvent.id).label("cnt"))
+        .group_by(AnalyticsEvent.event_type)
+        .all()
+    )
+    event_type_breakdown = {r.event_type: r.cnt for r in type_rows}
+
+    return AnalyticsSummaryResponse(
+        total_events=total_events,
+        today_events=today_events,
+        unique_ips=unique_ips,
+        unique_countries=unique_countries,
+        top_pages=top_pages,
+        event_type_breakdown=event_type_breakdown,
+    )
+
+
+@router.get("/analytics/events", response_model=AnalyticsEventListResponse)
+@user_limiter.limit("100/hour")
+def get_analytics_events(
+    request: Request,
+    page: int = 1,
+    page_size: int = 50,
+    event_type: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_admin),
+):
+    """Return paginated analytics events (admin only)."""
+    request.state.user = current_admin
+
+    query = db.query(AnalyticsEvent)
+
+    if event_type:
+        query = query.filter(AnalyticsEvent.event_type == event_type)
+
+    if date_from:
+        try:
+            df = datetime.fromisoformat(date_from).replace(tzinfo=timezone.utc)
+            query = query.filter(AnalyticsEvent.created_at >= df)
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            dt = datetime.fromisoformat(date_to).replace(tzinfo=timezone.utc)
+            query = query.filter(AnalyticsEvent.created_at <= dt)
+        except ValueError:
+            pass
+
+    total = query.count()
+    events = (
+        query.order_by(AnalyticsEvent.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    return AnalyticsEventListResponse(
+        events=events, total=total, page=page, page_size=page_size
+    )

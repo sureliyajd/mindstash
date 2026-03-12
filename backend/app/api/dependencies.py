@@ -3,6 +3,8 @@ API dependencies for authentication and authorization
 
 Common dependencies used across API routes.
 """
+from typing import Optional
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -13,6 +15,8 @@ from app.models.user import User
 
 # HTTPBearer scheme for extracting JWT tokens from Authorization header
 security = HTTPBearer()
+# Optional bearer — does NOT raise 403 when the header is absent
+optional_security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
@@ -80,6 +84,25 @@ def get_current_user(
         )
 
     return user
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """
+    Dependency that returns the current user if a valid JWT is present,
+    or None if no / invalid token is provided.  Never raises 401.
+    """
+    if not credentials:
+        return None
+    payload = decode_token(credentials.credentials)
+    if not payload:
+        return None
+    email = payload.get("sub")
+    if not email:
+        return None
+    return db.query(User).filter(User.email == email).first()
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:

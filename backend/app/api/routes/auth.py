@@ -12,6 +12,7 @@ Rate Limits (IP-based to prevent brute force):
 - Refresh: 100/hour
 - Get current user: 500/hour
 """
+import asyncio
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 
@@ -40,8 +41,52 @@ from app.schemas.user import (
 )
 from app.api.dependencies import get_current_user
 from app.services.notifications.sender import send_welcome_email, send_password_reset_email
+from app.core.utils import get_client_ip
+from app.models.analytics import AnalyticsEvent
+from app.services.geolocation import lookup_ip
 
 router = APIRouter(tags=["authentication"])
+
+
+async def _geo_enrich(event_id, ip: str) -> None:
+    """Background task: geo-lookup and update an analytics event row."""
+    try:
+        geo = await lookup_ip(ip)
+        from app.core.database import SessionLocal
+        with SessionLocal() as bg_db:
+            ev = bg_db.query(AnalyticsEvent).filter(AnalyticsEvent.id == event_id).first()
+            if ev:
+                ev.country = geo["country"]
+                ev.city = geo["city"]
+                ev.region = geo["region"]
+                ev.country_code = geo["country_code"]
+                bg_db.commit()
+    except Exception as exc:
+        logger.debug("Auth geo enrichment failed for event %s: %s", event_id, exc)
+
+
+def _track(db: Session, request: Request, event_type: str, user_id=None) -> None:
+    """
+    Write an AnalyticsEvent row for an auth outcome, then schedule
+    geo enrichment as a background task (fire-and-forget).
+    """
+    ip = get_client_ip(request)
+    ev = AnalyticsEvent(
+        event_type=event_type,
+        page=None,
+        ip_address=ip,
+        user_agent=request.headers.get("User-Agent"),
+        referrer=request.headers.get("Referer"),
+        user_id=user_id,
+    )
+    db.add(ev)
+    db.commit()
+    db.refresh(ev)
+    try:
+        asyncio.create_task(_geo_enrich(ev.id, ip))
+    except RuntimeError:
+        # No running event loop (e.g. sync test context) — skip enrichment
+        pass
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -64,9 +109,12 @@ def register(request: Request, user_data: UserCreate, db: Session = Depends(get_
         HTTPException 400: If email already exists
         HTTPException 429: If rate limit exceeded
     """
+    _track(db, request, "register_attempt")
+
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
+        _track(db, request, "register_failed")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
@@ -85,6 +133,8 @@ def register(request: Request, user_data: UserCreate, db: Session = Depends(get_
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    _track(db, request, "register_success", user_id=new_user.id)
 
     # Send welcome email (non-blocking — registration succeeds even if email fails)
     try:
@@ -116,9 +166,12 @@ def login(request: Request, user_credentials: UserLogin, db: Session = Depends(g
         HTTPException 401: If password is incorrect
         HTTPException 429: If rate limit exceeded
     """
+    _track(db, request, "login_attempt")
+
     # Find user by email
     user = db.query(User).filter(User.email == user_credentials.email).first()
     if not user:
+        _track(db, request, "login_failed")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
@@ -126,11 +179,13 @@ def login(request: Request, user_credentials: UserLogin, db: Session = Depends(g
 
     # Verify password (Google-only accounts have no password)
     if not user.hashed_password:
+        _track(db, request, "login_failed")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This account uses Google Sign-In. Please log in with Google."
         )
     if not verify_password(user_credentials.password, user.hashed_password):
+        _track(db, request, "login_failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password"
@@ -138,6 +193,7 @@ def login(request: Request, user_credentials: UserLogin, db: Session = Depends(g
 
     # Check if account is suspended
     if user.is_suspended:
+        _track(db, request, "login_failed")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Your account has been suspended."
@@ -147,6 +203,8 @@ def login(request: Request, user_credentials: UserLogin, db: Session = Depends(g
     token_data = {"sub": user.email}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
+
+    _track(db, request, "login_success", user_id=user.id)
 
     return TokenResponse(
         access_token=access_token,
