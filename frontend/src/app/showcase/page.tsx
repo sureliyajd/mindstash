@@ -8,7 +8,6 @@ import Footer from '@/components/Footer';
 import TabContentExplorer, { type TabItem } from '@/components/TabContentExplorer';
 import {
   Play,
-  Image as ImageIcon,
   MessageSquare,
   Search,
   Sparkles,
@@ -206,7 +205,7 @@ export default function ShowcasePage() {
             </p>
           </motion.div>
 
-          {/* Video embed placeholder */}
+          {/* Loom video embed */}
           <motion.div
             className="max-w-5xl mx-auto"
             initial="hidden"
@@ -215,33 +214,12 @@ export default function ShowcasePage() {
             variants={scaleIn}
           >
             <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-gray-200">
-              {/* Placeholder for Loom embed */}
-              <div className="aspect-video bg-gradient-to-br from-[#EA7B7B]/20 via-[#FACE68]/20 to-[#79C9C5]/20 flex items-center justify-center">
-                <div className="text-center px-6">
-                  <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-white shadow-lg mb-6">
-                    <Play className="h-10 w-10 text-[#EA7B7B]" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Demo Video Coming Soon</h3>
-                  <p className="text-gray-500 max-w-md mx-auto">
-                    Full product walkthrough and feature demonstration will be embedded here.
-                  </p>
-                  <div className="mt-8 rounded-2xl bg-white/80 backdrop-blur-sm p-6 inline-block">
-                    <p className="text-sm text-gray-600 mb-2 font-mono">To embed your Loom video:</p>
-                    <code className="text-xs text-gray-500 block">
-                      {'<iframe src="https://www.loom.com/embed/YOUR_VIDEO_ID" ...></iframe>'}
-                    </code>
-                  </div>
-                </div>
-              </div>
-
-              {/* Uncomment and replace with your Loom embed code:
               <iframe
-                src="https://www.loom.com/embed/YOUR_VIDEO_ID?sid=OPTIONAL_SID"
+                src="https://www.loom.com/embed/710973463ade4df0850cbee85d795e79"
                 frameBorder="0"
                 allowFullScreen
                 className="w-full aspect-video"
               ></iframe>
-              */}
             </div>
           </motion.div>
         </div>
@@ -287,56 +265,39 @@ export default function ShowcasePage() {
             viewport={{ once: true }}
             variants={stagger}
           >
-            {/* Screenshot placeholders */}
             {[
               {
                 title: 'Dashboard Overview',
                 description: 'Main interface with all your captured thoughts, organized by AI',
+                image: '/screenshots/Dashboard-Overview.png',
               },
               {
                 title: 'AI Chat Interface',
                 description: 'Natural language conversations with your intelligent assistant',
+                image: '/screenshots/AI-Chat-Interface.png',
               },
               {
                 title: 'Quick Capture',
                 description: '500-character input with real-time AI categorization',
+                image: '/screenshots/Quick-Capture.png',
               },
               {
                 title: 'Telegram Integration',
                 description: 'Seamless bot interaction for on-the-go capturing and chat',
+                image: '/screenshots/Telegram-Integration.png',
               },
-            ].map((screenshot, index) => (
+            ].map((screenshot) => (
               <motion.div
                 key={screenshot.title}
                 variants={scaleIn}
                 className="group relative"
               >
                 <div className="relative rounded-3xl overflow-hidden shadow-xl ring-1 ring-gray-200 transition-all duration-300 hover:shadow-2xl hover:ring-[#EA7B7B]/30 hover:-translate-y-1">
-                  {/* Image placeholder */}
-                  <div className="aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                    <div className="text-center px-6">
-                      <ImageIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {screenshot.title}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {screenshot.description}
-                      </p>
-                      <div className="mt-4 text-xs text-gray-400">
-                        Screenshot placeholder - Add image at:
-                        <br />
-                        <code className="text-mono-small">/public/screenshots/{index + 1}.png</code>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Uncomment to use real images:
                   <img
-                    src={`/screenshots/${index + 1}.png`}
+                    src={screenshot.image}
                     alt={screenshot.title}
-                    className="w-full h-full object-cover"
+                    className="w-full aspect-[4/3] object-cover"
                   />
-                  */}
 
                   {/* Caption overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
@@ -350,32 +311,6 @@ export default function ShowcasePage() {
                 </div>
               </motion.div>
             ))}
-          </motion.div>
-
-          {/* Instructions */}
-          <motion.div
-            className="mt-16 max-w-3xl mx-auto"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-          >
-            <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-gray-100">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#79C9C5]/10">
-                  <ImageIcon className="h-6 w-6 text-[#5AACA8]" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Adding Your Screenshots</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed mb-4">
-                    To add real screenshots, save your images to <code className="text-mono-small bg-gray-100 px-2 py-1 rounded">/public/screenshots/</code> and uncomment the <code className="text-mono-small bg-gray-100 px-2 py-1 rounded">&lt;img&gt;</code> tags in the code.
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Recommended size: 1200x900px (4:3 aspect ratio) for best display quality.
-                  </p>
-                </div>
-              </div>
-            </div>
           </motion.div>
         </div>
       </section>
