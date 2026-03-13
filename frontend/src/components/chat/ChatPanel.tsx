@@ -875,7 +875,7 @@ export function ChatPanel() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 right-0 top-0 z-50 flex w-full flex-col border-l border-gray-100 bg-gray-50 shadow-2xl sm:w-[400px] lg:top-[73px] lg:z-30"
+              className="fixed bottom-0 right-0 top-0 z-50 flex w-full flex-col border-l border-gray-100 bg-gray-50 shadow-2xl sm:w-[480px] lg:top-[73px] lg:z-30"
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
