@@ -195,8 +195,8 @@ export default function Home() {
               </Link>
             </motion.div>
 
-            {/* Product Hunt badge */}
-            <motion.div variants={fadeUp} className="mt-10 flex justify-center">
+            {/* Product Hunt badges */}
+            <motion.div variants={fadeUp} className="mt-10 flex justify-center gap-4 flex-wrap">
               <a
                 href="https://www.producthunt.com/products/mindstash?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-mindstash"
                 target="_blank"
@@ -208,6 +208,19 @@ export default function Home() {
                   width={250}
                   height={54}
                   src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1095636&theme=light&t=1773260745830"
+                />
+              </a>
+              <a
+                href="https://www.producthunt.com/products/mindstash/reviews/new?utm_source=badge-product_review&utm_medium=badge&utm_source=badge-mindstash"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt="MindStash - Never lose a thought again. | Product Hunt"
+                  width={250}
+                  height={54}
+                  src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1179249&theme=light"
                 />
               </a>
             </motion.div>
