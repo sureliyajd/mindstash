@@ -52,6 +52,22 @@ export interface AdminUserUpdate {
   email?: string;
 }
 
+export interface AdminUserInfo {
+  id: string;
+  email: string;
+  name: string | null;
+  created_at: string;
+  is_admin: boolean;
+  is_suspended: boolean;
+  auth_method: 'google' | 'email';
+  plan: string;
+  subscription_status: string | null;
+  plan_expires_at: string | null;
+  items_this_month: number;
+  chat_messages_this_month: number;
+  usage_reset_at: string;
+}
+
 export interface TokenResponse {
   access_token: string;
   refresh_token: string;
@@ -736,6 +752,11 @@ export const adminApi = {
 
   deleteUser: async (id: string): Promise<void> => {
     await api.delete(`/api/admin/users/${id}`);
+  },
+
+  getUserInfo: async (userId: string): Promise<AdminUserInfo> => {
+    const response = await api.get<AdminUserInfo>(`/api/admin/users/${userId}/info`);
+    return response.data;
   },
 
   getUserActivity: async (userId: string, page = 1, pageSize = 20): Promise<ActivityLogListResponse> => {

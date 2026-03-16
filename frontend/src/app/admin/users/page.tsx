@@ -16,10 +16,16 @@ import {
   X,
   Shield,
   Clock,
+  Info,
+  Mail,
+  CreditCard,
+  BarChart2,
+  Calendar,
+  LogIn,
 } from 'lucide-react';
 import { AdminRoute } from '@/components/AdminRoute';
 import { useToast } from '@/components/Providers';
-import { adminApi, AdminUser, ActivityLog } from '@/lib/api';
+import { adminApi, AdminUser, AdminUserInfo, ActivityLog, PLAN_LIMITS } from '@/lib/api';
 
 // =============================================================================
 // EDIT MODAL
@@ -305,6 +311,200 @@ function ActivityModal({ user, onClose }: ActivityModalProps) {
 }
 
 // =============================================================================
+// USER INFO MODAL
+// =============================================================================
+
+const PLAN_LABELS: Record<string, string> = {
+  free: 'Free',
+  starter: 'Starter',
+  pro: 'Pro',
+};
+
+const PLAN_COLORS: Record<string, string> = {
+  free: 'bg-gray-100 text-gray-600',
+  starter: 'bg-blue-100 text-blue-700',
+  pro: 'bg-purple-100 text-purple-700',
+};
+
+interface UserInfoModalProps {
+  user: AdminUser;
+  onClose: () => void;
+}
+
+function UserInfoModal({ user, onClose }: UserInfoModalProps) {
+  const { data, isLoading } = useQuery<AdminUserInfo>({
+    queryKey: ['admin', 'user-info', user.id],
+    queryFn: () => adminApi.getUserInfo(user.id),
+  });
+
+  const itemLimit = data ? (PLAN_LIMITS[data.plan as keyof typeof PLAN_LIMITS]?.items_per_month ?? null) : null;
+  const chatLimit = data ? (PLAN_LIMITS[data.plan as keyof typeof PLAN_LIMITS]?.chat_messages_per_month ?? null) : null;
+
+  const pct = (used: number, limit: number | null) =>
+    limit === null ? 0 : Math.min(100, Math.round((used / limit) * 100));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl mx-4 overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100">
+              <Info className="h-4 w-4 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">User Info</h2>
+              <p className="text-xs text-gray-400">{user.email}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="h-7 w-7 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+          </div>
+        ) : data ? (
+          <div className="px-6 py-5 space-y-5">
+            {/* Basic info */}
+            <section>
+              <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                <Mail className="h-3.5 w-3.5" /> Account
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-gray-50 px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-0.5">Name</p>
+                  <p className="text-sm font-medium text-gray-800">{data.name || '—'}</p>
+                </div>
+                <div className="rounded-xl bg-gray-50 px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-0.5">Sign-in method</p>
+                  <div className="flex items-center gap-1.5">
+                    <LogIn className="h-3.5 w-3.5 text-gray-500" />
+                    <p className="text-sm font-medium text-gray-800 capitalize">{data.auth_method}</p>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-gray-50 px-4 py-3 col-span-2">
+                  <p className="text-xs text-gray-400 mb-0.5">Registered</p>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                    <p className="text-sm font-medium text-gray-800">
+                      {new Date(data.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Subscription */}
+            <section>
+              <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                <CreditCard className="h-3.5 w-3.5" /> Subscription
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-gray-50 px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-1">Plan</p>
+                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${PLAN_COLORS[data.plan] || 'bg-gray-100 text-gray-600'}`}>
+                    {PLAN_LABELS[data.plan] || data.plan}
+                  </span>
+                </div>
+                <div className="rounded-xl bg-gray-50 px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-1">Status</p>
+                  {data.subscription_status ? (
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      data.subscription_status === 'active' ? 'bg-green-100 text-green-700' :
+                      data.subscription_status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                      'bg-amber-100 text-amber-700'
+                    }`}>
+                      {data.subscription_status}
+                    </span>
+                  ) : (
+                    <p className="text-sm text-gray-500">—</p>
+                  )}
+                </div>
+                {data.plan_expires_at && (
+                  <div className="rounded-xl bg-gray-50 px-4 py-3 col-span-2">
+                    <p className="text-xs text-gray-400 mb-0.5">Renews / Expires</p>
+                    <p className="text-sm font-medium text-gray-800">
+                      {new Date(data.plan_expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Usage */}
+            <section>
+              <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                <BarChart2 className="h-3.5 w-3.5" /> AI Credits Usage This Month
+              </h3>
+              <div className="space-y-3">
+                {/* Items */}
+                <div className="rounded-xl bg-gray-50 px-4 py-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs text-gray-500">Items captured</p>
+                    <p className="text-xs font-semibold text-gray-700">
+                      {data.items_this_month}{itemLimit !== null ? ` / ${itemLimit}` : ' / ∞'}
+                    </p>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        itemLimit && pct(data.items_this_month, itemLimit) >= 90 ? 'bg-red-500' :
+                        itemLimit && pct(data.items_this_month, itemLimit) >= 70 ? 'bg-amber-500' : 'bg-indigo-500'
+                      }`}
+                      style={{ width: `${itemLimit === null ? 0 : pct(data.items_this_month, itemLimit)}%` }}
+                    />
+                  </div>
+                </div>
+                {/* Chat messages */}
+                <div className="rounded-xl bg-gray-50 px-4 py-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs text-gray-500">Chat messages</p>
+                    <p className="text-xs font-semibold text-gray-700">
+                      {data.chat_messages_this_month}{chatLimit !== null ? ` / ${chatLimit}` : ' / ∞'}
+                    </p>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        chatLimit && pct(data.chat_messages_this_month, chatLimit) >= 90 ? 'bg-red-500' :
+                        chatLimit && pct(data.chat_messages_this_month, chatLimit) >= 70 ? 'bg-amber-500' : 'bg-purple-500'
+                      }`}
+                      style={{ width: `${chatLimit === null ? 0 : pct(data.chat_messages_this_month, chatLimit)}%` }}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 text-right">
+                  Resets {new Date(data.usage_reset_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </p>
+              </div>
+            </section>
+          </div>
+        ) : (
+          <p className="py-10 text-center text-sm text-gray-400">Failed to load user info</p>
+        )}
+
+        <div className="border-t border-gray-100 px-6 py-4">
+          <button
+            onClick={onClose}
+            className="w-full rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// =============================================================================
 // MAIN PAGE
 // =============================================================================
 
@@ -319,6 +519,7 @@ function AdminUsersContent() {
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [activityTarget, setActivityTarget] = useState<AdminUser | null>(null);
+  const [infoTarget, setInfoTarget] = useState<AdminUser | null>(null);
 
   const PAGE_SIZE = 20;
 
@@ -508,6 +709,13 @@ function AdminUsersContent() {
                           >
                             <Clock className="h-4 w-4" />
                           </button>
+                          <button
+                            onClick={() => setInfoTarget(u)}
+                            title="Info"
+                            className="rounded-lg p-2 text-gray-400 hover:bg-indigo-50 hover:text-indigo-700"
+                          >
+                            <Info className="h-4 w-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -565,6 +773,13 @@ function AdminUsersContent() {
             key="activity"
             user={activityTarget}
             onClose={() => setActivityTarget(null)}
+          />
+        )}
+        {infoTarget && (
+          <UserInfoModal
+            key="info"
+            user={infoTarget}
+            onClose={() => setInfoTarget(null)}
           />
         )}
       </AnimatePresence>

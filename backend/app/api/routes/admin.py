@@ -17,7 +17,7 @@ from app.core.rate_limit import user_limiter
 from app.models.user import User
 from app.models.activity_log import ActivityLog
 from app.models.analytics import AnalyticsEvent
-from app.schemas.user import AdminUserResponse, AdminUserUpdate, AdminUserListResponse
+from app.schemas.user import AdminUserResponse, AdminUserUpdate, AdminUserListResponse, AdminUserInfoResponse
 from app.schemas.activity import ActivityLogListResponse
 from app.schemas.analytics import (
     AnalyticsSummaryResponse,
@@ -151,6 +151,37 @@ def delete_user(
     db.delete(target)
     db.commit()
     logger.info(f"Admin {current_admin.email} deleted user {email}")
+
+
+@router.get("/users/{user_id}/info", response_model=AdminUserInfoResponse)
+@user_limiter.limit("200/hour")
+def get_user_info(
+    request: Request,
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_admin),
+):
+    """Get detailed info for a user (subscription, usage, auth method)."""
+    request.state.user = current_admin
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    return AdminUserInfoResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        created_at=user.created_at,
+        is_admin=user.is_admin,
+        is_suspended=user.is_suspended,
+        auth_method="google" if user.google_id else "email",
+        plan=user.plan,
+        subscription_status=user.subscription_status,
+        plan_expires_at=user.plan_expires_at,
+        items_this_month=user.items_this_month or 0,
+        chat_messages_this_month=user.chat_messages_this_month or 0,
+        usage_reset_at=user.usage_reset_at,
+    )
 
 
 @router.get("/users/{user_id}/activity", response_model=ActivityLogListResponse)

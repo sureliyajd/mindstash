@@ -82,6 +82,28 @@ class AdminUserResponse(BaseModel):
         from_attributes = True
 
 
+class AdminUserInfoResponse(BaseModel):
+    """Detailed user info for admin — includes subscription and usage data"""
+    id: UUID
+    email: str
+    name: Optional[str] = None
+    created_at: datetime
+    is_admin: bool
+    is_suspended: bool
+    auth_method: str  # "google" | "email"
+    # Subscription
+    plan: str
+    subscription_status: Optional[str] = None
+    plan_expires_at: Optional[datetime] = None
+    # Usage this month
+    items_this_month: int
+    chat_messages_this_month: int
+    usage_reset_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class AdminUserUpdate(BaseModel):
     """Schema for admin updating a user"""
     name: Optional[str] = Field(None, max_length=100)
