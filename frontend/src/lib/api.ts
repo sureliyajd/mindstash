@@ -1,8 +1,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type { TelegramLinkStatus, TelegramLinkCode } from './types/telegram';
 
-// Token storage key
+// Token storage keys
 const TOKEN_KEY = 'mindstash_token';
+const REFRESH_TOKEN_KEY = 'mindstash_refresh_token';
 
 // Plan constants
 export const PLAN_FREE = "free";
@@ -170,6 +171,17 @@ export const setToken = (token: string): void => {
 export const clearToken = (): void => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+};
+
+export const getRefreshToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+};
+
+export const setRefreshToken = (token: string): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(REFRESH_TOKEN_KEY, token);
 };
 
 // Request interceptor - attach Authorization header
@@ -184,14 +196,68 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Track if a token refresh is in progress to avoid multiple concurrent refresh calls
+let isRefreshing = false;
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+const onRefreshed = (token: string) => {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+};
+
 // Response interceptor - handle 401 and 429 errors
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    // Skip redirect for auth endpoints (login/register) - let them handle their own errors
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Skip for auth endpoints (login/register/refresh) - let them handle their own errors
     const isAuthEndpoint = error.config?.url?.includes('/api/auth/');
 
-    if (error.response?.status === 401 && !isAuthEndpoint) {
+    if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry) {
+      const refreshToken = getRefreshToken();
+
+      if (refreshToken) {
+        if (isRefreshing) {
+          // Queue this request until the refresh completes
+          return new Promise((resolve) => {
+            refreshSubscribers.push((token: string) => {
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+              }
+              resolve(api(originalRequest));
+            });
+          });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const res = await fetch(`${baseURL}/api/auth/refresh`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${refreshToken}` },
+          });
+
+          if (res.ok) {
+            const data: TokenResponse = await res.json();
+            setToken(data.access_token);
+            setRefreshToken(data.refresh_token);
+            isRefreshing = false;
+            onRefreshed(data.access_token);
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+            }
+            return api(originalRequest);
+          }
+        } catch {
+          // Refresh failed — fall through to logout
+        }
+
+        isRefreshing = false;
+      }
+
       clearToken();
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
@@ -247,6 +313,9 @@ export const auth = {
     if (response.data.access_token) {
       setToken(response.data.access_token);
     }
+    if (response.data.refresh_token) {
+      setRefreshToken(response.data.refresh_token);
+    }
     return response.data;
   },
 
@@ -278,6 +347,9 @@ export const auth = {
     const response = await api.post<TokenResponse>('/api/auth/google', { id_token: idToken });
     if (response.data.access_token) {
       setToken(response.data.access_token);
+    }
+    if (response.data.refresh_token) {
+      setRefreshToken(response.data.refresh_token);
     }
     return response.data;
   },
@@ -442,26 +514,59 @@ export const notifications = {
   },
 };
 
+// Helper: fetch with silent token refresh for SSE/raw-fetch calls
+async function fetchWithAuth(url: string, init: RequestInit): Promise<Response> {
+  const token = getToken();
+  const headers = {
+    ...(init.headers as Record<string, string>),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  let response = await fetch(url, { ...init, headers });
+
+  if (response.status === 401) {
+    const refreshToken = getRefreshToken();
+    if (refreshToken) {
+      const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      try {
+        const refreshRes = await fetch(`${baseURL}/api/auth/refresh`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${refreshToken}` },
+        });
+        if (refreshRes.ok) {
+          const data: TokenResponse = await refreshRes.json();
+          setToken(data.access_token);
+          setRefreshToken(data.refresh_token);
+          response = await fetch(url, {
+            ...init,
+            headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${data.access_token}` },
+          });
+        }
+      } catch {
+        // ignore — fall through to redirect
+      }
+    }
+
+    if (response.status === 401) {
+      clearToken();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
+  }
+
+  return response;
+}
+
 // Chat API (uses raw fetch for SSE streaming)
 export const chat = {
   sendMessage: async (message: string, sessionId?: string): Promise<Response> => {
-    const token = getToken();
     const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${baseURL}/api/chat/`, {
+    const response = await fetchWithAuth(`${baseURL}/api/chat/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, session_id: sessionId }),
     });
     if (!response.ok) {
-      if (response.status === 401) {
-        clearToken();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-      }
       throw new Error(`Chat request failed: ${response.status}`);
     }
     return response;
@@ -487,23 +592,13 @@ export const chat = {
   },
 
   confirmAction: async (confirmationId: string, confirmed: boolean): Promise<Response> => {
-    const token = getToken();
     const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${baseURL}/api/chat/confirm`, {
+    const response = await fetchWithAuth(`${baseURL}/api/chat/confirm`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ confirmation_id: confirmationId, confirmed }),
     });
     if (!response.ok) {
-      if (response.status === 401) {
-        clearToken();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-      }
       throw new Error(`Confirmation request failed: ${response.status}`);
     }
     return response;
