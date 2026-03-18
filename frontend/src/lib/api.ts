@@ -713,6 +713,8 @@ export interface AnalyticsSummaryResponse {
   today_events: number;
   unique_ips: number;
   unique_countries: number;
+  today_unique_ips: number;
+  today_unique_countries: number;
   top_pages: TopPage[];
   event_type_breakdown: Record<string, number>;
 }

@@ -249,6 +249,22 @@ def get_analytics_summary(
         or 0
     )
 
+    today_unique_ips = (
+        db.query(func.count(distinct(AnalyticsEvent.ip_address)))
+        .filter(AnalyticsEvent.created_at >= today_start)
+        .scalar()
+        or 0
+    )
+    today_unique_countries = (
+        db.query(func.count(distinct(AnalyticsEvent.country_code)))
+        .filter(
+            AnalyticsEvent.created_at >= today_start,
+            AnalyticsEvent.country_code.isnot(None),
+        )
+        .scalar()
+        or 0
+    )
+
     # Top pages — only page_view events with a non-null page
     page_rows = (
         db.query(AnalyticsEvent.page, func.count(AnalyticsEvent.id).label("cnt"))
@@ -280,6 +296,8 @@ def get_analytics_summary(
         today_events=today_events,
         unique_ips=unique_ips,
         unique_countries=unique_countries,
+        today_unique_ips=today_unique_ips,
+        today_unique_countries=today_unique_countries,
         top_pages=top_pages,
         event_type_breakdown=event_type_breakdown,
     )

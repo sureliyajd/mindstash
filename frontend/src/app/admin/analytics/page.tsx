@@ -9,6 +9,8 @@ import {
   Globe,
   Users,
   Activity,
+  Fingerprint,
+  MapPin,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -129,13 +131,13 @@ function AnalyticsDashboard() {
       <main className="mx-auto max-w-6xl px-6 py-8 space-y-8">
         {/* Summary cards */}
         {summaryLoading ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-32 animate-pulse rounded-2xl bg-gray-100" />
             ))}
           </div>
         ) : summary ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <SummaryCard
               icon={Activity}
               label="Total Events"
@@ -144,21 +146,33 @@ function AnalyticsDashboard() {
             />
             <SummaryCard
               icon={BarChart2}
-              label="Today"
+              label="Today Events"
               value={summary.today_events}
               color="bg-purple-50 text-purple-600"
             />
             <SummaryCard
               icon={Users}
-              label="Unique IPs"
+              label="Total IPs"
               value={summary.unique_ips}
               color="bg-green-50 text-green-600"
             />
             <SummaryCard
               icon={Globe}
-              label="Countries"
+              label="Total Countries"
               value={summary.unique_countries}
               color="bg-teal-50 text-teal-600"
+            />
+            <SummaryCard
+              icon={Fingerprint}
+              label="Today IPs"
+              value={summary.today_unique_ips}
+              color="bg-orange-50 text-orange-600"
+            />
+            <SummaryCard
+              icon={MapPin}
+              label="Today Countries"
+              value={summary.today_unique_countries}
+              color="bg-rose-50 text-rose-600"
             />
           </div>
         ) : null}

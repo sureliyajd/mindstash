@@ -44,6 +44,8 @@ class AnalyticsSummaryResponse(BaseModel):
     today_events: int
     unique_ips: int
     unique_countries: int
+    today_unique_ips: int
+    today_unique_countries: int
     top_pages: List[TopPage]
     event_type_breakdown: Dict[str, int]
 
