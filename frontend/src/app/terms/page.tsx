@@ -120,6 +120,7 @@ export default function TermsPage() {
           <span>© 2026 MindStash</span>
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</Link>
+            <Link href="/refund" className="hover:text-gray-600 transition-colors">Refund</Link>
             <Link href="/" className="hover:text-gray-600 transition-colors">← Back home</Link>
           </div>
         </div>
