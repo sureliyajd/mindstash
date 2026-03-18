@@ -227,8 +227,14 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // Skip for auth endpoints (login/register/refresh) - let them handle their own errors
-    const isAuthEndpoint = error.config?.url?.includes('/api/auth/');
+    // Skip for auth mutation endpoints (login/register/refresh) to avoid infinite loops.
+    // Do NOT skip /api/auth/me — it's a normal protected endpoint that should trigger refresh.
+    const authUrl = error.config?.url || '';
+    const isAuthEndpoint =
+      authUrl.includes('/api/auth/login') ||
+      authUrl.includes('/api/auth/register') ||
+      authUrl.includes('/api/auth/refresh') ||
+      authUrl.includes('/api/auth/google');
 
     if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry) {
       const refreshToken = getRefreshToken();
