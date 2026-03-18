@@ -683,7 +683,7 @@ export default function Home() {
             className="text-lg sm:text-xl mb-10 max-w-2xl mx-auto"
             style={{ color: 'rgba(255, 255, 255, 0.9)' }}
           >
-            Join thousands who never lose a thought. Free to start, no credit card required.
+            Your best thoughts deserve to be remembered. Free to start, no credit card required.
           </motion.p>
           <motion.div variants={fadeUp}>
             <Link

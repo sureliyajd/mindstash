@@ -78,8 +78,8 @@ export default function RefundPage() {
             </ul>
             <p className="mt-3">
               Email us at{' '}
-              <a href="mailto:jaydeepsureliya.jd@gmail.com" className="text-[#EA7B7B] hover:underline">
-                jaydeepsureliya.jd@gmail.com
+              <a href="mailto:support@mindstashhq.space" className="text-[#EA7B7B] hover:underline">
+                support@mindstashhq.space
               </a>{' '}
               and we will process your request within 5–7 business days.
             </p>
@@ -108,8 +108,8 @@ export default function RefundPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-3">8. Contact</h2>
             <p>
               Questions about refunds? Email us at{' '}
-              <a href="mailto:jaydeepsureliya.jd@gmail.com" className="text-[#EA7B7B] hover:underline">
-                jaydeepsureliya.jd@gmail.com
+              <a href="mailto:support@mindstashhq.space" className="text-[#EA7B7B] hover:underline">
+                support@mindstashhq.space
               </a>.
             </p>
           </section>

@@ -102,7 +102,7 @@ export default function Footer() {
             <p className="text-xs text-gray-400 leading-relaxed">
               For any queries or inquiries,{' '}
               <a
-                href="mailto:jaydeepsureliya.jd@gmail.com"
+                href="mailto:hello@mindstashhq.space"
                 className="text-[#EA7B7B] font-medium hover:underline"
               >
                 feel free to reach out

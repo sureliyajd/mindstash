@@ -125,7 +125,7 @@ const faqs = [
   },
   {
     q: 'What payment methods do you accept?',
-    a: 'All major credit and debit cards through Stripe. Payments are processed securely and you get a PDF receipt for every charge.',
+    a: 'All major credit and debit cards. Payments are processed securely through our payment partner and you get a PDF receipt for every charge.',
   },
   {
     q: 'What is the annual discount?',
