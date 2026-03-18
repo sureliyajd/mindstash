@@ -224,7 +224,7 @@ def get_analytics_summary(
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_admin),
 ):
-    """Return aggregated analytics metrics (admin only)."""
+    """Return aggregated analytics metrics (admin only)"""
     request.state.user = current_admin
 
     total_events = db.query(func.count(AnalyticsEvent.id)).scalar() or 0
