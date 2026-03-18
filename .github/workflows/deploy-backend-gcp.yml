@@ -1,11 +1,10 @@
-name: Deploy Backend (EC2 - Disabled)
+name: Deploy Backend (GCP)
 
 on:
-  workflow_dispatch:
-  # push:
-  #   branches: [main]
-  #   paths:
-  #     - 'backend/**'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
 
 jobs:
   deploy:
@@ -18,11 +17,11 @@ jobs:
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.GCP_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Sync files to EC2
+      - name: Sync files to GCP
         run: |
           rsync -avz --delete \
             --exclude 'venv' \
@@ -32,12 +31,12 @@ jobs:
             --exclude '.git' \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             backend/ \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/opt/mindstash/
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }}:/opt/mindstash/
 
       - name: Install dependencies and restart service
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} << 'ENDSSH'
               cd /opt/mindstash
               source venv/bin/activate
               pip install -r requirements.txt --quiet
@@ -49,6 +48,6 @@ jobs:
         run: |
           sleep 5
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} \
             'curl -sf http://localhost:8000/health' || exit 1
           echo "Deployment successful!"
