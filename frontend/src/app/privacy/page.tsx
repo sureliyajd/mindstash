@@ -102,8 +102,8 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-3">6. Contact</h2>
             <p>
               Questions about this policy? Email us at{' '}
-              <a href="mailto:privacy@mindstash.app" className="text-[#EA7B7B] hover:underline">
-                privacy@mindstash.app
+              <a href="mailto:jaydeepsureliya.jd@gmail.com" className="text-[#EA7B7B] hover:underline">
+                jaydeepsureliya.jd@gmail.com
               </a>.
             </p>
           </section>

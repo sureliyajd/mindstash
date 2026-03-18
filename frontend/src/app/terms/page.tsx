@@ -106,8 +106,8 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-3">9. Contact</h2>
             <p>
               Questions about these Terms? Email us at{' '}
-              <a href="mailto:legal@mindstash.app" className="text-[#EA7B7B] hover:underline">
-                legal@mindstash.app
+              <a href="mailto:jaydeepsureliya.jd@gmail.com" className="text-[#EA7B7B] hover:underline">
+                jaydeepsureliya.jd@gmail.com
               </a>.
             </p>
           </section>
