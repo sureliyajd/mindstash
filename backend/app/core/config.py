@@ -24,8 +24,6 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # AI/LLM APIs (at least one is required based on environment)
     ANTHROPIC_API_KEY: str | None = None  # For production (Claude Sonnet 4.5)
