@@ -9,6 +9,7 @@ This module handles:
 """
 
 import logging
+from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import List, Optional
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ import resend
 
 from app.core.config import settings
 from app.core.plans import plan_has_feature
+from app.core.security import create_email_action_token
 from app.models.item import Item
 from app.models.user import User
 
@@ -311,6 +313,8 @@ def send_notification(item: Item, user: User, db: Session) -> bool:
                                     <span class="meta-tag">{item.priority.title() if item.priority else 'Normal'} priority</span>
                                 </div>
 
+                                {_build_action_buttons_html(item, user)}
+
                                 <div class="cta-wrap">
                                     <a href="{settings.APP_URL}/dashboard" class="cta">Open MindStash &rarr;</a>
                                 </div>
@@ -378,6 +382,197 @@ def send_notification(item: Item, user: User, db: Session) -> bool:
         return False
 
 
+def _update_item_after_notification(item: Item) -> None:
+    """
+    Update an item's notification tracking after a notification is sent.
+    Recalculates next_notification_at based on the item's frequency.
+    """
+    item.last_notified_at = datetime.utcnow()
+
+    if item.notification_frequency == "once":
+        item.notification_enabled = False
+        item.next_notification_at = None
+    elif item.notification_frequency == "daily":
+        item.next_notification_at = datetime.utcnow() + timedelta(days=1)
+    elif item.notification_frequency == "weekly":
+        item.next_notification_at = datetime.utcnow() + timedelta(weeks=1)
+    elif item.notification_frequency == "monthly":
+        item.next_notification_at = datetime.utcnow() + timedelta(days=30)
+    else:
+        item.notification_enabled = False
+        item.next_notification_at = None
+
+
+def _build_action_buttons_html(item: Item, user: User) -> str:
+    """Generate one-click action button HTML for an item in a reminder email."""
+    base_url = f"{settings.APP_URL}/api/notifications/email-action"
+
+    complete_token = create_email_action_token(str(item.id), str(user.id), "complete")
+    snooze_token = create_email_action_token(str(item.id), str(user.id), "snooze")
+    stop_token = create_email_action_token(str(item.id), str(user.id), "stop")
+
+    complete_url = f"{base_url}?token={complete_token}"
+    snooze_url = f"{base_url}?token={snooze_token}"
+    stop_url = f"{base_url}?token={stop_token}"
+
+    return f"""
+    <div style="margin-top: 14px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <td style="padding-right: 6px;" width="33%">
+                <a href="{complete_url}" style="display: block; padding: 8px 4px; background: #10b981;
+                   color: white; text-align: center; border-radius: 6px; font-size: 12px;
+                   font-weight: 600; text-decoration: none;">&#10003; Done</a>
+            </td>
+            <td style="padding: 0 3px;" width="34%">
+                <a href="{snooze_url}" style="display: block; padding: 8px 4px; background: #6366f1;
+                   color: white; text-align: center; border-radius: 6px; font-size: 12px;
+                   font-weight: 600; text-decoration: none;">&#128337; Snooze 7d</a>
+            </td>
+            <td style="padding-left: 6px;" width="33%">
+                <a href="{stop_url}" style="display: block; padding: 8px 4px; background: #9ca3af;
+                   color: white; text-align: center; border-radius: 6px; font-size: 12px;
+                   font-weight: 600; text-decoration: none;">&#10005; Stop</a>
+            </td>
+        </tr></table>
+    </div>
+    """
+
+
+def send_batched_notification(items: List[Item], user: User, db: Session) -> bool:
+    """
+    Send a single batched notification email containing all due items for a user.
+
+    Instead of sending one email per item, this groups all due reminders into
+    one consolidated email. After sending, each item's notification tracking
+    is updated independently based on its own frequency.
+
+    Args:
+        items: List of Item objects to include in the email
+        user: The User who owns the items
+        db: Database session
+
+    Returns:
+        True if the email was sent successfully
+    """
+    if not items:
+        return False
+
+    try:
+        if settings.RESEND_API_KEY:
+            # Build subject line
+            if len(items) == 1:
+                subject = f"⏰ Reminder: {items[0].content[:50]}"
+            else:
+                subject = f"⏰ You have {len(items)} reminder{'s' if len(items) > 1 else ''} — MindStash"
+
+            # Build individual item HTML blocks
+            items_html = ""
+            for item in items:
+                url_html = f'<p style="margin-top: 8px;"><a href="{item.url}" style="color: #EA7B7B; font-size: 13px;">{item.url}</a></p>' if item.url else ''
+                action_buttons = _build_action_buttons_html(item, user)
+                items_html += f"""
+                                <div style="background: #fafafa; padding: 18px; border-radius: 12px;
+                                            border-left: 3px solid #EA7B7B; margin: 12px 0; word-wrap: break-word;">
+                                    <p style="margin: 0; font-size: 15px; font-weight: 500; color: #111827;">{item.content}</p>
+                                    {url_html}
+                                    <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
+                                        <span style="background: #f3f4f6; padding: 4px 10px; border-radius: 6px;
+                                                     font-size: 12px; color: #6b7280;">{item.category.title()}</span>
+                                        <span style="background: #f3f4f6; padding: 4px 10px; border-radius: 6px;
+                                                     font-size: 12px; color: #6b7280;">{item.priority.title() if item.priority else 'Normal'} priority</span>
+                                    </div>
+                                    {action_buttons}
+                                </div>
+                """
+
+            # Build the header text
+            if len(items) == 1:
+                header_text = "You saved this and wanted to be reminded:"
+            else:
+                header_text = f"You have {len(items)} items to check on today:"
+
+            html_body = f"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            line-height: 1.6; background-color: #f3f4f6; -webkit-text-size-adjust: 100%; }}
+                    @media only screen and (max-width: 480px) {{
+                        .wrapper {{ padding: 12px 8px !important; }}
+                        .header {{ padding: 24px 20px !important; }}
+                        .header h1 {{ font-size: 20px !important; }}
+                        .body {{ padding: 22px 18px !important; }}
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="wrapper" style="width: 100%; padding: 24px 16px; background-color: #f3f4f6;">
+                    <div style="max-width: 560px; margin: 0 auto;">
+                        <div style="background: #ffffff; border-radius: 16px; overflow: hidden;
+                                    box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                            <div class="header" style="background: linear-gradient(135deg, #79C9C5 0%, #5AACA8 100%);
+                                        padding: 28px 24px; text-align: center;">
+                                <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0;">MindStash Reminder</h1>
+                            </div>
+                            <div class="body" style="padding: 28px 24px;">
+                                <p style="font-size: 15px; color: #374151; margin-bottom: 6px;">Hi there,</p>
+                                <p style="font-size: 14px; color: #9ca3af; margin-bottom: 16px;">{header_text}</p>
+
+                                {items_html}
+
+                                <div style="text-align: center; padding: 20px 0 4px;">
+                                    <a href="{settings.APP_URL}/dashboard" style="display: inline-block; padding: 12px 28px;
+                                       background: #EA7B7B; color: #ffffff; text-decoration: none; border-radius: 10px;
+                                       font-weight: 600; font-size: 14px;">Open MindStash &rarr;</a>
+                                </div>
+                            </div>
+
+                            <div style="height: 1px; background: #f3f4f6; margin: 0;"></div>
+
+                            <div style="padding: 20px 24px; text-align: center;">
+                                <p style="font-size: 11px; color: #9ca3af;"><a href="{settings.APP_URL}/settings" style="color: #EA7B7B; text-decoration: underline;">Manage email preferences</a></p>
+                                <p style="font-size: 11px; color: #d1d5db; margin-top: 8px;">MindStash &middot; Never lose a thought again</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            params = {
+                "from": settings.FROM_EMAIL,
+                "to": [user.email],
+                "subject": subject,
+                "html": html_body,
+            }
+
+            response = resend.Emails.send(params)
+            logger.info(
+                f"📧 Batched notification sent: user={user.email} "
+                f"items={len(items)} email_id={response.get('id')}"
+            )
+        else:
+            logger.warning("RESEND_API_KEY not configured, skipping email send")
+            print(f"📧 BATCH NOTIFY {user.email}: {len(items)} items")
+            for item in items:
+                print(f"   - {item.content[:50]}... ({item.notification_frequency})")
+
+        # Update tracking for each item independently
+        for item in items:
+            _update_item_after_notification(item)
+
+        return True
+
+    except Exception as e:
+        logger.error(f"❌ Failed to send batched notification for user {user.email}: {e}")
+        return False
+
+
 def process_notifications(db: Session) -> dict:
     """
     Process and send all pending notifications.
@@ -406,23 +601,29 @@ def process_notifications(db: Session) -> dict:
     failed = 0
     item_ids = []
 
+    # Group items by user_id for batched sending (1 email per user)
+    items_by_user = defaultdict(list)
     for item in items:
-        # Get the user for this item
-        user = db.query(User).filter(User.id == item.user_id).first()
+        items_by_user[item.user_id].append(item)
+
+    print(f"   Grouped into {len(items_by_user)} user(s)")
+
+    for user_id, user_items in items_by_user.items():
+        user = db.query(User).filter(User.id == user_id).first()
 
         if not user:
-            print(f"   ⚠️ User not found for item {item.id}")
-            failed += 1
+            print(f"   ⚠️ User not found for user_id {user_id}")
+            failed += len(user_items)
             continue
 
         if not user.item_reminders_enabled:
             continue
 
-        if send_notification(item, user, db):
-            successful += 1
-            item_ids.append(str(item.id))
+        if send_batched_notification(user_items, user, db):
+            successful += len(user_items)
+            item_ids.extend([str(item.id) for item in user_items])
         else:
-            failed += 1
+            failed += len(user_items)
 
     # Commit all changes
     db.commit()
@@ -434,7 +635,7 @@ def process_notifications(db: Session) -> dict:
         "items": item_ids
     }
 
-    print(f"   ✓ Processed: {successful} successful, {failed} failed")
+    print(f"   ✓ Processed: {successful} successful, {failed} failed ({len(items_by_user)} email(s) sent)")
 
     return result
 

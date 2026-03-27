@@ -3,6 +3,7 @@ Security utilities for authentication
 """
 import secrets
 import hashlib
+from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -87,6 +88,48 @@ def generate_reset_token() -> tuple[str, str]:
 def hash_reset_token(raw: str) -> str:
     """Hash a raw reset token using SHA-256."""
     return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def create_email_action_token(item_id: str, user_id: str, action: str) -> str:
+    """
+    Create a short-lived JWT for one-click email actions.
+
+    Args:
+        item_id: UUID of the item to act on
+        user_id: UUID of the item owner
+        action: "complete", "snooze", or "stop"
+
+    Returns:
+        Encoded JWT token string (expires in 7 days)
+    """
+    payload = {
+        "item_id": str(item_id),
+        "user_id": str(user_id),
+        "action": action,
+        "type": "email_action",
+        "exp": datetime.utcnow() + timedelta(days=7),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_email_action_token(token: str) -> Optional[dict]:
+    """
+    Decode an email action token WITH expiration verification.
+
+    Returns:
+        Decoded payload if valid and not expired, None otherwise
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+        if payload.get("type") != "email_action":
+            return None
+        return payload
+    except JWTError:
+        return None
 
 
 def decode_token(token: str) -> Optional[dict]:

@@ -1,3 +1,6 @@
+# Sensitive project docs
+dev/NOTION-PROJECT-HUB.md
+
 # Python
 __pycache__/
 *.py[cod]
@@ -125,4 +128,11 @@ coverage/
 # Social media post drafts (personal, auto-generated)
 social-posts/
 
+# Social poster — generated posts, logs, and credentials
+dev/social-poster/posts/
+dev/social-poster/logs/
+dev/social-poster/.env
+
 backend/client_secret_764192002795-e4tn4hbtvgp73hvg4t4gf108p44gdklk.apps.googleusercontent.com.json
+
+dev/social-poster/

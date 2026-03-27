@@ -124,6 +124,34 @@ Resurface strategy definitions:
 - weekly_review: Include in weekly digest
 - manual: User decides when to see
 
+PRIORITY, URGENCY, AND ACTION_REQUIRED RULES:
+
+action_required = true ONLY when ALL of these are true:
+- There is a concrete, specific action the user must take
+- The action has a deadline, external dependency, or time constraint
+- Failing to act would have a consequence
+
+action_required = false for:
+- Ideas, brainstorms, aspirational thoughts ("I want to...", "would be cool if...")
+- Reference information, notes, quotes, facts
+- Journal entries, reflections, personal thoughts
+- Bookmarks, saved links, articles to read/watch
+- Goals without deadlines
+- Casual suggestions ("try this restaurant", "check out this tool")
+
+priority guidelines:
+- "high" = External deadline within 48 hours, OR someone else is waiting on you, OR financial/legal consequence
+- "medium" = Has a deadline further out, OR is part of an active project
+- "low" = DEFAULT. No deadline, no external dependency, personal interest, reference info, ideas, journal entries
+
+urgency guidelines:
+- "high" = Must act within 24-48 hours or there is a real consequence (missed meeting, expired offer, deadline)
+- "medium" = Should act within a week, has some time pressure
+- "low" = DEFAULT. No time pressure, no external deadline, personal aspiration, reference material
+
+DEFAULT BIAS: When in doubt, choose LOW priority, LOW urgency, action_required = false.
+Most items people save are reference material, ideas, or aspirational thoughts — not emergencies.
+
 NOTIFICATION PREDICTION RULES:
 Analyze if this input needs a notification/reminder.
 Use today's date ({current_date}) to calculate the exact number of days from now.
@@ -156,12 +184,19 @@ preferred_time: When the notification should fire.
 notification_date: Optional fallback relative date string (e.g. "next_saturday_evening").
 Only used if days_from_now is not provided.
 
-frequency values:
-- "once" - One-time notification (events, deadlines, tasks)
-- "daily" - Daily reminder (habits, daily tasks)
-- "weekly" - Weekly check-in (goals, reviews)
-- "monthly" - Monthly reminder (learning, long-term goals)
-- "never" - No notification needed (reference items)
+frequency values (USE THE MOST CONSERVATIVE OPTION THAT FITS):
+- "never" - DEFAULT for most items. Use for: reference, bookmarks, notes, journal, ideas without deadlines, aspirations, reflections, casual thoughts
+- "once" - One-time events with a specific date/deadline (appointments, due dates, bills, meetings)
+- "weekly" - MAXIMUM for goals, habits, recurring reviews. Goals and habits are NEVER daily
+- "monthly" - Learning goals, long-term projects, quarterly reviews
+- "daily" - ALMOST NEVER USE THIS. Only when user explicitly says "every day" or "daily" (e.g. "remind me to take medicine every day"). Habits and goals are NOT daily — use weekly
+
+FREQUENCY DECISION TREE (follow in order):
+1. Does it have a specific date/deadline? → "once"
+2. Did the user explicitly say "every day" or "daily"? → "daily"
+3. Is it a goal, habit, or recurring review? → "weekly"
+4. Is it a learning goal or long-term project? → "monthly"
+5. Everything else → "never"
 
 Examples:
 Input: "Call John for football on Sunday" (today is Wednesday)
@@ -183,7 +218,41 @@ Input: "Meeting with client next Monday"
 → days_from_now: 4, preferred_time: "evening", frequency: "once" (notify day before, Sunday evening)
 
 Input: "Pay bills next to next weekend"
-→ days_from_now: 12, preferred_time: "morning", frequency: "once" (count days to the Saturday after next)"""
+→ days_from_now: 12, preferred_time: "morning", frequency: "once" (count days to the Saturday after next)
+
+CONSERVATIVE CLASSIFICATION EXAMPLES (pay close attention):
+
+Input: "Start waking up at 6 AM consistently"
+→ category: "goals", should_notify: true, frequency: "weekly", days_from_now: 7
+  priority: "low", urgency: "low", action_required: false (aspiration, not a concrete task with a deadline)
+
+Input: "Redis default port is 6379"
+→ category: "notes", should_notify: false, frequency: "never"
+  priority: "low", urgency: "low", action_required: false (pure reference information)
+
+Input: "Remember the idea about auto-generated event badges"
+→ category: "ideas", should_notify: false, frequency: "never"
+  priority: "low", urgency: "low", action_required: false (idea capture, no action needed)
+
+Input: "Save that Tailwind animation snippet"
+→ category: "save", should_notify: false, frequency: "never"
+  priority: "low", urgency: "low", action_required: false (bookmark for reference)
+
+Input: "Sketch idea for a minimal bookmarking app"
+→ category: "ideas", should_notify: false, frequency: "never"
+  priority: "low", urgency: "low", action_required: false (idea exploration, no deadline)
+
+Input: "Feeling productive after finishing the deployment today"
+→ category: "journal", should_notify: false, frequency: "never"
+  priority: "low", urgency: "low", action_required: false (personal reflection)
+
+Input: "Try the coffee place Rahul mentioned near the station"
+→ category: "places", should_notify: false, frequency: "never"
+  priority: "low", urgency: "low", action_required: false (casual suggestion, no time pressure)
+
+Input: "Remind me to take vitamins every day"
+→ should_notify: true, frequency: "daily", days_from_now: 1
+  priority: "medium", urgency: "low", action_required: true (user explicitly said "every day" — rare valid daily case)"""
 
 
 # =============================================================================
@@ -422,7 +491,7 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         response = client.messages.create(
             model=CURRENT_MODEL,
             max_tokens=800,
-            temperature=0.7,
+            temperature=0.3,
             messages=[{
                 "role": "user",
                 "content": prompt

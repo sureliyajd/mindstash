@@ -13,7 +13,9 @@ Rate Limits:
 - User endpoints: 100/hour
 """
 
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Header
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 from uuid import UUID
@@ -21,12 +23,16 @@ from uuid import UUID
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.rate_limit import user_limiter
+from app.core.security import decode_email_action_token
 from app.api.dependencies import get_current_user
+from app.models.item import Item
 from app.models.user import User
 from app.schemas.user import EmailPreferences, EmailPreferencesUpdate
 from app.services.notifications.sender import (
     process_notifications,
-    get_upcoming_notifications
+    get_upcoming_notifications,
+    snooze_notification,
+    disable_notification,
 )
 from app.services.notifications.digest import (
     send_weekly_digests,
@@ -253,3 +259,139 @@ def get_digest_preview_endpoint(
         "status": "success",
         "data": preview
     }
+
+
+def _email_action_html(title: str, message: str, success: bool = True) -> str:
+    """Build a simple HTML confirmation page for email actions."""
+    color = "#10b981" if success else "#ef4444"
+    icon = "&#10003;" if success else "&#10007;"
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{title} — MindStash</title>
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background: #f3f4f6; display: flex; align-items: center; justify-content: center;
+                    min-height: 100vh; padding: 20px; }}
+            .card {{ background: white; border-radius: 16px; padding: 48px 36px; max-width: 440px;
+                     width: 100%; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }}
+            .icon {{ width: 64px; height: 64px; border-radius: 50%; background: {color};
+                     color: white; font-size: 32px; line-height: 64px; margin: 0 auto 20px; }}
+            h1 {{ font-size: 20px; color: #111827; margin-bottom: 8px; }}
+            p {{ font-size: 15px; color: #6b7280; line-height: 1.6; }}
+            .cta {{ display: inline-block; margin-top: 24px; padding: 12px 28px; background: #EA7B7B;
+                    color: white; text-decoration: none; border-radius: 10px; font-weight: 600;
+                    font-size: 14px; }}
+            .footer {{ margin-top: 32px; font-size: 12px; color: #d1d5db; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="icon">{icon}</div>
+            <h1>{title}</h1>
+            <p>{message}</p>
+            <a href="{settings.APP_URL}/dashboard" class="cta">Open MindStash &rarr;</a>
+            <p class="footer">MindStash &middot; Never lose a thought again</p>
+        </div>
+    </body>
+    </html>
+    """
+
+
+@router.get("/email-action", response_class=HTMLResponse)
+def handle_email_action(
+    token: str = Query(..., description="Signed JWT token from email"),
+    db: Session = Depends(get_db),
+):
+    """
+    Handle one-click actions from reminder emails (Mark Done, Snooze, Stop).
+
+    No authentication required — the signed JWT token contains the item_id,
+    user_id, and action. Token expires after 7 days.
+
+    Returns an HTML confirmation page (opened in the user's browser from email).
+    """
+    # Decode and verify token
+    payload = decode_email_action_token(token)
+    if not payload:
+        return HTMLResponse(
+            content=_email_action_html(
+                "Link Expired",
+                "This action link has expired or is invalid. Please open MindStash to manage your reminders.",
+                success=False,
+            ),
+            status_code=400,
+        )
+
+    item_id = payload.get("item_id")
+    user_id = payload.get("user_id")
+    action = payload.get("action")
+
+    if not all([item_id, user_id, action]):
+        return HTMLResponse(
+            content=_email_action_html(
+                "Invalid Link",
+                "This action link is malformed. Please open MindStash to manage your reminders.",
+                success=False,
+            ),
+            status_code=400,
+        )
+
+    # Load the item and verify ownership
+    item = db.query(Item).filter(Item.id == item_id, Item.user_id == user_id).first()
+    if not item:
+        return HTMLResponse(
+            content=_email_action_html(
+                "Item Not Found",
+                "This item may have been deleted. Please open MindStash to check.",
+                success=False,
+            ),
+            status_code=404,
+        )
+
+    # Perform the action
+    if action == "complete":
+        item.is_completed = True
+        item.completed_at = datetime.utcnow()
+        item.notification_enabled = False
+        item.next_notification_at = None
+        db.commit()
+        return HTMLResponse(
+            content=_email_action_html(
+                "Marked as Done!",
+                f'"{item.content[:80]}..." has been marked complete. No more reminders for this item.',
+            )
+        )
+
+    elif action == "snooze":
+        from datetime import timedelta
+        snooze_notification(item, db, snooze_duration=timedelta(days=7))
+        return HTMLResponse(
+            content=_email_action_html(
+                "Snoozed for 7 Days",
+                f'"{item.content[:80]}..." has been snoozed. You\'ll be reminded again in 7 days.',
+            )
+        )
+
+    elif action == "stop":
+        disable_notification(item, db)
+        return HTMLResponse(
+            content=_email_action_html(
+                "Reminders Stopped",
+                f'Notifications for "{item.content[:80]}..." have been turned off. You can re-enable them from the dashboard.',
+            )
+        )
+
+    else:
+        return HTMLResponse(
+            content=_email_action_html(
+                "Unknown Action",
+                "This action is not recognized. Please open MindStash to manage your reminders.",
+                success=False,
+            ),
+            status_code=400,
+        )
