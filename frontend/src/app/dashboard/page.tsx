@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, RefreshCw, WifiOff, Search as SearchIcon, Loader2, Settings, X, Sparkles, Zap, ArrowRight, Shield, ChevronDown, Star, Crown } from 'lucide-react';
 import { CaptureInput } from '@/components/CaptureInput';
 import { ItemCard } from '@/components/ItemCard';
+import { ItemListRow } from '@/components/ItemListRow';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useBillingStatus } from '@/lib/hooks/useBilling';
 import { DashboardSkeleton } from '@/components/Skeletons';
@@ -18,8 +19,12 @@ import { ItemEditModal } from '@/components/ItemEditModal';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ChatPanel } from '@/components/chat/ChatPanel';
+import { DashboardHome } from '@/components/DashboardHome';
+import { ViewToggle } from '@/components/ViewToggle';
 import { useItems, useItemCounts, useMarkSurfaced } from '@/lib/hooks/useItems';
+import { useDashboardHome, DASHBOARD_HOME_QUERY_KEY } from '@/lib/hooks/useDashboardHome';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
 import { Item, Category, ItemUpdate } from '@/lib/api';
 
 // =============================================================================
@@ -383,7 +388,7 @@ function PlanBadge() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-white shadow-xl ring-1 ring-gray-100 overflow-hidden z-50"
+            className="fixed right-3 left-3 sm:absolute sm:left-auto sm:right-0 top-[60px] sm:top-full mt-0 sm:mt-2 sm:w-64 rounded-2xl bg-white shadow-xl ring-1 ring-gray-100 overflow-hidden z-50"
           >
             {/* Plan header */}
             <div className="flex items-center gap-2.5 px-4 pt-4 pb-3 border-b border-gray-50">
@@ -472,6 +477,7 @@ function DashboardContent() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // ==========================================================================
   // FILTER STATE
@@ -484,6 +490,24 @@ function DashboardContent() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
+
+  // ==========================================================================
+  // VIEW MODE (grid/list) — persisted in localStorage
+  // ==========================================================================
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    if (typeof window === 'undefined') return 'grid';
+    return (localStorage.getItem('mindstash_view_mode') as 'grid' | 'list') || 'grid';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('mindstash_view_mode', viewMode);
+  }, [viewMode]);
+
+  // ==========================================================================
+  // HOME VIEW — show smart dashboard when on "All" with no filters
+  // ==========================================================================
+  const isHomeView = selectedModule === 'all' && !searchTerm && !urgencyFilter && selectedTags.length === 0 && !selectedCategory;
+  const dashboardHomeData = useDashboardHome(isHomeView);
 
   // ==========================================================================
   // PAGINATION STATE
@@ -662,6 +686,8 @@ function DashboardContent() {
     try {
       await createItem({ content, url });
       setPage(1);
+      // Refresh dashboard home data if visible
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_HOME_QUERY_KEY });
     } catch {
       showToast('Failed to save your thought. Please try again.', 'error');
       throw new Error('Failed to create item');
@@ -713,12 +739,14 @@ function DashboardContent() {
             prev ? { ...prev, is_completed: completed, completed_at: completedAt } : null
           );
         }
+        // Refresh dashboard home sections so checkboxes reflect the change
+        queryClient.invalidateQueries({ queryKey: DASHBOARD_HOME_QUERY_KEY });
         showToast(completed ? 'Marked as complete!' : 'Marked as incomplete', 'success');
       } catch {
         showToast('Failed to update item', 'error');
       }
     },
-    [markComplete, detailItem, showToast]
+    [markComplete, detailItem, showToast, queryClient]
   );
 
   // Handle confirm delete
@@ -765,15 +793,15 @@ function DashboardContent() {
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center">
             <img
               src="/logo.png"
               alt="MindStash"
-              className="h-10 sm:h-12 w-auto"
+              className="h-8 sm:h-12 w-auto"
             />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             {user && (
               <span className="hidden text-sm text-gray-500 sm:block">
                 {user.name || user.email}
@@ -818,14 +846,14 @@ function DashboardContent() {
             )}
             <button
               onClick={() => router.push('/settings')}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              className="flex items-center gap-2 rounded-lg px-2 py-2 sm:px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
               title="Settings"
             >
               <Settings className="h-4 w-4" />
             </button>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              className="flex items-center gap-2 rounded-lg px-2 py-2 sm:px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Sign out</span>
@@ -835,13 +863,13 @@ function DashboardContent() {
       </header>
 
       {/* Main content */}
-      <main className="mx-auto max-w-6xl px-6 py-8">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Controls section */}
         <div className="space-y-5 pb-8">
           {/* Capture Input */}
           <CaptureInput onSubmit={handleCreate} isSubmitting={isCreating} />
 
-          {/* Search + Filter button row */}
+          {/* Search + View toggle + Filter button row */}
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <SearchBar
@@ -850,6 +878,9 @@ function DashboardContent() {
                 onSearch={handleSearch}
               />
             </div>
+            {!isHomeView && (
+              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+            )}
             <FilterButton
               activeCount={
                 (urgencyFilter ? 1 : 0) + selectedTags.length + (selectedCategory ? 1 : 0)
@@ -886,7 +917,16 @@ function DashboardContent() {
 
         {/* Content area */}
         <div className="relative">
-          {isLoading && allItems.length === 0 ? (
+          {isHomeView ? (
+            <DashboardHome
+              data={dashboardHomeData}
+              itemCounts={itemCounts}
+              userName={user?.name ?? null}
+              onModuleChange={handleModuleChange}
+              onViewDetails={handleViewDetails}
+              onToggleComplete={handleMarkComplete}
+            />
+          ) : isLoading && allItems.length === 0 ? (
             <DashboardSkeleton />
           ) : isError ? (
             <ErrorState onRetry={refetch} />
@@ -894,15 +934,40 @@ function DashboardContent() {
             <SearchEmptyState searchTerm={searchTerm} />
           ) : hasItems ? (
             <>
-              <CardGrid
-                items={filteredItems}
-                currentModule={selectedModule}
-                onViewDetails={handleViewDetails}
-                onEdit={handleEdit}
-                onDelete={handleDeleteClick}
-                onToggleComplete={handleMarkComplete}
-                isFetching={isFetching && allItems.length === 0}
-              />
+              {viewMode === 'grid' ? (
+                <CardGrid
+                  items={filteredItems}
+                  currentModule={selectedModule}
+                  onViewDetails={handleViewDetails}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteClick}
+                  onToggleComplete={handleMarkComplete}
+                  isFetching={isFetching && allItems.length === 0}
+                />
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                  <AnimatePresence mode="popLayout">
+                    {filteredItems.map((item) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ItemListRow
+                          item={item}
+                          currentModule={selectedModule}
+                          onViewDetails={() => handleViewDetails(item)}
+                          onEdit={() => handleEdit(item)}
+                          onDelete={() => handleDeleteClick(item)}
+                          onToggleComplete={(completed) => handleMarkComplete(item, completed)}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
 
               {/* Pagination footer */}
               <div className="mt-8 flex flex-col items-center gap-3 pb-4">

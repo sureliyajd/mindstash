@@ -212,61 +212,65 @@ export function ItemDetailModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.2 }}
-          className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+          className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4">
-            <div className="flex items-center gap-3">
-              {/* Category badge */}
-              <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${categoryInfo.bgColor}`}>
-                <Icon className={`h-4 w-4 ${categoryInfo.color}`} />
-                <span className={`text-sm font-semibold ${categoryInfo.color}`}>
-                  {categoryInfo.label}
-                </span>
+          <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 sm:px-6 sm:py-4">
+            {/* Top row: category + close */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+                {/* Category badge */}
+                <div className={`flex items-center gap-1.5 sm:gap-2 rounded-xl border px-2.5 py-1.5 sm:px-3 ${categoryInfo.bgColor}`}>
+                  <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${categoryInfo.color}`} />
+                  <span className={`text-xs sm:text-sm font-semibold ${categoryInfo.color}`}>
+                    {categoryInfo.label}
+                  </span>
+                </div>
+
+                {/* Confidence badge */}
+                {confidence > 0 && (
+                  <div className={`flex items-center gap-1 sm:gap-1.5 rounded-lg px-2 py-1 sm:px-2.5 text-[11px] sm:text-xs font-medium ${
+                    confidence >= 0.9 ? 'bg-emerald-50 text-emerald-700' :
+                    confidence >= 0.7 ? 'bg-gray-100 text-gray-600' :
+                    'bg-amber-50 text-amber-700'
+                  }`}>
+                    <Activity className="h-3 w-3" />
+                    {Math.round(confidence * 100)}% confident
+                  </div>
+                )}
               </div>
 
-              {/* Confidence badge */}
-              {confidence > 0 && (
-                <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium ${
-                  confidence >= 0.9 ? 'bg-emerald-50 text-emerald-700' :
-                  confidence >= 0.7 ? 'bg-gray-100 text-gray-600' :
-                  'bg-amber-50 text-amber-700'
-                }`}>
-                  <Activity className="h-3 w-3" />
-                  {Math.round(confidence * 100)}% confident
-                </div>
-              )}
+              <button
+                onClick={onClose}
+                className="shrink-0 rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2">
+            {/* Action buttons row */}
+            <div className="mt-2.5 flex items-center gap-2">
               <button
                 onClick={onEdit}
-                className="flex items-center gap-2 rounded-xl bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-100"
+                className="flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-100"
               >
-                <Pencil className="h-4 w-4" />
+                <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Edit
               </button>
               <button
                 onClick={onDelete}
-                className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
+                className="flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Delete
-              </button>
-              <button
-                onClick={onClose}
-                className="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
               </button>
             </div>
           </div>
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="space-y-6 p-6">
+            <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
               {/* Completion Status Banner */}
               {isCompleted && (
                 <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-4">
@@ -443,7 +447,7 @@ export function ItemDetailModal({
                 )}
 
                 {/* AI Understanding Grid */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                   {/* Intent */}
                   {intent && intentConfig[intent] && (
                     <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
@@ -530,7 +534,7 @@ export function ItemDetailModal({
                 </div>
 
                 {/* Additional Metadata */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {/* Priority */}
                   {priority && priorityConfig[priority] && (
                     <div className="rounded-xl bg-gray-50 p-3 text-center">
@@ -583,13 +587,13 @@ export function ItemDetailModal({
           </div>
 
           {/* Footer with timestamps */}
-          <div className="border-t border-gray-100 bg-gray-50 px-6 py-4">
-            <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="border-t border-gray-100 bg-gray-50 px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex flex-col gap-1 text-[11px] sm:flex-row sm:items-center sm:justify-between sm:text-xs text-gray-500">
               <div className="flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" />
+                <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
                 <span>Created {timeAgo}</span>
-                <span className="text-gray-300">•</span>
-                <span>{createdDate}</span>
+                <span className="text-gray-300 hidden sm:inline">•</span>
+                <span className="hidden sm:inline">{createdDate}</span>
               </div>
               {item.updated_at !== item.created_at && (
                 <span>Last updated: {updatedDate}</span>

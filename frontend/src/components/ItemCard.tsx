@@ -29,25 +29,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Item, Category } from '@/lib/api';
-
-// =============================================================================
-// CATEGORY CONFIG - MINDSTASH BRAND COLORS
-// =============================================================================
-
-const categoryConfig: Record<Category, { icon: typeof BookOpen; label: string; color: string; bgColor: string }> = {
-  read: { icon: BookOpen, label: 'Read', color: 'text-[#5AACA8]', bgColor: 'bg-[#79C9C5]/10 border-[#79C9C5]/30' },
-  watch: { icon: Video, label: 'Watch', color: 'text-[#5AACA8]', bgColor: 'bg-[#79C9C5]/10 border-[#79C9C5]/30' },
-  ideas: { icon: Lightbulb, label: 'Ideas', color: 'text-[#C9A030]', bgColor: 'bg-[#FACE68]/15 border-[#FACE68]/30' },
-  tasks: { icon: CheckSquare, label: 'Tasks', color: 'text-[#D65E3F]', bgColor: 'bg-[#FF8364]/10 border-[#FF8364]/30' },
-  people: { icon: Users, label: 'People', color: 'text-[#C44545]', bgColor: 'bg-[#EA7B7B]/10 border-[#EA7B7B]/30' },
-  notes: { icon: FileText, label: 'Notes', color: 'text-[#5EB563]', bgColor: 'bg-[#93DA97]/10 border-[#93DA97]/30' },
-  goals: { icon: Target, label: 'Goals', color: 'text-[#C9A030]', bgColor: 'bg-[#FACE68]/15 border-[#FACE68]/30' },
-  buy: { icon: ShoppingCart, label: 'Buy', color: 'text-[#C44545]', bgColor: 'bg-[#EA7B7B]/10 border-[#EA7B7B]/30' },
-  places: { icon: MapPin, label: 'Places', color: 'text-[#5AACA8]', bgColor: 'bg-[#79C9C5]/10 border-[#79C9C5]/30' },
-  journal: { icon: BookMarked, label: 'Journal', color: 'text-[#5EB563]', bgColor: 'bg-[#93DA97]/10 border-[#93DA97]/30' },
-  learn: { icon: GraduationCap, label: 'Learn', color: 'text-[#5AACA8]', bgColor: 'bg-[#79C9C5]/10 border-[#79C9C5]/30' },
-  save: { icon: Bookmark, label: 'Saved', color: 'text-[#C44545]', bgColor: 'bg-[#EA7B7B]/10 border-[#EA7B7B]/30' },
-};
+import { categoryConfig } from '@/lib/categoryConfig';
 
 // Intent labels for quick display
 const intentLabels: Record<string, string> = {
@@ -243,7 +225,7 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete,
                   {statusBadge.label}
                 </span>
               )}
-              {!isOptimistic && confidence > 0 && (
+              {!isOptimistic && isExpanded && confidence > 0 && (
                 <span className={`rounded-lg px-2 py-1 font-mono text-[10px] font-semibold tabular-nums ${
                   confidence >= 0.9 ? 'bg-[#93DA97]/15 text-[#5EB563]' :
                   confidence >= 0.7 ? 'bg-[#FACE68]/15 text-[#C9A030]' :
@@ -256,37 +238,14 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete,
           </div>
 
           {/* Content - whitespace-pre-wrap preserves newlines */}
-          <p className={`text-sm leading-relaxed text-gray-700 whitespace-pre-wrap break-words ${isExpanded ? '' : 'line-clamp-3'} ${item.is_completed ? 'line-through opacity-50' : ''}`}>
+          <p className={`text-sm leading-relaxed text-gray-700 whitespace-pre-wrap break-words ${isExpanded ? '' : 'line-clamp-2'} ${item.is_completed ? 'line-through opacity-50' : ''}`}>
             {item.content}
           </p>
 
-          {/* Compact AI Signals - always visible */}
-          {!isOptimistic && (urgency || actionRequired || item.resurface_strategy) && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {urgency && urgencyColors[urgency] && (
-                <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold capitalize ${urgencyColors[urgency]}`}>
-                  <AlertCircle className="h-2.5 w-2.5" />
-                  {urgency}
-                </span>
-              )}
-              {actionRequired && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-[#FACE68]/15 border border-[#FACE68]/30 px-2 py-0.5 text-[10px] font-semibold text-[#C9A030]">
-                  <Zap className="h-2.5 w-2.5" />
-                  Action
-                </span>
-              )}
-              {item.resurface_strategy && resurfaceLabels[item.resurface_strategy] && item.resurface_strategy !== 'manual' && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-[#79C9C5]/10 border border-[#79C9C5]/30 px-2 py-0.5 text-[10px] font-semibold text-[#5AACA8]">
-                  {resurfaceLabels[item.resurface_strategy]}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Tags */}
+          {/* Tags — compact, show 2 */}
           {!isOptimistic && item.tags && item.tags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {item.tags.slice(0, 3).map((tag) => (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {item.tags.slice(0, 2).map((tag) => (
                 <span
                   key={tag}
                   className="inline-flex items-center gap-1 rounded-lg bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-600"
@@ -295,26 +254,11 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete,
                   {tag}
                 </span>
               ))}
-              {item.tags.length > 3 && (
+              {item.tags.length > 2 && (
                 <span className="rounded-lg bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-500">
-                  +{item.tags.length - 3}
+                  +{item.tags.length - 2}
                 </span>
               )}
-            </div>
-          )}
-
-          {/* Collapsed summary hint */}
-          {!isExpanded && !isOptimistic && item.summary && (
-            <p className="mt-4 text-xs text-gray-400 italic line-clamp-1">
-              {item.summary}
-            </p>
-          )}
-
-          {/* Tap for more hint */}
-          {!isExpanded && !isOptimistic && (
-            <div className="mt-4 flex items-center gap-1.5 text-[11px] text-gray-400">
-              <ChevronDown className="h-3 w-3" />
-              <span>Tap for more</span>
             </div>
           )}
 
@@ -339,7 +283,30 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete,
                     </div>
                   )}
 
-                  {/* Intent badge (urgency & action moved to compact row above) */}
+                  {/* AI Signals */}
+                  {(urgency || actionRequired || item.resurface_strategy) && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {urgency && urgencyColors[urgency] && (
+                        <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold capitalize ${urgencyColors[urgency]}`}>
+                          <AlertCircle className="h-2.5 w-2.5" />
+                          {urgency}
+                        </span>
+                      )}
+                      {actionRequired && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-[#FACE68]/15 border border-[#FACE68]/30 px-2 py-0.5 text-[10px] font-semibold text-[#C9A030]">
+                          <Zap className="h-2.5 w-2.5" />
+                          Action
+                        </span>
+                      )}
+                      {item.resurface_strategy && resurfaceLabels[item.resurface_strategy] && item.resurface_strategy !== 'manual' && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-[#79C9C5]/10 border border-[#79C9C5]/30 px-2 py-0.5 text-[10px] font-semibold text-[#5AACA8]">
+                          {resurfaceLabels[item.resurface_strategy]}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Intent badge */}
                   {intent && intentLabels[intent] && (
                     <div className="flex flex-wrap gap-2">
                       <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#EA7B7B]/10 px-3 py-1.5 text-[#C44545]">
