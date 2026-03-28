@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { usePageView } from '@/lib/hooks/useAnalytics';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/lib/hooks/useAuth';
 import Navigation from '@/components/Navigation';
 import LandingAnimations from '@/components/LandingAnimations';
 import ScenarioExplorer from '@/components/ScenarioExplorer';
@@ -124,6 +127,19 @@ const aiCapabilities = [
 
 export default function Home() {
   usePageView('/');
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading || isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Navigation />

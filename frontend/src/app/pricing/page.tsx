@@ -66,7 +66,7 @@ const plans = [
     monthly: PLAN_PRICING.starter.monthly_cents / 100,
     annual: PLAN_PRICING.starter.annual_cents / 100 / 12,
     cta: 'Get Starter',
-    ctaHref: '/register?redirect=/billing',
+    ctaHref: '/register?redirect=/profile?tab=billing',
     ctaStyle:
       'bg-[#EA7B7B] text-white hover:bg-[#D66B6B] shadow-lg shadow-[#EA7B7B]/25 hover:shadow-[#EA7B7B]/40',
     popular: true,
@@ -92,7 +92,7 @@ const plans = [
     monthly: PLAN_PRICING.pro.monthly_cents / 100,
     annual: PLAN_PRICING.pro.annual_cents / 100 / 12,
     cta: 'Go Pro',
-    ctaHref: '/register?redirect=/billing',
+    ctaHref: '/register?redirect=/profile?tab=billing',
     ctaStyle:
       'bg-[#FACE68] text-gray-900 hover:bg-[#EAB845] shadow-lg shadow-[#FACE68]/25 hover:shadow-[#FACE68]/40',
     popular: false,

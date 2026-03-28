@@ -101,6 +101,7 @@ export function SearchBar({
         {/* Input */}
         <input
           ref={inputRef}
+          id="mindstash-search-input"
           type="text"
           value={value}
           onChange={handleChange}

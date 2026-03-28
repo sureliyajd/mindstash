@@ -148,7 +148,7 @@ export function useItems(options: UseItemsOptions = {}) {
         if (typeof window !== 'undefined') {
           const msg = message || 'Monthly item limit reached. Upgrade your plan to capture more.';
           // Show a simple alert — components can override with toast if needed
-          alert(`${msg}\n\nVisit /billing to upgrade.`);
+          alert(`${msg}\n\nVisit /profile?tab=billing to upgrade.`);
         }
       }
     },

@@ -804,8 +804,8 @@ export const billing = {
   getStatus: () => api.get("/api/billing/status").then(r => r.data),
   createCheckout: (variantId: string) => api.post("/api/billing/checkout", {
     variant_id: variantId,
-    success_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/billing?success=true`,
-    cancel_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/billing?canceled=true`,
+    success_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/profile?tab=billing&success=true`,
+    cancel_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/profile?tab=billing&canceled=true`,
   }).then(r => r.data),
   openPortal: () => api.post("/api/billing/portal").then(r => r.data),
   cancelSubscription: () => api.post("/api/billing/cancel").then(r => r.data),

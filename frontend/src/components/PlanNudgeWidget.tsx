@@ -110,7 +110,7 @@ function FreePlanWidget({
             ? "You've hit your monthly limit. Upgrade to keep capturing."
             : `You're ${Math.round(maxPct)}% through your monthly limit.`}
           <Link
-            href="/billing"
+            href="/profile?tab=billing"
             className="ml-auto shrink-0 text-xs font-semibold underline underline-offset-2 hover:opacity-80"
             style={{ color: isAtLimit ? '#C04020' : '#A07800' }}
           >
@@ -177,7 +177,7 @@ function FreePlanWidget({
                       </span>
                     ))}
                     <Link
-                      href="/billing"
+                      href="/profile?tab=billing"
                       className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white transition-all hover:scale-105"
                       style={{ backgroundColor: '#EA7B7B' }}
                     >
@@ -234,7 +234,7 @@ function StarterPlanWidget({
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Starter plan</span>
         </div>
         <Link
-          href="/billing"
+          href="/profile?tab=billing"
           className="text-xs font-medium text-gray-400 hover:text-[#EA7B7B] flex items-center gap-1 transition-colors"
         >
           Manage <ArrowRight className="h-3 w-3" />
@@ -270,7 +270,7 @@ function StarterPlanWidget({
                   <span className="font-medium text-gray-700">Pro unlocks</span> semantic search · unlimited items · daily AI briefing
                 </span>
                 <Link
-                  href="/billing"
+                  href="/profile?tab=billing"
                   className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0 transition-all hover:scale-105"
                   style={{ backgroundColor: '#FACE6820', color: '#A07800' }}
                 >

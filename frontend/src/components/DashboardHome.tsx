@@ -9,15 +9,15 @@ import {
   Clock,
   Lightbulb,
   Target,
-  TrendingUp,
   Zap,
   Calendar,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Item, Category, ItemCounts } from '@/lib/api';
+import { Item, Category } from '@/lib/api';
 import { categoryConfig } from '@/lib/categoryConfig';
 import type { DashboardHomeData } from '@/lib/hooks/useDashboardHome';
 import type { ModuleType } from '@/components/ModuleSelector';
+import { AIInsightBanner } from '@/components/feed/AIInsightBanner';
 
 // =============================================================================
 // TYPES
@@ -30,21 +30,6 @@ interface DashboardHomeProps {
   onModuleChange: (module: ModuleType) => void;
   onViewDetails: (item: Item) => void;
   onToggleComplete: (item: Item, completed: boolean) => void;
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
-function getFormattedDate(): string {
-  return format(new Date(), 'EEEE, MMMM d, yyyy');
 }
 
 // =============================================================================
@@ -164,41 +149,15 @@ function CompactRow({
 }
 
 // =============================================================================
-// STAT CARD
-// =============================================================================
-
-function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: typeof TrendingUp; color: string }) {
-  return (
-    <div className="rounded-xl border border-gray-100 bg-white p-3 sm:p-4 shadow-sm">
-      <div className="mb-1.5 sm:mb-2 flex items-center gap-2">
-        <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}15` }}>
-          <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" style={{ color }} />
-        </div>
-      </div>
-      <p className="text-xl sm:text-2xl font-bold text-gray-900 tabular-nums">{value}</p>
-      <p className="text-[11px] sm:text-xs text-gray-500">{label}</p>
-    </div>
-  );
-}
-
-// =============================================================================
 // SKELETON
 // =============================================================================
 
 export function DashboardHomeSkeleton() {
   return (
     <div className="animate-pulse space-y-6">
-      {/* Greeting skeleton */}
-      <div>
-        <div className="h-8 w-64 rounded-lg bg-gray-200" />
-        <div className="mt-2 h-4 w-40 rounded bg-gray-100" />
-      </div>
-
-      {/* Stats skeleton */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-24 rounded-xl bg-gray-100" />
-        ))}
+      {/* AI Insight banner skeleton */}
+      <div className="rounded-xl bg-gray-100 px-4 py-3">
+        <div className="h-4 w-64 rounded bg-gray-200" />
       </div>
 
       {/* Sections skeleton */}
@@ -247,27 +206,17 @@ export function DashboardHome({
       className="space-y-6"
     >
       {/* ================================================================= */}
-      {/* GREETING BAR */}
+      {/* AI INSIGHT BANNER */}
       {/* ================================================================= */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {getGreeting()}{userName ? `, ${userName}` : ''}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">{getFormattedDate()}</p>
-      </div>
+      <AIInsightBanner
+        urgentCount={urgentItems.length}
+        todayCount={itemCounts?.today ?? 0}
+        pendingTasksCount={digest?.tasks_count ?? 0}
+        completedThisWeek={digest?.completed_this_week ?? 0}
+      />
 
       {/* ================================================================= */}
-      {/* QUICK STATS */}
-      {/* ================================================================= */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-4">
-        <StatCard label="Today" value={itemCounts?.today ?? 0} icon={Zap} color="#D65E3F" />
-        <StatCard label="Pending tasks" value={digest?.tasks_count ?? 0} icon={CheckCircle2} color="#C9A030" />
-        <StatCard label="Saved this week" value={digest?.items_saved_this_week ?? 0} icon={TrendingUp} color="#5AACA8" />
-        <StatCard label="Completed this week" value={digest?.completed_this_week ?? 0} icon={CheckCircle2} color="#5EB563" />
-      </div>
-
-      {/* ================================================================= */}
-      {/* URGENT / NEEDS ATTENTION */}
+      {/* URGENT / NEEDS ATTENTION — promoted to first position */}
       {/* ================================================================= */}
       {urgentItems.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-[#FF8364]/20 bg-[#FF8364]/[0.04] p-4 sm:p-5 shadow-sm">
