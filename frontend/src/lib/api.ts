@@ -338,6 +338,8 @@ export const auth = {
     if (response.data.refresh_token) {
       setRefreshToken(response.data.refresh_token);
     }
+    // Start with a fresh chat session on each login
+    localStorage.removeItem('mindstash_chat_session');
     return response.data;
   },
 
@@ -373,6 +375,8 @@ export const auth = {
     if (response.data.refresh_token) {
       setRefreshToken(response.data.refresh_token);
     }
+    // Start with a fresh chat session on each login
+    localStorage.removeItem('mindstash_chat_session');
     return response.data;
   },
 

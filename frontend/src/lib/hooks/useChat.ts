@@ -16,9 +16,8 @@ import type {
 } from '../types/chat';
 
 const SESSION_KEY = 'mindstash_chat_session';
-const BRIEFING_KEY = 'mindstash_last_briefing';
 
-/** The magic trigger message for daily briefing. Hidden from user in UI. */
+/** The magic trigger message for daily briefing. Used to identify briefing messages in history. */
 export const BRIEFING_TRIGGER = '[BRIEFING]';
 
 export interface PendingConfirmationState {
@@ -421,32 +420,6 @@ export function useChat() {
     [pendingConfirmation, parseSSEStream]
   );
 
-  /**
-   * Send a daily briefing request. Hidden from user bubbles.
-   * Only triggers if not already briefed today (localStorage check).
-   */
-  const sendBriefingRequest = useCallback(async () => {
-    if (typeof window === 'undefined') return;
-    const today = new Date().toDateString();
-    if (localStorage.getItem(BRIEFING_KEY) === today) return;
-
-    localStorage.setItem(BRIEFING_KEY, today);
-    await sendMessage(BRIEFING_TRIGGER, { hidden: true });
-  }, [sendMessage]);
-
-  // Auto-trigger daily briefing after history has loaded
-  const hasSentBriefingRef = useRef(false);
-  useEffect(() => {
-    if (isLoadingHistory || hasSentBriefingRef.current) return;
-    hasSentBriefingRef.current = true;
-
-    // Small delay to let the UI settle before triggering briefing
-    const timer = setTimeout(() => {
-      sendBriefingRequest();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [isLoadingHistory, sendBriefingRequest]);
-
   const startNewSession = useCallback(() => {
     setMessages([]);
     setPendingConfirmation(null);
@@ -495,7 +468,6 @@ export function useChat() {
     pendingConfirmation,
     sendMessage,
     confirmAction,
-    sendBriefingRequest,
     clearChat,
     startNewSession,
     switchSession,

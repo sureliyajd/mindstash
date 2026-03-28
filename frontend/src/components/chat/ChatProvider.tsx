@@ -15,7 +15,6 @@ interface ChatContextValue {
   // Chat actions
   sendMessage: (content: string, opts?: { hidden?: boolean }) => Promise<void>;
   confirmAction: (confirmed: boolean) => Promise<void>;
-  sendBriefingRequest: () => Promise<void>;
   startNewSession: () => void;
   switchSession: (sessionId: string) => Promise<void>;
   deleteSessionById: (sessionId: string) => Promise<void>;
