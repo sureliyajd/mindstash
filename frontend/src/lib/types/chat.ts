@@ -56,6 +56,7 @@ export interface ChatMessage {
   timestamp: Date;
   toolCalls?: ToolCallStatus[];
   isStreaming?: boolean;
+  isPlanLimit?: boolean;
 }
 
 // Chat session from the API

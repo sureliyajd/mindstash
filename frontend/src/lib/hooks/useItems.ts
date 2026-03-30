@@ -140,17 +140,6 @@ export function useItems(options: UseItemsOptions = {}) {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-      // Handle plan limit errors (402)
-      const axiosErr = err as AxiosError<{ detail?: string | { detail?: string; upgrade_url?: string } }>;
-      if (axiosErr?.response?.status === 402) {
-        const detail = axiosErr.response.data?.detail;
-        const message = typeof detail === 'object' ? detail?.detail : detail;
-        if (typeof window !== 'undefined') {
-          const msg = message || 'Monthly item limit reached. Upgrade your plan to capture more.';
-          // Show a simple alert — components can override with toast if needed
-          alert(`${msg}\n\nVisit /profile?tab=billing to upgrade.`);
-        }
-      }
     },
     onSuccess: (newItem) => {
       // Replace optimistic item with real one

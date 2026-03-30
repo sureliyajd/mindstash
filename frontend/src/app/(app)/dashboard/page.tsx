@@ -21,6 +21,7 @@ import { ViewToggle } from '@/components/ViewToggle';
 import { useItems, useItemCounts, useMarkSurfaced } from '@/lib/hooks/useItems';
 import { useDashboardHome, DASHBOARD_HOME_QUERY_KEY } from '@/lib/hooks/useDashboardHome';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useBillingStatus } from '@/lib/hooks/useBilling';
 import { useQueryClient } from '@tanstack/react-query';
 import { Item, Category, ItemUpdate } from '@/lib/api';
 
@@ -152,6 +153,11 @@ function DashboardContent() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const { data: billingStatus } = useBillingStatus();
+  const itemLimitReached = billingStatus?.usage
+    ? billingStatus.usage.items_limit !== null &&
+      billingStatus.usage.items_this_month >= billingStatus.usage.items_limit
+    : false;
 
   // ==========================================================================
   // FILTER STATE
@@ -335,9 +341,21 @@ function DashboardContent() {
       setPage(1);
       // Refresh dashboard home data if visible
       queryClient.invalidateQueries({ queryKey: DASHBOARD_HOME_QUERY_KEY });
-    } catch {
-      showToast('Failed to save your thought. Please try again.', 'error');
-      throw new Error('Failed to create item');
+    } catch (err) {
+      // Surface plan limit errors with upgrade action
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string | { detail?: string } } } };
+      if (axiosErr?.response?.status === 402) {
+        const detail = axiosErr.response.data?.detail;
+        const message = typeof detail === 'object' ? detail?.detail : detail;
+        showToast(
+          message || 'Monthly capture limit reached. Upgrade to save more.',
+          'error',
+          { label: 'Upgrade', onClick: () => { window.location.href = '/profile?tab=billing'; } }
+        );
+      } else {
+        showToast('Failed to save your thought. Please try again.', 'error');
+      }
+      throw err;
     }
   };
 
@@ -432,7 +450,7 @@ function DashboardContent() {
       {/* Controls section */}
       <div className="space-y-5 pb-8">
         {/* Capture Input */}
-        <CaptureInput onSubmit={handleCreate} isSubmitting={isCreating} />
+        <CaptureInput onSubmit={handleCreate} isSubmitting={isCreating} limitReached={itemLimitReached} />
 
         {/* Search + View toggle + Filter button row */}
         <div className="flex items-center gap-3">

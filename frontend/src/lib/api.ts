@@ -593,6 +593,21 @@ export const chat = {
       body: JSON.stringify({ message, session_id: sessionId }),
     });
     if (!response.ok) {
+      // Parse 402 plan limit errors to surface meaningful messages
+      if (response.status === 402) {
+        try {
+          const body = await response.json();
+          const detail = body?.detail;
+          const message = typeof detail === 'object' ? detail?.detail : detail;
+          const err = new Error(message || 'Monthly chat limit reached. Upgrade your plan to chat more.');
+          (err as any).status = 402;
+          (err as any).upgradeUrl = typeof detail === 'object' ? detail?.upgrade_url : '/billing';
+          throw err;
+        } catch (e) {
+          if (e instanceof Error && (e as any).status === 402) throw e;
+          throw new Error('Monthly chat limit reached. Upgrade your plan to chat more.');
+        }
+      }
       throw new Error(`Chat request failed: ${response.status}`);
     }
     return response;

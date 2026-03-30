@@ -353,16 +353,23 @@ export function useChat() {
         const response = await chat.sendMessage(content.trim(), sessionIdRef.current);
         await parseSSEStream(response);
       } catch (err) {
+        const is402 = err instanceof Error && (err as any).status === 402;
         const errorMsg: ChatMessage = {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content:
-            err instanceof Error
+          content: is402
+            ? err.message
+            : err instanceof Error
               ? err.message
               : 'Something went wrong. Please try again.',
           timestamp: new Date(),
+          isPlanLimit: is402 || undefined,
         };
         setMessages((prev) => [...prev, errorMsg]);
+        // Refresh billing data so UI reflects the limit
+        if (is402) {
+          queryClient.invalidateQueries({ queryKey: ['billing', 'status'] });
+        }
       } finally {
         setIsStreaming(false);
       }

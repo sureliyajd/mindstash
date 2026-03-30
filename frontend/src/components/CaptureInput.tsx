@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle, Send, Sparkles, Brain, Mic, X, Check } from 'lucide-react';
+import { Loader2, CheckCircle, Send, Sparkles, Brain, Mic, X, Check, Lock, Zap } from 'lucide-react';
 
 const MAX_CHARS = 500;
 
@@ -12,6 +12,7 @@ type SpeechRecognitionInstance = any;
 interface CaptureInputProps {
   onSubmit: (content: string, url?: string) => Promise<void>;
   isSubmitting?: boolean;
+  limitReached?: boolean;
 }
 
 // Detect platform for keyboard shortcut display
@@ -39,7 +40,7 @@ const barColors = (i: number, total: number) => {
   return `rgb(${r},${g},${b})`;
 };
 
-export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputProps) {
+export function CaptureInput({ onSubmit, isSubmitting = false, limitReached = false }: CaptureInputProps) {
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -230,11 +231,15 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
       submitTimeoutRef.current = setTimeout(() => {
         setShowSuccess(false);
       }, 2000);
-    } catch {
-      setError('Failed to save. Please try again.');
+    } catch (err) {
+      // Show plan limit message if available, otherwise generic error
+      const msg = err instanceof Error && err.message.includes('limit')
+        ? err.message
+        : 'Failed to save. Please try again.';
+      setError(msg);
       submitTimeoutRef.current = setTimeout(() => {
         setError(null);
-      }, 3000);
+      }, 5000);
     }
   }, [content, isOverLimit, isSubmitting, onSubmit]);
 
@@ -270,21 +275,38 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
         }`}
       >
         {/* Textarea */}
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => {
-            setContent(e.target.value);
-            setError(null);
-          }}
-          onFocus={() => setIsFocused(true)}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          placeholder="Drop anything here - a thought, link, reminder, idea..."
-          disabled={isSubmitting}
-          className="w-full resize-none border-0 bg-transparent px-4 py-4 text-base text-gray-800 placeholder-gray-400 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:!outline-none focus-visible:!ring-0 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5"
-          style={{ minHeight: '80px', maxHeight: '300px', overflowY: 'auto' }}
-        />
+        {limitReached ? (
+          <div className="flex items-center gap-3 px-4 py-5 sm:px-5">
+            <Lock className="h-5 w-5 shrink-0 text-amber-500" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-700">Monthly capture limit reached</p>
+              <p className="text-xs text-gray-400">Upgrade your plan to keep saving thoughts.</p>
+            </div>
+            <a
+              href="/profile?tab=billing"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-600"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Upgrade
+            </a>
+          </div>
+        ) : (
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              setError(null);
+            }}
+            onFocus={() => setIsFocused(true)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            placeholder="Drop anything here - a thought, link, reminder, idea..."
+            disabled={isSubmitting}
+            className="w-full resize-none border-0 bg-transparent px-4 py-4 text-base text-gray-800 placeholder-gray-400 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:!outline-none focus-visible:!ring-0 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5"
+            style={{ minHeight: '80px', maxHeight: '300px', overflowY: 'auto' }}
+          />
+        )}
 
         {/* AI Processing Indicator */}
         <AnimatePresence>
@@ -430,7 +452,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
         </AnimatePresence>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
+        {!limitReached && <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
           {/* Left side: mic button + hint/error */}
           <div className="flex items-center gap-2">
             {/* Mic button */}
@@ -520,7 +542,7 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
               <span className="hidden sm:inline">Save</span>
             </motion.button>
           </div>
-        </div>
+        </div>}
       </motion.div>
     </motion.div>
   );

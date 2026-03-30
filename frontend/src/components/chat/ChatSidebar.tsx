@@ -23,10 +23,13 @@ import {
   History,
   Plus,
   MessageCircle,
+  Lock,
+  Zap,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { BRIEFING_TRIGGER } from '@/lib/hooks/useChat';
 import { chat as chatApi } from '@/lib/api';
+import { useBillingStatus } from '@/lib/hooks/useBilling';
 import type { ChatMessage, ToolCallStatus } from '@/lib/types/chat';
 import { useChatContext } from './ChatProvider';
 
@@ -148,7 +151,29 @@ function MarkdownContent({ content }: { content: string }) {
 // CHAT BUBBLE
 // =============================================================================
 
+function PlanLimitBubble({ message }: { message: ChatMessage }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
+      <div className="max-w-[85%] rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="mb-2 flex items-center gap-2">
+          <Lock className="h-4 w-4 text-amber-600" />
+          <span className="text-xs font-semibold text-amber-700">Chat Limit Reached</span>
+        </div>
+        <p className="mb-3 text-sm leading-relaxed text-amber-800">{message.content}</p>
+        <a
+          href="/profile?tab=billing"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700"
+        >
+          <Zap className="h-3 w-3" />
+          Upgrade Plan
+        </a>
+      </div>
+    </motion.div>
+  );
+}
+
 function ChatBubble({ message, isBriefing, onConfirm, onDeny }: { message: ChatMessage; isBriefing?: boolean; onConfirm?: () => void; onDeny?: () => void }) {
+  if (message.isPlanLimit) return <PlanLimitBubble message={message} />;
   const isUser = message.role === 'user';
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -249,16 +274,16 @@ function WelcomeState({ onSuggest }: { onSuggest: (text: string) => void }) {
 // CHAT INPUT
 // =============================================================================
 
-function ChatInputArea({ onSend, disabled, pendingConfirmation }: { onSend: (message: string) => void; disabled: boolean; pendingConfirmation: boolean }) {
+function ChatInputArea({ onSend, disabled, pendingConfirmation, chatLimitReached }: { onSend: (message: string) => void; disabled: boolean; pendingConfirmation: boolean; chatLimitReached?: boolean }) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSend = useCallback(() => {
-    if (!value.trim() || disabled || pendingConfirmation) return;
+    if (!value.trim() || disabled || pendingConfirmation || chatLimitReached) return;
     onSend(value.trim());
     setValue('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
-  }, [value, disabled, pendingConfirmation, onSend]);
+  }, [value, disabled, pendingConfirmation, chatLimitReached, onSend]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
@@ -270,6 +295,21 @@ function ChatInputArea({ onSend, disabled, pendingConfirmation }: { onSend: (mes
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [value]);
+
+  if (chatLimitReached) {
+    return (
+      <div className="border-t border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="flex items-center gap-2 text-amber-700">
+          <Lock className="h-4 w-4 shrink-0" />
+          <p className="flex-1 text-xs">Monthly chat limit reached.</p>
+          <a href="/profile?tab=billing" className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-700">
+            <Zap className="h-3 w-3" />
+            Upgrade
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-end gap-2 border-t border-gray-100 bg-white px-4 py-3">
@@ -370,6 +410,12 @@ export function ChatSidebar({ onClose }: { onClose?: () => void } = {}) {
     sessionId,
   } = useChatContext();
 
+  const { data: billingStatus } = useBillingStatus();
+  const chatLimitReached = billingStatus?.usage
+    ? billingStatus.usage.chat_messages_limit !== null &&
+      billingStatus.usage.chat_messages_this_month >= billingStatus.usage.chat_messages_limit
+    : false;
+
   const [view, setView] = useState<'chat' | 'sessions'>('chat');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -452,7 +498,7 @@ export function ChatSidebar({ onClose }: { onClose?: () => void } = {}) {
               </div>
             )}
           </div>
-          <ChatInputArea onSend={sendMessage} disabled={isStreaming} pendingConfirmation={!!pendingConfirmation} />
+          <ChatInputArea onSend={sendMessage} disabled={isStreaming} pendingConfirmation={!!pendingConfirmation} chatLimitReached={chatLimitReached} />
         </>
       )}
     </div>
