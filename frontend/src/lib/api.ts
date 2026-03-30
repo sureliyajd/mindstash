@@ -29,6 +29,7 @@ export interface User {
   created_at: string;
   is_admin: boolean;
   is_suspended: boolean;
+  auth_method: 'google' | 'email';
 }
 
 export interface AdminUser {
@@ -471,6 +472,14 @@ export const items = {
     const response = await api.post<Item>(`/api/items/${itemId}/complete?completed=${completed}`);
     return response.data;
   },
+
+  bulkMarkComplete: async (itemIds: string[], completed: boolean = true): Promise<{ updated: number }> => {
+    const response = await api.post<{ updated: number }>('/api/items/bulk-complete', {
+      item_ids: itemIds,
+      completed,
+    });
+    return response.data;
+  },
 };
 
 // Item counts per module
@@ -480,6 +489,8 @@ export interface ItemCounts {
   tasks: number;
   read_later: number;
   ideas: number;
+  journal: number;
+  people: number;
   insights: number;
   archived: number;
   reminders: number;

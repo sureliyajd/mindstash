@@ -94,14 +94,14 @@ export function AccountTab() {
         </h2>
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100 space-y-5">
           {/* Identity row */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-gray-900">{user?.email}</p>
               <p className="mt-0.5 text-xs text-gray-400">Signed in</p>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+              className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
             >
               <LogOut className="h-4 w-4" />
               Sign out
@@ -135,8 +135,8 @@ export function AccountTab() {
             </div>
           </div>
 
-          {/* Change password */}
-          <div className="border-t border-gray-100 pt-4 space-y-2">
+          {/* Change password — hidden for Google-only accounts */}
+          {user?.auth_method !== 'google' && <div className="border-t border-gray-100 pt-4 space-y-2">
             <label className="text-xs font-medium text-gray-500">Change password</label>
             <div className="relative">
               <input
@@ -182,7 +182,7 @@ export function AccountTab() {
               ) : null}
               Update password
             </button>
-          </div>
+          </div>}
         </div>
       </motion.section>
 
@@ -255,7 +255,7 @@ export function AccountTab() {
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500">Legal</span>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <a
                 href="/privacy"
                 target="_blank"

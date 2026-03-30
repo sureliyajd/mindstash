@@ -24,6 +24,8 @@ const chips: { id: ModuleType; label: string }[] = [
   { id: 'tasks', label: 'Tasks' },
   { id: 'read_later', label: 'Read Later' },
   { id: 'ideas', label: 'Ideas' },
+  { id: 'journal', label: 'Journal' },
+  { id: 'people', label: 'People' },
   { id: 'insights', label: 'Insights' },
   { id: 'reminders', label: 'Reminders' },
 ];
@@ -73,7 +75,7 @@ export function FilterChips({ selectedModule, onModuleChange, itemCounts }: Filt
               ${
                 isSelected
                   ? 'bg-[#EA7B7B]/15 text-[#C44545]'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-150 hover:text-gray-700'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
               }
             `}
           >

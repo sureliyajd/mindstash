@@ -14,6 +14,8 @@ export type ModuleType =
   | 'read_later'
   | 'ideas'
   | 'insights'
+  | 'people'
+  | 'journal'
   | 'reminders';
 
 export interface ModuleConfig {
@@ -37,6 +39,8 @@ const modules: ModuleConfig[] = [
   { id: 'tasks', label: 'Tasks' },
   { id: 'read_later', label: 'Read Later' },
   { id: 'ideas', label: 'Ideas' },
+  { id: 'journal', label: 'Journal' },
+  { id: 'people', label: 'People' },
   { id: 'insights', label: 'Insights' },
   { id: 'reminders', label: 'Reminders' },
 ];

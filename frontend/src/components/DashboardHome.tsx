@@ -239,7 +239,7 @@ export function DashboardHome({
                 <div
                   key={urgentItem.id}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/60 cursor-pointer min-w-0"
-                  onClick={() => onViewDetails({ id: urgentItem.id } as Item)}
+                  onClick={() => onViewDetails(urgentItem as unknown as Item)}
                 >
                   <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${info.bgColor.split(' ')[0]}`}>
                     <UrgentIcon className={`h-3 w-3 ${info.color}`} />
@@ -307,7 +307,7 @@ export function DashboardHome({
                   <div
                     key={task.id}
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-50 cursor-pointer min-w-0"
-                    onClick={() => onViewDetails({ id: task.id } as Item)}
+                    onClick={() => onViewDetails(task as unknown as Item)}
                   >
                     <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${info.bgColor.split(' ')[0]}`}>
                       <TaskIcon className={`h-3 w-3 ${info.color}`} />
@@ -375,7 +375,7 @@ export function DashboardHome({
               count={activeGoals.length}
               color="#C9A030"
               actionLabel="View all"
-              onAction={() => onModuleChange('ideas')}
+              onAction={() => onModuleChange('tasks')}
             />
             <div className="-mx-1">
               {activeGoals.filter((g) => !g.is_completed).map((item) => (

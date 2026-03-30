@@ -25,6 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func, cast, String
 from sqlalchemy.dialects.postgresql import ARRAY
+from pydantic import BaseModel
 from typing import Optional, Literal, List
 from uuid import UUID
 from datetime import datetime, timedelta
@@ -370,6 +371,58 @@ def mark_item_complete(
     return item
 
 
+class BulkCompleteRequest(BaseModel):
+    item_ids: List[str]
+    completed: bool = True
+
+
+@router.post("/bulk-complete")
+@user_limiter.limit("50/hour")
+def bulk_mark_complete(
+    request: Request,
+    body: BulkCompleteRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Bulk mark multiple items as complete or incomplete."""
+    request.state.user = current_user
+
+    if len(body.item_ids) > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot update more than 50 items at once"
+        )
+
+    items = db.query(Item).filter(
+        Item.id.in_(body.item_ids),
+        Item.user_id == current_user.id
+    ).all()
+
+    now = datetime.utcnow()
+    for item in items:
+        item.is_completed = body.completed
+        if body.completed:
+            item.completed_at = now
+            if item.notification_frequency in ["weekly", "monthly", "daily"]:
+                item.notification_enabled = False
+                item.next_notification_at = None
+        else:
+            item.completed_at = None
+            if item.notification_date:
+                item.notification_enabled = True
+                if item.notification_date > now:
+                    item.next_notification_at = item.notification_date
+
+    db.commit()
+
+    log_activity(db, current_user.id,
+                 "bulk_complete" if body.completed else "bulk_uncomplete",
+                 source="web", resource_type="item",
+                 details={"count": len(items)})
+
+    return {"updated": len(items)}
+
+
 @router.get("/", response_model=ItemListResponse)
 @user_limiter.limit("200/hour")
 def list_items(
@@ -465,7 +518,7 @@ def list_items(
     # 1. Apply Module Filter (combines category + AI intent for intuitive filtering)
     # ==========================================================================
     if module and module.lower() != "all":
-        valid_modules = ["all", "today", "tasks", "read_later", "ideas", "insights", "archived", "reminders"]
+        valid_modules = ["all", "today", "tasks", "read_later", "ideas", "insights", "people", "journal", "archived", "reminders"]
 
         if module not in valid_modules:
             raise HTTPException(
@@ -501,6 +554,19 @@ def list_items(
                 or_(
                     Item.category == "ideas",
                     Item.intent == "idea"
+                )
+            )
+
+        elif module == "people":
+            # Category is people
+            query = query.filter(Item.category == "people")
+
+        elif module == "journal":
+            # Category is journal OR intent is reflection
+            query = query.filter(
+                or_(
+                    Item.category == "journal",
+                    Item.intent == "reflection"
                 )
             )
 
@@ -669,6 +735,17 @@ def get_item_counts(
         )
     ).count()
 
+    # Count "people" items: category=people
+    people_count = base_query.filter(Item.category == "people").count()
+
+    # Count "journal" items: category=journal OR intent=reflection
+    journal_count = base_query.filter(
+        or_(
+            Item.category == "journal",
+            Item.intent == "reflection"
+        )
+    ).count()
+
     # Archived count (placeholder - always 0 for now)
     archived_count = 0
 
@@ -684,6 +761,8 @@ def get_item_counts(
         "tasks": tasks_count,
         "read_later": read_later_count,
         "ideas": ideas_count,
+        "journal": journal_count,
+        "people": people_count,
         "insights": insights_count,
         "archived": archived_count,
         "reminders": reminders_count,

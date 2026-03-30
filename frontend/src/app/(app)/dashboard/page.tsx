@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Search as SearchIcon, Loader2 } from 'lucide-react';
+import { RefreshCw, Search as SearchIcon, Loader2, CheckSquare, X, CheckCircle2 } from 'lucide-react';
 import { CaptureInput } from '@/components/CaptureInput';
 import { ItemCard } from '@/components/ItemCard';
 import { ItemListRow } from '@/components/ItemListRow';
@@ -18,12 +18,12 @@ import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { EmptyState } from '@/components/EmptyState';
 import { DashboardHome } from '@/components/DashboardHome';
 import { ViewToggle } from '@/components/ViewToggle';
-import { useItems, useItemCounts, useMarkSurfaced } from '@/lib/hooks/useItems';
+import { useItems, useItemCounts, useMarkSurfaced, useBulkComplete } from '@/lib/hooks/useItems';
 import { useDashboardHome, DASHBOARD_HOME_QUERY_KEY } from '@/lib/hooks/useDashboardHome';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useBillingStatus } from '@/lib/hooks/useBilling';
 import { useQueryClient } from '@tanstack/react-query';
-import { Item, Category, ItemUpdate } from '@/lib/api';
+import { Item, Category, ItemUpdate, items as itemsApi } from '@/lib/api';
 
 // =============================================================================
 // SEARCH EMPTY STATE (for when search has no results)
@@ -95,9 +95,12 @@ interface CardGridProps {
   onDelete: (item: Item) => void;
   onToggleComplete: (item: Item, completed: boolean) => void;
   isFetching?: boolean;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-function CardGrid({ items, currentModule, onViewDetails, onEdit, onDelete, onToggleComplete, isFetching }: CardGridProps) {
+function CardGrid({ items, currentModule, onViewDetails, onEdit, onDelete, onToggleComplete, isFetching, selectionMode, selectedIds, onToggleSelect }: CardGridProps) {
   return (
     <div className="relative">
       {/* Subtle loading overlay when fetching */}
@@ -129,14 +132,28 @@ function CardGrid({ items, currentModule, onViewDetails, onEdit, onDelete, onTog
               transition={{ delay: index * 0.02, duration: 0.3 }}
               className="mb-5 break-inside-avoid"
             >
-              <ItemCard
-                item={item}
-                currentModule={currentModule}
-                onViewDetails={() => onViewDetails(item)}
-                onEdit={() => onEdit(item)}
-                onDelete={() => onDelete(item)}
-                onToggleComplete={(completed) => onToggleComplete(item, completed)}
-              />
+              <div className="relative">
+                {selectionMode && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onToggleSelect?.(item.id); }}
+                    className={`absolute -left-1 -top-1 z-20 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+                      selectedIds?.has(item.id)
+                        ? 'border-[#5EB563] bg-[#5EB563] text-white'
+                        : 'border-gray-300 bg-white hover:border-[#EA7B7B]'
+                    }`}
+                  >
+                    {selectedIds?.has(item.id) && <CheckCircle2 className="h-3.5 w-3.5" />}
+                  </button>
+                )}
+                <ItemCard
+                  item={item}
+                  currentModule={currentModule}
+                  onViewDetails={() => selectionMode ? onToggleSelect?.(item.id) : onViewDetails(item)}
+                  onEdit={() => onEdit(item)}
+                  onDelete={() => onDelete(item)}
+                  onToggleComplete={(completed) => onToggleComplete(item, completed)}
+                />
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -288,12 +305,57 @@ function DashboardContent() {
   const [deleteItem, setDeleteItem] = useState<Item | null>(null);
 
   // ==========================================================================
+  // MULTI-SELECT STATE
+  // ==========================================================================
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { bulkComplete, isBulkCompleting } = useBulkComplete();
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // handleSelectAll is defined after filteredItems below
+
+  const handleBulkComplete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      await bulkComplete({ itemIds: Array.from(selectedIds), completed: true });
+      const now = new Date().toISOString();
+      setAllItems((prev) =>
+        prev.map((i) => selectedIds.has(i.id) ? { ...i, is_completed: true, completed_at: now } : i)
+      );
+      showToast(`${selectedIds.size} items marked as done!`, 'success');
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_HOME_QUERY_KEY });
+    } catch {
+      showToast('Failed to update items', 'error');
+    }
+  }, [selectedIds, bulkComplete, showToast, queryClient]);
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  // ==========================================================================
   // FILTER ITEMS BY CATEGORY (client-side on accumulated list)
   // ==========================================================================
   const filteredItems = useMemo(() => {
     if (!selectedCategory) return allItems;
     return allItems.filter((item) => item.category === selectedCategory);
   }, [allItems, selectedCategory]);
+
+  const handleSelectAll = useCallback(() => {
+    const incompleteIds = filteredItems.filter((i) => !i.is_completed).map((i) => i.id);
+    setSelectedIds(new Set(incompleteIds));
+  }, [filteredItems]);
 
   // ==========================================================================
   // EXTRACT AVAILABLE TAGS FROM ALL ACCUMULATED ITEMS
@@ -360,9 +422,19 @@ function DashboardContent() {
   };
 
   // Handle view details (opens detail modal)
-  const handleViewDetails = useCallback((item: Item) => {
+  // If item is partial (from digest), fetch full item first
+  const handleViewDetails = useCallback(async (item: Item) => {
+    if (!item.created_at) {
+      try {
+        const fullItem = await itemsApi.getItem(item.id);
+        setDetailItem(fullItem);
+      } catch {
+        showToast('Failed to load item details', 'error');
+      }
+      return;
+    }
     setDetailItem(item);
-  }, []);
+  }, [showToast]);
 
   // Handle edit (opens edit modal)
   const handleEdit = useCallback((item: Item) => {
@@ -462,7 +534,20 @@ function DashboardContent() {
             />
           </div>
           {!isHomeView && (
-            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+            <>
+              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+              <button
+                onClick={() => selectionMode ? exitSelectionMode() : setSelectionMode(true)}
+                className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors ${
+                  selectionMode
+                    ? 'bg-[#EA7B7B]/15 text-[#C44545]'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-150 hover:text-gray-700'
+                }`}
+              >
+                <CheckSquare className="h-3.5 w-3.5" />
+                {selectionMode ? 'Cancel' : 'Select'}
+              </button>
+            </>
           )}
           <FilterButton
             activeCount={
@@ -519,6 +604,9 @@ function DashboardContent() {
                   onDelete={handleDeleteClick}
                   onToggleComplete={handleMarkComplete}
                   isFetching={isFetching && allItems.length === 0}
+                  selectionMode={selectionMode}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
                 />
               ) : (
                 <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
@@ -530,15 +618,30 @@ function DashboardContent() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
+                        className="relative"
                       >
-                        <ItemListRow
-                          item={item}
-                          currentModule={selectedModule}
-                          onViewDetails={() => handleViewDetails(item)}
-                          onEdit={() => handleEdit(item)}
-                          onDelete={() => handleDeleteClick(item)}
-                          onToggleComplete={(completed) => handleMarkComplete(item, completed)}
-                        />
+                        {selectionMode && (
+                          <button
+                            onClick={() => toggleSelect(item.id)}
+                            className={`absolute left-3 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-md border-2 transition-colors ${
+                              selectedIds.has(item.id)
+                                ? 'border-[#5EB563] bg-[#5EB563] text-white'
+                                : 'border-gray-300 bg-white hover:border-[#EA7B7B]'
+                            }`}
+                          >
+                            {selectedIds.has(item.id) && <CheckCircle2 className="h-3 w-3" />}
+                          </button>
+                        )}
+                        <div className={selectionMode ? 'pl-10' : ''}>
+                          <ItemListRow
+                            item={item}
+                            currentModule={selectedModule}
+                            onViewDetails={() => selectionMode ? toggleSelect(item.id) : handleViewDetails(item)}
+                            onEdit={() => handleEdit(item)}
+                            onDelete={() => handleDeleteClick(item)}
+                            onToggleComplete={(completed) => handleMarkComplete(item, completed)}
+                          />
+                        </div>
                       </motion.div>
                     ))}
                   </AnimatePresence>
@@ -582,6 +685,47 @@ function DashboardContent() {
             <EmptyState module={selectedModule} isFirstTime={isFirstTimeUser} />
           )}
         </div>
+
+      {/* Bulk Selection Action Bar */}
+      <AnimatePresence>
+        {selectionMode && selectedIds.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 sm:gap-3 rounded-2xl border border-gray-200 bg-white px-3 sm:px-5 py-3 shadow-2xl max-w-[calc(100vw-2rem)]"
+          >
+            <span className="text-sm font-medium text-gray-700">
+              {selectedIds.size} selected
+            </span>
+            <button
+              onClick={handleSelectAll}
+              className="text-xs font-medium text-[#EA7B7B] hover:text-[#C44545] transition-colors"
+            >
+              Select all
+            </button>
+            <div className="h-5 w-px bg-gray-200" />
+            <button
+              onClick={handleBulkComplete}
+              disabled={isBulkCompleting}
+              className="flex items-center gap-1.5 rounded-xl bg-[#5EB563] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4da352] disabled:opacity-60"
+            >
+              {isBulkCompleting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              )}
+              Mark Done
+            </button>
+            <button
+              onClick={exitSelectionMode}
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Detail Modal */}
       {detailItem && (

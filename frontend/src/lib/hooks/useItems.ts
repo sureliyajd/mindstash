@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { items, Item, ItemListResponse, ItemUpdate, GetItemsParams, ItemCounts } from '../api';
-import type { AxiosError } from 'axios';
 
 const ITEMS_QUERY_KEY = ['items'];
 const ITEM_COUNTS_QUERY_KEY = ['item-counts'];
@@ -309,6 +308,25 @@ export function useItemCounts() {
     isLoading,
     isError,
     refetch,
+  };
+}
+
+// Hook to bulk mark items as complete/incomplete
+export function useBulkComplete() {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: ({ itemIds, completed }: { itemIds: string[]; completed: boolean }) =>
+      items.bulkMarkComplete(itemIds, completed),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ITEM_COUNTS_QUERY_KEY });
+    },
+  });
+
+  return {
+    bulkComplete: mutation.mutateAsync,
+    isBulkCompleting: mutation.isPending,
   };
 }
 

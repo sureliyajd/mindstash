@@ -27,7 +27,7 @@ import {
   Zap,
   CheckCircle2,
 } from 'lucide-react';
-import { formatDistanceToNow, isValid } from 'date-fns';
+import { formatDistanceToNow, format, isValid } from 'date-fns';
 import { Item, Category } from '@/lib/api';
 import { categoryConfig } from '@/lib/categoryConfig';
 
@@ -105,10 +105,170 @@ interface ItemCardProps {
   onToggleComplete?: (completed: boolean) => void;
 }
 
+// =============================================================================
+// JOURNAL CARD — diary-style layout for journal entries
+// =============================================================================
+
+function JournalCard({ item, onViewDetails, onEdit, onDelete }: Omit<ItemCardProps, 'onToggleComplete' | 'currentModule'>) {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const isOptimistic = item.id.startsWith('temp-');
+
+  const createdDate = new Date(item.created_at);
+  const dayNum = isValid(createdDate) ? format(createdDate, 'd') : '';
+  const monthYear = isValid(createdDate) ? format(createdDate, 'MMM yyyy') : '';
+  const weekday = isValid(createdDate) ? format(createdDate, 'EEEE') : '';
+  const time = isValid(createdDate) ? format(createdDate, 'h:mm a') : '';
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMenu]);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: isOptimistic ? 0.6 : 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      whileHover={isOptimistic ? undefined : { y: -2 }}
+      transition={{ duration: 0.2 }}
+      className={`group relative ${showMenu ? 'z-50' : ''}`}
+    >
+      <motion.div
+        layout
+        className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br from-amber-50/80 via-white to-orange-50/40 shadow-sm transition-all duration-200 ${
+          isOptimistic
+            ? 'cursor-wait border-amber-100'
+            : 'cursor-pointer border-amber-200/60 hover:border-amber-300/80 hover:shadow-lg'
+        }`}
+        onClick={(e) => {
+          if (isOptimistic) return;
+          const target = e.target as HTMLElement;
+          if (target.closest('button')) return;
+          onViewDetails?.();
+        }}
+      >
+        {/* Decorative left date strip */}
+        <div className="flex">
+          <div className="flex w-16 shrink-0 flex-col items-center justify-center border-r border-amber-200/40 bg-amber-100/30 py-4">
+            <span className="text-2xl font-bold text-amber-800/80">{dayNum}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600/70">{monthYear}</span>
+          </div>
+
+          <div className="flex-1 p-4">
+            {/* Header with day & time */}
+            <div className="mb-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-amber-700/60">{weekday}</span>
+                <span className="text-[10px] text-amber-500/50">•</span>
+                <span className="text-xs text-amber-600/50">{time}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <BookMarked className="h-3.5 w-3.5 text-amber-500/60" />
+                {!isOptimistic && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(!showMenu);
+                    }}
+                    className="rounded-lg p-1 text-amber-400 opacity-0 transition-all hover:bg-amber-100 hover:text-amber-600 group-hover:opacity-100"
+                  >
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Journal content — slightly larger, serif-like feel via italic */}
+            <p className="text-[15px] italic leading-relaxed text-gray-700 whitespace-pre-wrap break-words">
+              {item.content}
+            </p>
+
+            {/* Tags */}
+            {item.tags && item.tags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {item.tags.slice(0, 3).map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-amber-100/60 px-2 py-0.5 text-[10px] font-medium text-amber-700/70"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Subtle ruled-line decoration at bottom */}
+        <div className="mx-4 mb-0 border-t border-dashed border-amber-200/40" />
+      </motion.div>
+
+      {/* Context Menu — reused pattern */}
+      <AnimatePresence>
+        {showMenu && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+            <motion.div
+              ref={menuRef}
+              initial={{ opacity: 0, scale: 0.95, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -8 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-xl border border-gray-100 bg-white p-1.5 shadow-xl"
+            >
+              {onViewDetails && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMenu(false); onViewDetails(); }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                  View details
+                </button>
+              )}
+              {onEdit && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(); }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(); }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </button>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete, onToggleComplete }: ItemCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Render journal-style card for journal items (after hooks to avoid Rules of Hooks violation)
+  if (item.category === 'journal') {
+    return <JournalCard item={item} onViewDetails={onViewDetails} onEdit={onEdit} onDelete={onDelete} />;
+  }
 
   const category = (item.category as Category) || 'save';
   const categoryInfo = categoryConfig[category] || categoryConfig.save;
