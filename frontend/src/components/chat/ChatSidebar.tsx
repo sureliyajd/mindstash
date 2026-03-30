@@ -286,9 +286,10 @@ function ChatInputArea({ onSend, disabled, pendingConfirmation }: { onSend: (mes
 // =============================================================================
 
 function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
   const now = Date.now();
-  const date = new Date(dateStr).getTime();
-  const diffMs = now - date;
+  const diffMs = now - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);
   const diffHr = Math.floor(diffMs / 3600000);
   const diffDay = Math.floor(diffMs / 86400000);

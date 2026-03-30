@@ -36,7 +36,7 @@ import {
   Check,
   Repeat,
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow, format, isValid } from 'date-fns';
 import { Item, Category, NotificationFrequency } from '@/lib/api';
 
 // =============================================================================
@@ -172,18 +172,20 @@ export function ItemDetailModal({
   const isCompleted = item.is_completed;
   const completedAt = item.completed_at;
 
-  // Format timestamps
-  const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
-  const createdDate = format(new Date(item.created_at), 'MMMM d, yyyy \'at\' h:mm a');
-  const updatedDate = format(new Date(item.updated_at), 'MMMM d, yyyy \'at\' h:mm a');
+  // Format timestamps (guard against invalid dates)
+  const safeFormat = (dateStr: string | null | undefined, fmt: string) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return isValid(d) ? format(d, fmt) : null;
+  };
+  const parsedCreated = new Date(item.created_at);
+  const timeAgo = isValid(parsedCreated) ? formatDistanceToNow(parsedCreated, { addSuffix: true }) : '';
+  const createdDate = safeFormat(item.created_at, 'MMMM d, yyyy \'at\' h:mm a') ?? '';
+  const updatedDate = safeFormat(item.updated_at, 'MMMM d, yyyy \'at\' h:mm a') ?? '';
 
   // Format notification date
-  const formattedNotificationDate = notificationDate
-    ? format(new Date(notificationDate), 'MMMM d, yyyy \'at\' h:mm a')
-    : null;
-  const formattedNextNotification = nextNotificationAt
-    ? format(new Date(nextNotificationAt), 'MMMM d, yyyy \'at\' h:mm a')
-    : null;
+  const formattedNotificationDate = safeFormat(notificationDate, 'MMMM d, yyyy \'at\' h:mm a');
+  const formattedNextNotification = safeFormat(nextNotificationAt, 'MMMM d, yyyy \'at\' h:mm a');
 
   // Handle completion toggle
   const handleToggleComplete = async () => {
@@ -281,7 +283,7 @@ export function ItemDetailModal({
                     <p className="text-sm font-semibold text-emerald-700">Completed</p>
                     {completedAt && (
                       <p className="text-xs text-emerald-600">
-                        {format(new Date(completedAt), 'MMMM d, yyyy \'at\' h:mm a')}
+                        {safeFormat(completedAt, 'MMMM d, yyyy \'at\' h:mm a') ?? ''}
                       </p>
                     )}
                   </div>

@@ -27,7 +27,7 @@ import {
   Zap,
   CheckCircle2,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid } from 'date-fns';
 import { Item, Category } from '@/lib/api';
 import { categoryConfig } from '@/lib/categoryConfig';
 
@@ -122,7 +122,8 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete,
   const actionRequired = item.action_required;
 
   // Format timestamp
-  const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
+  const createdDate = new Date(item.created_at);
+  const timeAgo = isValid(createdDate) ? formatDistanceToNow(createdDate, { addSuffix: true }) : '';
 
   // Close menu on click outside
   useEffect(() => {

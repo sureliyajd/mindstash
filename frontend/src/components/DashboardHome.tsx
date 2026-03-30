@@ -12,7 +12,7 @@ import {
   Zap,
   Calendar,
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow, format, isValid } from 'date-fns';
 import { Item, Category } from '@/lib/api';
 import { categoryConfig } from '@/lib/categoryConfig';
 import type { DashboardHomeData } from '@/lib/hooks/useDashboardHome';
@@ -95,7 +95,9 @@ function CompactRow({
   const category = (item.category as Category) || 'save';
   const info = categoryConfig[category] || categoryConfig.save;
   const Icon = info.icon;
-  const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
+  const createdDate = new Date(item.created_at);
+  const timeAgo = isValid(createdDate) ? formatDistanceToNow(createdDate, { addSuffix: true }) : '';
+  const notifDate = item.notification_date ? new Date(item.notification_date) : null;
 
   return (
     <motion.div
@@ -136,10 +138,10 @@ function CompactRow({
         </span>
       )}
 
-      {item.notification_date && !item.is_completed && (
+      {notifDate && isValid(notifDate) && !item.is_completed && (
         <span className="shrink-0 flex items-center gap-1 text-[10px] text-gray-400">
           <Calendar className="h-2.5 w-2.5" />
-          {format(new Date(item.notification_date), 'MMM d')}
+          {format(notifDate, 'MMM d')}
         </span>
       )}
 
