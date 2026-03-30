@@ -126,38 +126,42 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
     setIsRecording(false);
   }, []);
 
-  const startRecording = useCallback(() => {
+  const finalTextRef = useRef('');
+
+  const createRecognition = useCallback(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognitionCtor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognitionCtor) return;
+    if (!SpeechRecognitionCtor) return null;
 
     const recognition = new SpeechRecognitionCtor();
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
-    let finalText = '';
-
     recognition.onresult = (event: any) => {
       let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalText += transcript + ' ';
+          finalTextRef.current += transcript + ' ';
         } else {
           interim = transcript;
         }
       }
-      setVoiceTranscript((finalText + interim).trimStart());
+      setVoiceTranscript((finalTextRef.current + interim).trimStart());
     };
 
     recognition.onend = () => {
-      // Restart if still supposed to be recording (for continuous flow)
+      // Restart with a fresh instance if still recording (mobile ends after each utterance)
       if (recognitionRef.current) {
-        try {
-          recognition.start();
-        } catch {
-          // ignore
+        const next = createRecognition();
+        if (next) {
+          recognitionRef.current = next;
+          try {
+            next.start();
+          } catch {
+            // ignore
+          }
         }
       }
     };
@@ -166,11 +170,19 @@ export function CaptureInput({ onSubmit, isSubmitting = false }: CaptureInputPro
       stopRecording();
     };
 
+    return recognition;
+  }, [stopRecording]);
+
+  const startRecording = useCallback(() => {
+    const recognition = createRecognition();
+    if (!recognition) return;
+
+    finalTextRef.current = '';
     recognitionRef.current = recognition;
     setVoiceTranscript('');
     setIsRecording(true);
     recognition.start();
-  }, [stopRecording]);
+  }, [createRecognition]);
 
   const handleVoiceDone = useCallback(() => {
     const transcript = voiceTranscript.trim();
