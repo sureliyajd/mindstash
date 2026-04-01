@@ -249,10 +249,11 @@ function DashboardContent() {
     page,
   });
 
-  // Reset to page 1 when any server-side filter changes
+  // Reset to page 1 and clear items when any server-side filter changes
   const tagsKey = selectedTags.join(',');
   useEffect(() => {
     setPage(1);
+    setAllItems([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedModule, searchTerm, urgencyFilter, tagsKey]);
 
