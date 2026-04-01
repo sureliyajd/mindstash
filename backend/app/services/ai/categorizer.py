@@ -280,8 +280,13 @@ def parse_relative_date(relative_date: str) -> Optional[datetime]:
     def next_weekday(weekday: int, hour: int = 9) -> datetime:
         """Get next occurrence of weekday (0=Monday, 6=Sunday)"""
         days_ahead = weekday - now.weekday()
-        if days_ahead <= 0:  # Target day already happened this week
+        if days_ahead < 0:  # Target day already happened this week
             days_ahead += 7
+        if days_ahead == 0:
+            # Same day: schedule today if the target hour hasn't passed, else next week
+            target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+            if target <= now:
+                days_ahead = 7
         return now.replace(hour=hour, minute=0, second=0, microsecond=0) + timedelta(days=days_ahead)
 
     # Parse different formats
@@ -368,6 +373,98 @@ def parse_relative_date(relative_date: str) -> Optional[datetime]:
     # If nothing matches, return None
     logger.warning("Could not parse relative date: %s", relative_date)
     return None
+
+
+def _validate_notification_date(dt: datetime, content: str, frequency: str) -> datetime:
+    """
+    Post-processing guard: verify that the AI-resolved notification date
+    actually matches what the user asked for. Covers three cases:
+
+    1. weekly  — content mentions a weekday name → snap to that weekday
+    2. once    — content mentions a weekday name → snap to that weekday
+    3. monthly — content mentions a date number  → snap to that day-of-month
+    """
+    now = datetime.utcnow()
+    content_lower = content.lower()
+
+    # -----------------------------------------------------------------
+    # Case 1 & 2: weekly / once — snap to the named weekday
+    # -----------------------------------------------------------------
+    if frequency in ("weekly", "once"):
+        target_weekday = None
+        matched_day = None
+        for day_name, day_num in WEEKDAY_MAP.items():
+            if day_name in content_lower:
+                target_weekday = day_num
+                matched_day = day_name
+                break
+
+        if target_weekday is not None and dt.weekday() != target_weekday:
+            days_ahead = target_weekday - now.weekday()
+            if days_ahead < 0:
+                days_ahead += 7
+            if days_ahead == 0:
+                # Same day: schedule today if target hour hasn't passed
+                target = now.replace(hour=dt.hour, minute=0, second=0, microsecond=0)
+                if target <= now:
+                    days_ahead = 7
+
+            corrected = now.replace(
+                hour=dt.hour, minute=0, second=0, microsecond=0
+            ) + timedelta(days=days_ahead)
+
+            if corrected <= now + timedelta(minutes=MIN_LEAD_MINUTES):
+                corrected += timedelta(days=7)
+
+            logger.info(
+                "Weekday snap (%s): %s (%s) → %s (%s) for '%s'",
+                frequency,
+                dt.strftime("%A"), dt.isoformat(),
+                corrected.strftime("%A"), corrected.isoformat(),
+                matched_day,
+            )
+            return corrected
+
+    # -----------------------------------------------------------------
+    # Case 3: monthly — snap to the mentioned day-of-month
+    # -----------------------------------------------------------------
+    if frequency == "monthly":
+        # Match ordinal or plain numbers: "1st", "15th", "the 3rd", "on 21"
+        match = re.search(
+            r'(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(?:every|each)',
+            content_lower,
+        )
+        if not match:
+            # Also match "every month on 15" / "every month on the 1st"
+            match = re.search(
+                r'every\s+month\s+(?:on\s+)?(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?',
+                content_lower,
+            )
+        if match:
+            target_day = int(match.group(1))
+            if 1 <= target_day <= 31 and dt.day != target_day:
+                # Build corrected date in the same month, or next month if past
+                try:
+                    corrected = dt.replace(day=target_day)
+                except ValueError:
+                    # Day doesn't exist in this month (e.g., Feb 30) — skip
+                    return dt
+
+                if corrected <= now + timedelta(minutes=MIN_LEAD_MINUTES):
+                    # Move to next month
+                    if corrected.month == 12:
+                        corrected = corrected.replace(year=corrected.year + 1, month=1)
+                    else:
+                        corrected = corrected.replace(month=corrected.month + 1)
+
+                logger.info(
+                    "Day-of-month snap (monthly): day %d → day %d, %s → %s",
+                    dt.day, target_day,
+                    dt.isoformat(), corrected.isoformat(),
+                )
+                return corrected
+
+    return dt
 
 
 def resolve_notification_date(prediction: dict) -> datetime:
@@ -561,6 +658,10 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
 
         if should_notify:
             notification_date = resolve_notification_date(notification_prediction)
+            # Validate the resolved date matches what the user actually asked for
+            notification_date = _validate_notification_date(
+                notification_date, content, notification_frequency
+            )
             next_notification_at = notification_date
             logger.info(
                 "Notification scheduled: %s (%s)",

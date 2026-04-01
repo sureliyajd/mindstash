@@ -16,6 +16,7 @@ import { formatDistanceToNow, format, isValid } from 'date-fns';
 import { Item, Category } from '@/lib/api';
 import { categoryConfig } from '@/lib/categoryConfig';
 import type { DashboardHomeData } from '@/lib/hooks/useDashboardHome';
+import { parseUTCDate } from '@/lib/dateUtils';
 import type { ModuleType } from '@/components/ModuleSelector';
 import { AIInsightBanner } from '@/components/feed/AIInsightBanner';
 
@@ -95,9 +96,9 @@ function CompactRow({
   const category = (item.category as Category) || 'save';
   const info = categoryConfig[category] || categoryConfig.save;
   const Icon = info.icon;
-  const createdDate = new Date(item.created_at);
+  const createdDate = parseUTCDate(item.created_at) ?? new Date();
   const timeAgo = isValid(createdDate) ? formatDistanceToNow(createdDate, { addSuffix: true }) : '';
-  const notifDate = item.notification_date ? new Date(item.notification_date) : null;
+  const notifDate = parseUTCDate(item.notification_date);
 
   return (
     <motion.div

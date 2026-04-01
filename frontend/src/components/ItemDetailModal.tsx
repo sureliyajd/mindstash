@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow, format, isValid } from 'date-fns';
 import { Item, Category, NotificationFrequency } from '@/lib/api';
+import { parseUTCDate } from '@/lib/dateUtils';
 
 // =============================================================================
 // CATEGORY CONFIG
@@ -175,11 +176,11 @@ export function ItemDetailModal({
   // Format timestamps (guard against invalid dates)
   const safeFormat = (dateStr: string | null | undefined, fmt: string) => {
     if (!dateStr) return null;
-    const d = new Date(dateStr);
-    return isValid(d) ? format(d, fmt) : null;
+    const d = parseUTCDate(dateStr);
+    return d && isValid(d) ? format(d, fmt) : null;
   };
-  const parsedCreated = new Date(item.created_at);
-  const timeAgo = isValid(parsedCreated) ? formatDistanceToNow(parsedCreated, { addSuffix: true }) : '';
+  const parsedCreated = parseUTCDate(item.created_at);
+  const timeAgo = parsedCreated && isValid(parsedCreated) ? formatDistanceToNow(parsedCreated, { addSuffix: true }) : '';
   const createdDate = safeFormat(item.created_at, 'MMMM d, yyyy \'at\' h:mm a') ?? '';
   const updatedDate = safeFormat(item.updated_at, 'MMMM d, yyyy \'at\' h:mm a') ?? '';
 

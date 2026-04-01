@@ -30,6 +30,7 @@ import {
 import { formatDistanceToNow, format, isValid } from 'date-fns';
 import { Item, Category } from '@/lib/api';
 import { categoryConfig } from '@/lib/categoryConfig';
+import { parseUTCDate } from '@/lib/dateUtils';
 
 // Intent labels for quick display
 const intentLabels: Record<string, string> = {
@@ -64,8 +65,8 @@ function getSurfacingReason(item: Item): string | null {
   const now = new Date();
   const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const createdAt = new Date(item.created_at);
-  const lastSurfaced = item.last_surfaced_at ? new Date(item.last_surfaced_at) : null;
+  const createdAt = parseUTCDate(item.created_at) ?? new Date();
+  const lastSurfaced = parseUTCDate(item.last_surfaced_at);
 
   // 1. High urgency
   if (item.urgency === 'high') return 'High urgency item';
@@ -114,7 +115,7 @@ function JournalCard({ item, onViewDetails, onEdit, onDelete }: Omit<ItemCardPro
   const menuRef = useRef<HTMLDivElement>(null);
   const isOptimistic = item.id.startsWith('temp-');
 
-  const createdDate = new Date(item.created_at);
+  const createdDate = parseUTCDate(item.created_at) ?? new Date();
   const dayNum = isValid(createdDate) ? format(createdDate, 'd') : '';
   const monthYear = isValid(createdDate) ? format(createdDate, 'MMM yyyy') : '';
   const weekday = isValid(createdDate) ? format(createdDate, 'EEEE') : '';
@@ -282,7 +283,7 @@ export function ItemCard({ item, currentModule, onViewDetails, onEdit, onDelete,
   const actionRequired = item.action_required;
 
   // Format timestamp
-  const createdDate = new Date(item.created_at);
+  const createdDate = parseUTCDate(item.created_at) ?? new Date();
   const timeAgo = isValid(createdDate) ? formatDistanceToNow(createdDate, { addSuffix: true }) : '';
 
   // Close menu on click outside

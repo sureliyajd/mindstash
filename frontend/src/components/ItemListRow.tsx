@@ -14,6 +14,7 @@ import {
 import { formatDistanceToNow, format, isValid } from 'date-fns';
 import { Item, Category } from '@/lib/api';
 import { categoryConfig } from '@/lib/categoryConfig';
+import { parseUTCDate } from '@/lib/dateUtils';
 
 interface ItemListRowProps {
   item: Item;
@@ -32,7 +33,7 @@ export function ItemListRow({ item, onViewDetails, onEdit, onDelete, onToggleCom
   const info = categoryConfig[category] || categoryConfig.save;
   const Icon = info.icon;
   const isOptimistic = item.id.startsWith('temp-');
-  const createdDate = new Date(item.created_at);
+  const createdDate = parseUTCDate(item.created_at) ?? new Date();
   const timeAgo = isValid(createdDate) ? formatDistanceToNow(createdDate, { addSuffix: true }) : '';
 
   useEffect(() => {
@@ -76,7 +77,7 @@ export function ItemListRow({ item, onViewDetails, onEdit, onDelete, onToggleCom
       ) : item.notification_date ? (
         <span className="shrink-0 flex items-center gap-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
           <Calendar className="h-2.5 w-2.5" />
-          {isValid(new Date(item.notification_date)) ? format(new Date(item.notification_date), 'MMM d') : ''}
+          {(() => { const d = parseUTCDate(item.notification_date); return d && isValid(d) ? format(d, 'MMM d') : ''; })()}
         </span>
       ) : item.tags && item.tags.length > 0 ? (
         <span className="shrink-0 hidden sm:inline-flex items-center gap-1 rounded-md bg-gray-50 px-1.5 py-0.5 text-[10px] text-gray-500">
