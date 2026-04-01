@@ -207,7 +207,7 @@ export function ItemDetailModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
@@ -215,7 +215,7 @@ export function ItemDetailModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.2 }}
-          className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl"
+          className="relative flex max-h-[85vh] sm:max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl sm:rounded-3xl bg-white shadow-2xl mb-[calc(env(safe-area-inset-bottom,0px)+64px)] sm:mb-0"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

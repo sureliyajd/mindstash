@@ -99,7 +99,7 @@ export function ItemListRow({ item, onViewDetails, onEdit, onDelete, onToggleCom
               e.stopPropagation();
               setShowMenu(!showMenu);
             }}
-            className="rounded-lg p-1.5 text-gray-400 opacity-0 transition-all hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
+            className="rounded-lg p-1.5 text-gray-400 sm:opacity-0 transition-all hover:bg-gray-100 hover:text-gray-600 sm:group-hover:opacity-100"
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>

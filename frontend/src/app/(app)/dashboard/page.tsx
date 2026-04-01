@@ -694,7 +694,7 @@ function DashboardContent() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
-            className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 sm:gap-3 rounded-2xl border border-gray-200 bg-white px-3 sm:px-5 py-3 shadow-2xl max-w-[calc(100vw-2rem)]"
+            className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+72px)] sm:bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 sm:gap-3 rounded-2xl border border-gray-200 bg-white px-3 sm:px-5 py-3 shadow-2xl max-w-[calc(100vw-2rem)]"
           >
             <span className="text-sm font-medium text-gray-700">
               {selectedIds.size} selected
