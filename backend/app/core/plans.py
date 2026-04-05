@@ -8,7 +8,7 @@ PLAN_PRO = "pro"
 ALL_PLANS = [PLAN_FREE, PLAN_STARTER, PLAN_PRO]
 
 PLAN_LIMITS = {
-    PLAN_FREE:    { "items_per_month": 30,  "chat_messages_per_month": 10,  "semantic_search": False, "telegram": False, "daily_briefing": False, "weekly_digest": False },
+    PLAN_FREE:    { "items_per_month": 30,  "chat_messages_per_month": 10,  "semantic_search": False, "telegram": False, "daily_briefing": False, "weekly_digest": True  },
     PLAN_STARTER: { "items_per_month": 200, "chat_messages_per_month": 100, "semantic_search": False, "telegram": True,  "daily_briefing": False, "weekly_digest": True  },
     PLAN_PRO:     { "items_per_month": None,"chat_messages_per_month": None,"semantic_search": True,  "telegram": True,  "daily_briefing": True,  "weekly_digest": True  },
 }
