@@ -18,7 +18,7 @@ import resend
 
 from app.core.config import settings
 from app.core.plans import plan_has_feature
-from app.core.security import create_email_action_token
+from app.core.security import create_email_action_token, create_unsubscribe_token
 from app.models.item import Item
 from app.models.user import User
 
@@ -323,7 +323,7 @@ def send_notification(item: Item, user: User, db: Session) -> bool:
                             <div class="divider"></div>
 
                             <div class="footer">
-                                <p style="color:#9ca3af;"><a href="{settings.APP_URL}/settings">Manage email preferences</a></p>
+                                <p style="color:#9ca3af;"><a href="{settings.APP_URL}/profile" style="color: #EA7B7B; text-decoration: underline;">Manage email preferences</a> | <a href="{settings.BACKEND_URL}/api/notifications/unsubscribe?token={create_unsubscribe_token(str(user.id), 'item_reminders')}" style="color: #EA7B7B; text-decoration: underline;">Unsubscribe</a></p>
                                 <p style="margin-top:8px;">MindStash &middot; Never lose a thought again</p>
                             </div>
                         </div>
@@ -405,7 +405,7 @@ def _update_item_after_notification(item: Item) -> None:
 
 def _build_action_buttons_html(item: Item, user: User) -> str:
     """Generate one-click action button HTML for an item in a reminder email."""
-    base_url = f"{settings.APP_URL}/api/notifications/email-action"
+    base_url = f"{settings.BACKEND_URL}/api/notifications/email-action"
 
     complete_token = create_email_action_token(str(item.id), str(user.id), "complete")
     snooze_token = create_email_action_token(str(item.id), str(user.id), "snooze")
@@ -534,7 +534,7 @@ def send_batched_notification(items: List[Item], user: User, db: Session) -> boo
                             <div style="height: 1px; background: #f3f4f6; margin: 0;"></div>
 
                             <div style="padding: 20px 24px; text-align: center;">
-                                <p style="font-size: 11px; color: #9ca3af;"><a href="{settings.APP_URL}/settings" style="color: #EA7B7B; text-decoration: underline;">Manage email preferences</a></p>
+                                <p style="font-size: 11px; color: #9ca3af;"><a href="{settings.APP_URL}/profile" style="color: #EA7B7B; text-decoration: underline;">Manage email preferences</a> | <a href="{settings.BACKEND_URL}/api/notifications/unsubscribe?token={create_unsubscribe_token(str(user.id), 'item_reminders')}" style="color: #EA7B7B; text-decoration: underline;">Unsubscribe</a></p>
                                 <p style="font-size: 11px; color: #d1d5db; margin-top: 8px;">MindStash &middot; Never lose a thought again</p>
                             </div>
                         </div>

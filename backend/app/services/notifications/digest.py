@@ -17,6 +17,7 @@ import resend
 
 from app.core.config import settings
 from app.core.plans import plan_has_feature
+from app.core.security import create_unsubscribe_token
 from app.models.item import Item
 from app.models.user import User
 
@@ -259,8 +260,8 @@ def generate_digest_email(user: User, digest_data: Dict[str, Any]) -> str:
                 You're receiving this because you have a MindStash account.
             </p>
             <p style="color: #999; font-size: 12px; margin: 0;">
-                <a href="#" style="color: #EA7B7B;">Unsubscribe</a> |
-                <a href="#" style="color: #EA7B7B;">Manage preferences</a>
+                <a href="{settings.BACKEND_URL}/api/notifications/unsubscribe?token={create_unsubscribe_token(str(user.id), 'weekly_digest')}" style="color: #EA7B7B;">Unsubscribe</a> |
+                <a href="{settings.APP_URL}/profile" style="color: #EA7B7B;">Manage preferences</a>
             </p>
         </div>
     </body>

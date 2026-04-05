@@ -112,6 +112,46 @@ def create_email_action_token(item_id: str, user_id: str, action: str) -> str:
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
+def create_unsubscribe_token(user_id: str, email_type: str) -> str:
+    """
+    Create a long-lived JWT for one-click email unsubscribe.
+
+    Args:
+        user_id: UUID of the user
+        email_type: "weekly_digest", "daily_briefing", or "item_reminders"
+
+    Returns:
+        Encoded JWT token string (expires in 30 days)
+    """
+    payload = {
+        "user_id": str(user_id),
+        "email_type": email_type,
+        "type": "unsubscribe",
+        "exp": datetime.utcnow() + timedelta(days=30),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_unsubscribe_token(token: str) -> Optional[dict]:
+    """
+    Decode an unsubscribe token WITH expiration verification.
+
+    Returns:
+        Decoded payload if valid and not expired, None otherwise
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+        if payload.get("type") != "unsubscribe":
+            return None
+        return payload
+    except JWTError:
+        return None
+
+
 def decode_email_action_token(token: str) -> Optional[dict]:
     """
     Decode an email action token WITH expiration verification.

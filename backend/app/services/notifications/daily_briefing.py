@@ -18,6 +18,7 @@ import resend
 
 from app.core.config import settings
 from app.core.plans import plan_has_feature
+from app.core.security import create_unsubscribe_token
 from app.models.user import User
 from app.services.ai.agent import run_agent
 
@@ -207,7 +208,7 @@ def send_daily_briefing_to_user(user: User, db: Session) -> bool:
                                 <span class="accent-dot" style="background:#93DA97;"></span>
                             </div>
                             <p style="color:#9ca3af;">You're receiving this because you have daily briefings enabled.</p>
-                            <p><a href="{settings.APP_URL}/settings">Manage email preferences</a></p>
+                            <p><a href="{settings.APP_URL}/profile" style="color: #EA7B7B;">Manage email preferences</a> | <a href="{settings.BACKEND_URL}/api/notifications/unsubscribe?token={create_unsubscribe_token(str(user.id), 'daily_briefing')}" style="color: #EA7B7B;">Unsubscribe</a></p>
                             <p style="margin-top:10px;">MindStash &middot; Never lose a thought again</p>
                         </div>
                     </div>

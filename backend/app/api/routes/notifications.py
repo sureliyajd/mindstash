@@ -23,7 +23,7 @@ from uuid import UUID
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.rate_limit import user_limiter
-from app.core.security import decode_email_action_token
+from app.core.security import decode_email_action_token, decode_unsubscribe_token
 from app.api.dependencies import get_current_user
 from app.models.item import Item
 from app.models.user import User
@@ -395,3 +395,81 @@ def handle_email_action(
             ),
             status_code=400,
         )
+
+
+@router.get("/unsubscribe", response_class=HTMLResponse)
+def handle_unsubscribe(
+    token: str = Query(..., description="Signed JWT unsubscribe token from email"),
+    db: Session = Depends(get_db),
+):
+    """
+    One-click unsubscribe from email notifications.
+
+    No authentication required — the signed JWT token contains the user_id
+    and email_type. Token expires after 30 days.
+
+    Returns an HTML confirmation page.
+    """
+    payload = decode_unsubscribe_token(token)
+    if not payload:
+        return HTMLResponse(
+            content=_email_action_html(
+                "Link Expired",
+                "This unsubscribe link has expired or is invalid. "
+                "Please log in to MindStash and go to Profile > Notifications to manage your preferences.",
+                success=False,
+            ),
+            status_code=400,
+        )
+
+    user_id = payload.get("user_id")
+    email_type = payload.get("email_type")
+
+    if not user_id or not email_type:
+        return HTMLResponse(
+            content=_email_action_html(
+                "Invalid Link",
+                "This unsubscribe link is malformed.",
+                success=False,
+            ),
+            status_code=400,
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return HTMLResponse(
+            content=_email_action_html(
+                "Account Not Found",
+                "No account found for this unsubscribe link.",
+                success=False,
+            ),
+            status_code=404,
+        )
+
+    email_type_labels = {
+        "weekly_digest": ("weekly_digest_enabled", "Weekly Digest"),
+        "daily_briefing": ("daily_briefing_enabled", "Daily Briefing"),
+        "item_reminders": ("item_reminders_enabled", "Item Reminders"),
+    }
+
+    if email_type not in email_type_labels:
+        return HTMLResponse(
+            content=_email_action_html(
+                "Unknown Email Type",
+                "This unsubscribe link is not recognized.",
+                success=False,
+            ),
+            status_code=400,
+        )
+
+    field, label = email_type_labels[email_type]
+    setattr(user, field, False)
+    db.commit()
+
+    return HTMLResponse(
+        content=_email_action_html(
+            "Unsubscribed",
+            f"You've been unsubscribed from {label} emails. "
+            f"You can re-enable them anytime from your profile settings.",
+        )
+    )
