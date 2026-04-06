@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Generator, Optional
 from uuid import UUID
 
-from anthropic import Anthropic
+from anthropic import Anthropic, APIError, AuthenticationError, RateLimitError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -27,6 +27,17 @@ import app.services.ai.agent_tools  # noqa: F401
 logger = logging.getLogger(__name__)
 
 client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+
+def _friendly_api_error(e: Exception) -> str:
+    """Convert API exceptions to user-friendly messages. Raw details stay in logs."""
+    if isinstance(e, AuthenticationError):
+        return "AI service is temporarily unavailable. Please try again later."
+    if isinstance(e, RateLimitError):
+        return "AI service is busy right now. Please wait a moment and try again."
+    if isinstance(e, APIError):
+        return "AI service encountered an issue. Please try again."
+    return "Something went wrong. Please try again."
 AGENT_MODEL = "claude-haiku-4-5-20251001"
 MAX_ITERATIONS = 10
 MAX_HISTORY_MESSAGES = 50
@@ -245,7 +256,7 @@ def run_agent(
                 )
             except Exception as e:
                 logger.exception("Claude API call failed")
-                yield _sse_event("error", {"message": f"AI service error: {str(e)}"})
+                yield _sse_event("error", {"message": _friendly_api_error(e)})
                 yield _sse_event("done", {})
                 return
 
@@ -546,7 +557,7 @@ def run_confirmation(
             )
         except Exception as e:
             logger.exception("Claude API call failed during confirmation follow-up")
-            yield _sse_event("error", {"message": f"AI service error: {str(e)}"})
+            yield _sse_event("error", {"message": _friendly_api_error(e)})
             yield _sse_event("done", {})
             return
 
