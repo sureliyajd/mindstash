@@ -29,9 +29,21 @@ interface DashboardHomeProps {
   itemCounts?: Partial<Record<ModuleType, number>>;
   userName: string | null;
   onModuleChange: (module: ModuleType) => void;
+  onViewCategory?: (category: Category) => void;
   onViewDetails: (item: Item) => void;
   onToggleComplete: (item: Item, completed: boolean) => void;
 }
+
+const EXTRA_CATEGORY_SECTIONS: { category: Category; title: string; module?: ModuleType }[] = [
+  { category: 'people', title: 'People', module: 'people' },
+  { category: 'journal', title: 'Journal', module: 'journal' },
+  { category: 'notes', title: 'Notes' },
+  { category: 'watch', title: 'Watch Later' },
+  { category: 'learn', title: 'Learning' },
+  { category: 'buy', title: 'Shopping' },
+  { category: 'places', title: 'Places' },
+  { category: 'save', title: 'Saved' },
+];
 
 // =============================================================================
 // SECTION HEADER
@@ -189,10 +201,11 @@ export function DashboardHome({
   itemCounts,
   userName,
   onModuleChange,
+  onViewCategory,
   onViewDetails,
   onToggleComplete,
 }: DashboardHomeProps) {
-  const { digest, todayItems, recentIdeas, readingQueue, activeGoals, isLoading } = data;
+  const { digest, todayItems, recentIdeas, readingQueue, activeGoals, byCategory, isLoading } = data;
 
   if (isLoading) {
     return <DashboardHomeSkeleton />;
@@ -366,6 +379,40 @@ export function DashboardHome({
             </div>
           </div>
         )}
+
+        {/* EXTRA CATEGORY SECTIONS — surface remaining captures so nothing feels lost */}
+        {EXTRA_CATEGORY_SECTIONS.map(({ category, title, module }) => {
+          const catItems = byCategory?.[category] ?? [];
+          if (catItems.length === 0) return null;
+          const info = categoryConfig[category];
+          const colorMatch = info.color.match(/\[(#[0-9A-Fa-f]+)\]/);
+          const color = colorMatch ? colorMatch[1] : '#6B7280';
+          return (
+            <div key={category} className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 shadow-sm">
+              <SectionHeader
+                icon={info.icon}
+                title={title}
+                count={catItems.length}
+                color={color}
+                actionLabel="View all"
+                onAction={() => {
+                  if (module) onModuleChange(module);
+                  else if (onViewCategory) onViewCategory(category);
+                  else onModuleChange('all');
+                }}
+              />
+              <div className="-mx-1">
+                {catItems.map((item) => (
+                  <CompactRow
+                    key={item.id}
+                    item={item}
+                    onViewDetails={() => onViewDetails(item)}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
 
         {/* ACTIVE GOALS */}
         {activeGoals.length > 0 && (

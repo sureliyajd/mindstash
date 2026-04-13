@@ -24,6 +24,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useBillingStatus } from '@/lib/hooks/useBilling';
 import { useQueryClient } from '@tanstack/react-query';
 import { Item, Category, ItemUpdate, items as itemsApi } from '@/lib/api';
+import { categoryConfig } from '@/lib/categoryConfig';
 
 // =============================================================================
 // SEARCH EMPTY STATE (for when search has no results)
@@ -400,10 +401,13 @@ function DashboardContent() {
   // Handle item creation — reset to page 1 so new item appears at top
   const handleCreate = async (content: string, url?: string) => {
     try {
-      await createItem({ content, url });
+      const created = await createItem({ content, url });
       setPage(1);
       // Refresh dashboard home data if visible
       queryClient.invalidateQueries({ queryKey: DASHBOARD_HOME_QUERY_KEY });
+      const cat = (created?.category as Category | null | undefined) ?? null;
+      const label = cat ? (categoryConfig[cat]?.label ?? cat) : null;
+      showToast(label ? `Saved to ${label}` : 'Saved', 'success');
     } catch (err) {
       // Surface plan limit errors with upgrade action
       const axiosErr = err as { response?: { status?: number; data?: { detail?: string | { detail?: string } } } };
@@ -585,6 +589,7 @@ function DashboardContent() {
               itemCounts={itemCounts}
               userName={user?.name ?? null}
               onModuleChange={handleModuleChange}
+              onViewCategory={setSelectedCategory}
               onViewDetails={handleViewDetails}
               onToggleComplete={handleMarkComplete}
             />
