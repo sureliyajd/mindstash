@@ -122,19 +122,33 @@ function CompactRow({
       onClick={onViewDetails}
     >
       {showCheckbox && onToggleComplete ? (
-        <button
+        <motion.button
           onClick={(e) => {
             e.stopPropagation();
             onToggleComplete();
           }}
+          whileTap={{ scale: 0.82 }}
+          animate={{ scale: item.is_completed ? [1, 1.25, 1] : 1 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          aria-pressed={item.is_completed}
+          aria-label={item.is_completed ? 'Mark incomplete' : 'Mark complete'}
           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors ${
             item.is_completed
               ? 'border-[#5EB563] bg-[#5EB563]'
-              : 'border-gray-300 hover:border-[#EA7B7B]'
+              : 'border-gray-300 hover:border-[#EA7B7B] active:border-[#5EB563] active:bg-[#5EB563]/20'
           }`}
         >
-          {item.is_completed && <CheckCircle2 className="h-3 w-3 text-white" />}
-        </button>
+          {item.is_completed && (
+            <motion.span
+              initial={{ scale: 0, rotate: -30 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+              className="flex items-center justify-center"
+            >
+              <CheckCircle2 className="h-3 w-3 text-white" />
+            </motion.span>
+          )}
+        </motion.button>
       ) : (
         <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${info.bgColor.split(' ')[0]}`}>
           <Icon className={`h-3 w-3 ${info.color}`} />

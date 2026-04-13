@@ -229,16 +229,53 @@ export function useItems(options: UseItemsOptions = {}) {
     mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
       items.markComplete(id, completed),
     onMutate: async ({ id, completed }) => {
-      await queryClient.cancelQueries({ queryKey: ITEMS_QUERY_KEY });
+      // Cancel both ITEMS and DASHBOARD_HOME queries so neither overwrites our
+      // optimistic patch before the server responds.
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ITEMS_QUERY_KEY }),
+        queryClient.cancelQueries({ queryKey: ['dashboard-home'] }),
+      ]);
+
       const previousData = queryClient.getQueryData<ItemListResponse>(queryKey);
+
+      const patch = (item: Item): Item =>
+        item.id === id
+          ? { ...item, is_completed: completed, completed_at: completed ? new Date().toISOString() : null }
+          : item;
+
+      // Patch the currently-visible items list.
       queryClient.setQueryData<ItemListResponse>(queryKey, (old) => ({
         ...old!,
-        items: old?.items.map((item) =>
-          item.id === id
-            ? { ...item, is_completed: completed, completed_at: completed ? new Date().toISOString() : null }
-            : item
-        ) || [],
+        items: old?.items.map(patch) || [],
       }));
+
+      // Also patch every dashboard-home subquery so the checkbox on the "All"
+      // tab (and every category section) reflects the click instantly. These
+      // queries return either { items: Item[] } (per-section lists) or a
+      // DigestPreview shape with `urgent_items` / `pending_tasks` arrays.
+      type DashboardPage =
+        | { items?: Item[] }
+        | { urgent_items?: Item[]; pending_tasks?: Item[] }
+        | undefined;
+
+      queryClient.setQueriesData<DashboardPage>(
+        { queryKey: ['dashboard-home'] },
+        (old) => {
+          if (!old) return old;
+          const next: DashboardPage = { ...old };
+          if ('items' in next && Array.isArray(next.items)) {
+            next.items = next.items.map(patch);
+          }
+          if ('urgent_items' in next && Array.isArray(next.urgent_items)) {
+            next.urgent_items = next.urgent_items.map(patch);
+          }
+          if ('pending_tasks' in next && Array.isArray(next.pending_tasks)) {
+            next.pending_tasks = next.pending_tasks.map(patch);
+          }
+          return next;
+        }
+      );
+
       return { previousData };
     },
     onError: (_err, _variables, context) => {
@@ -246,6 +283,7 @@ export function useItems(options: UseItemsOptions = {}) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-home'] });
     },
   });
 
