@@ -24,8 +24,10 @@ from app.models.analytics import AnalyticsEvent
 # access to the values within the .ini file in use.
 config = context.config
 
-# Override sqlalchemy.url with the one from environment variables
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Override sqlalchemy.url with the one from environment variables.
+# Escape '%' to '%%' so ConfigParser doesn't try to interpolate
+# URL-encoded characters in the password (e.g. '%2B', '%3D').
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
