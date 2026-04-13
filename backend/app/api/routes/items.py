@@ -151,6 +151,19 @@ def create_item(
     # Check plan limits before creating item
     check_item_limit(current_user, db)
 
+    # Determine effective timezone for this capture.
+    # Preference order: explicit request tz → user's stored tz → UTC.
+    effective_tz = item_data.timezone or current_user.timezone or "UTC"
+
+    # Persist a newly-discovered tz on the user so server-side flows
+    # (digest, daily briefing, agent reminders) can use it later.
+    if (
+        item_data.timezone
+        and item_data.timezone != current_user.timezone
+        and (current_user.timezone or "UTC") == "UTC"
+    ):
+        current_user.timezone = item_data.timezone
+
     # Create initial item in database
     new_item = Item(
         user_id=current_user.id,
@@ -166,7 +179,8 @@ def create_item(
     try:
         ai_result = categorize_item(
             content=item_data.content,
-            url=item_data.url
+            url=item_data.url,
+            tz=effective_tz,
         )
 
         # Update item with AI results

@@ -42,6 +42,9 @@ class User(Base):
     weekly_digest_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
     item_reminders_enabled = Column(Boolean, default=True, nullable=False, server_default='true')
 
+    # IANA timezone (e.g. "Asia/Kolkata"); used to interpret relative reminder times.
+    timezone = Column(String(64), nullable=False, server_default="UTC")
+
     # Admin / account status
     is_admin = Column(Boolean, default=False, nullable=False, server_default='false')
     is_suspended = Column(Boolean, default=False, nullable=False, server_default='false')

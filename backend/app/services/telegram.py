@@ -385,7 +385,9 @@ def process_message(db: Session, telegram_link: TelegramLink, text: str) -> str:
 
     # AI categorization (same as handle_create_item in agent_tools.py)
     try:
-        ai_result = categorize_item(content=content)
+        from app.models.user import User as _User
+        user_tz = db.query(_User.timezone).filter(_User.id == telegram_link.user_id).scalar() or "UTC"
+        ai_result = categorize_item(content=content, tz=user_tz)
         new_item.category = ai_result.get("category", "save")
         new_item.tags = ai_result.get("tags", [])
         new_item.summary = ai_result.get("summary", content[:100])

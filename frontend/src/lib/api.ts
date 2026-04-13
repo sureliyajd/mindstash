@@ -144,6 +144,15 @@ export interface ItemListResponse {
 export interface ItemCreate {
   content: string;
   url?: string;
+  timezone?: string;
+}
+
+function getBrowserTimezone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export interface ItemUpdate {
@@ -405,6 +414,8 @@ export const items = {
   createItem: async (content: string, url?: string): Promise<Item> => {
     const payload: ItemCreate = { content };
     if (url) payload.url = url;
+    const tz = getBrowserTimezone();
+    if (tz) payload.timezone = tz;
     const response = await api.post<Item>('/api/items/', payload);
     return response.data;
   },

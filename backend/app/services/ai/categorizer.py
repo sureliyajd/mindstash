@@ -6,8 +6,9 @@ Using Anthropic Claude API for production-ready categorization
 import json
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from anthropic import Anthropic
 
 from app.core.config import settings
@@ -260,7 +261,29 @@ Input: "Remind me to take vitamins every day"
 # =============================================================================
 
 
-def parse_relative_date(relative_date: str) -> Optional[datetime]:
+def _safe_zoneinfo(tz: str) -> ZoneInfo:
+    """Return ZoneInfo for tz, falling back to UTC on invalid input."""
+    try:
+        return ZoneInfo(tz or "UTC")
+    except (ZoneInfoNotFoundError, ValueError):
+        logger.warning("Invalid timezone '%s', falling back to UTC", tz)
+        return ZoneInfo("UTC")
+
+
+def _now_local_naive(tz: str) -> datetime:
+    """Current wall-clock time in the user's timezone as a naive datetime."""
+    return datetime.now(_safe_zoneinfo(tz)).replace(tzinfo=None)
+
+
+def local_naive_to_utc_naive(dt: datetime, tz: str) -> datetime:
+    """Convert a naive datetime interpreted as user-local time to naive UTC."""
+    if dt is None:
+        return None
+    aware = dt.replace(tzinfo=_safe_zoneinfo(tz))
+    return aware.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def parse_relative_date(relative_date: str, tz: str = "UTC") -> Optional[datetime]:
     """
     Convert relative date strings to actual datetime objects.
 
@@ -273,7 +296,7 @@ def parse_relative_date(relative_date: str) -> Optional[datetime]:
     if not relative_date:
         return None
 
-    now = datetime.utcnow()
+    now = _now_local_naive(tz)
     relative_date = relative_date.lower().strip()
 
     # Helper to get next occurrence of a weekday
@@ -375,7 +398,7 @@ def parse_relative_date(relative_date: str) -> Optional[datetime]:
     return None
 
 
-def _validate_notification_date(dt: datetime, content: str, frequency: str) -> datetime:
+def _validate_notification_date(dt: datetime, content: str, frequency: str, tz: str = "UTC") -> datetime:
     """
     Post-processing guard: verify that the AI-resolved notification date
     actually matches what the user asked for. Covers three cases:
@@ -384,7 +407,7 @@ def _validate_notification_date(dt: datetime, content: str, frequency: str) -> d
     2. once    — content mentions a weekday name → snap to that weekday
     3. monthly — content mentions a date number  → snap to that day-of-month
     """
-    now = datetime.utcnow()
+    now = _now_local_naive(tz)
     content_lower = content.lower()
 
     # -----------------------------------------------------------------
@@ -467,7 +490,7 @@ def _validate_notification_date(dt: datetime, content: str, frequency: str) -> d
     return dt
 
 
-def resolve_notification_date(prediction: dict) -> datetime:
+def resolve_notification_date(prediction: dict, tz: str = "UTC") -> datetime:
     """
     Resolve a notification datetime from AI prediction using 3-tier fallback.
 
@@ -475,9 +498,10 @@ def resolve_notification_date(prediction: dict) -> datetime:
     Tier 2: notification_date (str) via parse_relative_date() — legacy fallback
     Tier 3: Tomorrow at 9 AM — last resort when should_notify=True
 
-    Always returns a valid datetime. Never returns None.
+    Always returns a valid datetime in the user's local naive time. Never returns None.
+    Callers are expected to convert to UTC for storage via local_naive_to_utc_naive().
     """
-    now = datetime.utcnow()
+    now = _now_local_naive(tz)
 
     # --- Tier 1: days_from_now + preferred_time ---
     days_raw = prediction.get("days_from_now")
@@ -502,15 +526,15 @@ def resolve_notification_date(prediction: dict) -> datetime:
                 result += timedelta(days=1)
 
             logger.info(
-                "Notification resolved via Tier 1 (days_from_now=%d, time=%s): %s",
-                days, preferred_time, result.isoformat(),
+                "Notification resolved via Tier 1 (days_from_now=%d, time=%s, tz=%s): %s",
+                days, preferred_time, tz, result.isoformat(),
             )
             return result
 
     # --- Tier 2: notification_date string via parse_relative_date() ---
     date_str = prediction.get("notification_date", "")
     if date_str:
-        parsed = parse_relative_date(str(date_str))
+        parsed = parse_relative_date(str(date_str), tz=tz)
         if parsed is not None:
             # Validate: if in the past, bump +1 day
             if parsed <= now + timedelta(minutes=MIN_LEAD_MINUTES):
@@ -533,9 +557,9 @@ def resolve_notification_date(prediction: dict) -> datetime:
     return fallback
 
 
-def build_system_prompt(content: str, url: Optional[str] = None) -> str:
-    """Build the system prompt with current date injected."""
-    now = datetime.utcnow()
+def build_system_prompt(content: str, url: Optional[str] = None, tz: str = "UTC") -> str:
+    """Build the system prompt with current date injected in the user's timezone."""
+    now = _now_local_naive(tz)
     current_date = now.strftime("%A, %B %d, %Y")
     return SYSTEM_PROMPT_TEMPLATE.format(
         content=content[:500],
@@ -549,7 +573,7 @@ def build_system_prompt(content: str, url: Optional[str] = None) -> str:
 # =============================================================================
 
 
-def categorize_item(content: str, url: Optional[str] = None) -> dict:
+def categorize_item(content: str, url: Optional[str] = None, tz: str = "UTC") -> dict:
     """
     Categorize content using AI (12-category system) with notification prediction.
 
@@ -579,8 +603,8 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         "once"
     """
     try:
-        # Prepare prompt with current date injected
-        prompt = build_system_prompt(content, url)
+        # Prepare prompt with current date injected (in user's timezone)
+        prompt = build_system_prompt(content, url, tz=tz)
 
         # =============================================================================
         # API CALL - Anthropic Claude API
@@ -657,15 +681,19 @@ def categorize_item(content: str, url: Optional[str] = None) -> dict:
         next_notification_at = None
 
         if should_notify:
-            notification_date = resolve_notification_date(notification_prediction)
-            # Validate the resolved date matches what the user actually asked for
-            notification_date = _validate_notification_date(
-                notification_date, content, notification_frequency
+            # Resolve in the user's local wall-clock time, then convert to UTC
+            # for storage so the cron (which compares naive UTC) fires at the
+            # correct local moment regardless of the user's timezone.
+            local_dt = resolve_notification_date(notification_prediction, tz=tz)
+            local_dt = _validate_notification_date(
+                local_dt, content, notification_frequency, tz=tz
             )
+            notification_date = local_naive_to_utc_naive(local_dt, tz)
             next_notification_at = notification_date
             logger.info(
-                "Notification scheduled: %s (%s)",
-                notification_date.isoformat(), notification_frequency,
+                "Notification scheduled: local=%s tz=%s utc=%s (%s)",
+                local_dt.isoformat(), tz, notification_date.isoformat(),
+                notification_frequency,
             )
 
         # If should_notify is false, ensure no notifications

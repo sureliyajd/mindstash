@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, cast, String
 
 from app.models.item import Item
+from app.models.user import User
 from app.services.ai.tool_registry import registry
 from app.services.ai.categorizer import categorize_item
 from app.services.ai.embeddings import embedding_service
@@ -338,8 +339,12 @@ def handle_create_item(db: Session, user_id: UUID, params: dict) -> dict:
     db.commit()
     db.refresh(new_item)
 
+    # Use the user's stored timezone so agent-created reminders fire at
+    # the correct local time (falls back to UTC for legacy users).
+    user_tz = db.query(User.timezone).filter(User.id == user_id).scalar() or "UTC"
+
     try:
-        ai_result = categorize_item(content=content, url=url)
+        ai_result = categorize_item(content=content, url=url, tz=user_tz)
         new_item.category = ai_result.get("category", "save")
         new_item.tags = ai_result.get("tags", [])
         new_item.summary = ai_result.get("summary", content[:100])

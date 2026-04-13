@@ -39,6 +39,12 @@ class ItemBase(BaseModel):
 
 class ItemCreate(ItemBase):
     """Schema for creating an item"""
+    timezone: Optional[str] = Field(
+        None,
+        max_length=64,
+        description="IANA timezone of the capturing client (e.g. 'Asia/Kolkata'); "
+        "used so AI-resolved reminder times match the user's wall clock.",
+    )
 
     @validator('content')
     def validate_content(cls, v):
